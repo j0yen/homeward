@@ -1,20 +1,8 @@
 # Changelog
 
-## v0.8.0 — 2026-06-05
+## Recent
 
-homeward-connectors: source-connector framework + RescueGroups (JSON:API v5) and municipal Socrata (Austin/Dallas/Sonoma/Long Beach) connectors. Polite conditional-request HTTP core (304 no-op, identifying UA, per-host backoff), PhotoRef stores source URLs only (never raw image bytes), normalizes dogs and cats into PetRecord. CLI `homeward connectors poll <name>`. All 7 ACs green (29 tests).
-
-## v0.7.0 — 2026-06-05
-
-Freshness engine: sqlite-backed canonical store, AIMD-cadence orchestrator, entity-resolution dedup, two-strikes departure detection, TTL expiry, and delete-org ToS hook — all clippy gates green, 21 tests passing.
-
-## v0.6.0 — 2026-06-05
-
-Fix all clippy pedantic+nursery warnings in homeward-report; all 28 tests pass
-
-## v0.5.0 — 2026-06-05
-
-homeward-match: fusion matching crate — prefilter + visual kNN + calibrated scoring (AC1-7 green, 28 tests)
+- homeward-embed (Rust): `homeward_ingest::embed_client` — typed async HTTP client for the Python embed sidecar (enroll/query/health_check); 10 unit tests green.
 
 ## v0.4.0 — 2026-06-05
 
