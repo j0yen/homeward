@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.6.0 — 2026-06-05
+
+Fix all clippy pedantic+nursery warnings in homeward-report; all 28 tests pass
+
 ## v0.5.0 — 2026-06-05
 
 homeward-match: fusion matching crate — prefilter + visual kNN + calibrated scoring (AC1-7 green, 28 tests)
