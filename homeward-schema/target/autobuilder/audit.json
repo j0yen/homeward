@@ -1,6 +1,6 @@
 {
   "schema": "autobuilder.bad_rust_audit.v1",
-  "head_sha": "HEAD\nunknown",
+  "head_sha": "1cfa0ef3169bfa6a6f88499dd4f2c4e30463913c",
   "findings": [
     {
       "rule_id": "HLT-016-SUPPLY-CHAIN-DRIFT",
@@ -19,53 +19,8 @@
       "line": 0,
       "snippet": "",
       "explanation": "Cargo.lock missing; commit it for reproducible builds"
-    },
-    {
-      "rule_id": "HLT-020-CI-HARDENING-GAP",
-      "detector": "check_workflow_pinned_actions",
-      "severity": "blocking",
-      "path": ".github/workflows/ci.yml",
-      "line": 17,
-      "snippet": "      - uses: actions/checkout@v4",
-      "explanation": "GitHub Action not pinned to a commit SHA"
-    },
-    {
-      "rule_id": "HLT-020-CI-HARDENING-GAP",
-      "detector": "check_workflow_pinned_actions",
-      "severity": "blocking",
-      "path": ".github/workflows/ci.yml",
-      "line": 18,
-      "snippet": "      - uses: dtolnay/rust-toolchain@master",
-      "explanation": "GitHub Action not pinned to a commit SHA"
-    },
-    {
-      "rule_id": "HLT-020-CI-HARDENING-GAP",
-      "detector": "check_workflow_pinned_actions",
-      "severity": "blocking",
-      "path": ".github/workflows/ci.yml",
-      "line": 23,
-      "snippet": "      - uses: Swatinem/rust-cache@v2",
-      "explanation": "GitHub Action not pinned to a commit SHA"
-    },
-    {
-      "rule_id": "HLT-020-CI-HARDENING-GAP",
-      "detector": "check_workflow_pinned_actions",
-      "severity": "blocking",
-      "path": ".github/workflows/ci.yml",
-      "line": 37,
-      "snippet": "        uses: EmbarkStudios/cargo-deny-action@v1",
-      "explanation": "GitHub Action not pinned to a commit SHA"
-    },
-    {
-      "rule_id": "HLT-020-CI-HARDENING-GAP",
-      "detector": "check_workflow_minimal_permissions",
-      "severity": "blocking",
-      "path": ".github/workflows/ci.yml",
-      "line": 0,
-      "snippet": "",
-      "explanation": "workflow missing top-level permissions: block (defaults to write-all)"
     }
   ],
-  "blocking_count": 6,
+  "blocking_count": 1,
   "advisory_count": 1
 }

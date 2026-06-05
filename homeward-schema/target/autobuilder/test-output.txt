@@ -1,4 +1,4 @@
-    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.06s
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.07s
      Running unittests src/lib.rs (/home/jsy/wintermute/homeward/target/debug/deps/homeward_schema-8a8b73300d72abfb)
 
 running 0 tests
@@ -15,10 +15,10 @@ test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; fini
      Running tests/acceptance_ac2.rs (/home/jsy/wintermute/homeward/target/debug/deps/acceptance_ac2-cc443795b1f63a42)
 
 running 5 tests
-test ac2_known_species_aliases ... ok
 test ac2_known_species_cat ... ok
-test ac2_unknown_species_fails_with_typed_error ... ok
 test ac2_known_species_dog ... ok
+test ac2_known_species_aliases ... ok
+test ac2_unknown_species_fails_with_typed_error ... ok
 test ac2_unknown_species_no_silent_default ... ok
 
 test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
@@ -26,10 +26,10 @@ test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; fini
      Running tests/acceptance_ac3.rs (/home/jsy/wintermute/homeward/target/debug/deps/acceptance_ac3-279569caa62a9dfe)
 
 running 5 tests
-test ac3_intake_and_availability_are_distinct_fields ... ok
-test ac3_found_report_departed_is_valid ... ok
-test ac3_stray_adoptable_is_flagged ... ok
 test ac3_owner_surrender_adoptable_is_valid ... ok
+test ac3_stray_adoptable_is_flagged ... ok
+test ac3_found_report_departed_is_valid ... ok
+test ac3_intake_and_availability_are_distinct_fields ... ok
 test ac3_stray_in_custody_is_valid ... ok
 
 test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
@@ -47,8 +47,8 @@ test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; fini
      Running tests/acceptance_ac5.rs (/home/jsy/wintermute/homeward/target/debug/deps/acceptance_ac5-e925c1daa4dc9739)
 
 running 5 tests
-test ac5_brokered_contact_token_json_roundtrip ... ok
 test ac5_brokered_contact_token_no_raw_accessor ... ok
+test ac5_brokered_contact_token_json_roundtrip ... ok
 test ac5_brokered_contact_token_opaque ... ok
 test ac5_coarse_location_no_street_address ... ok
 test ac5_coarse_location_json_roundtrip ... ok
@@ -59,19 +59,19 @@ test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; fini
 
 running 5 tests
 test ac6_lost_report_missing_optionals_default ... ok
-test ac6_provenance_json_roundtrip ... ok
 test ac6_pet_record_missing_optionals_use_defaults ... ok
-test ac6_lost_report_json_roundtrip ... ok
 test ac6_pet_record_json_roundtrip ... ok
+test ac6_provenance_json_roundtrip ... ok
+test ac6_lost_report_json_roundtrip ... ok
 
 test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 
      Running tests/acceptance_ac7.rs (/home/jsy/wintermute/homeward/target/debug/deps/acceptance_ac7-47413e5b548aeb14)
 
 running 5 tests
-test ac7_coarsened_location_json_roundtrip ... ok
-test ac7_precise_coord_stored_at_coarse_precision_2dp ... ok
 test ac7_none_coords_stay_none ... ok
+test ac7_precise_coord_stored_at_coarse_precision_2dp ... ok
+test ac7_coarsened_location_json_roundtrip ... ok
 test ac7_precision_0_stores_integer_degrees ... ok
 test ac7_precision_4_preserves_more_detail ... ok
 

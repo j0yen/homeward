@@ -1,0 +1,29 @@
+{
+  "schema": "autobuilder.evidence_pack.v1",
+  "intent_slug": "homeward-schema",
+  "iteration": 1,
+  "head_sha": "1cfa0ef3169bfa6a6f88499dd4f2c4e30463913c",
+  "hypothesis": "Scaffold homeward-schema lib crate with all 7 ACs",
+  "status": "advance",
+  "quality_score": 73,
+  "ac_passing_count": 7,
+  "ac_total_count": 7,
+  "gates": {
+    "cargo_check": "pass",
+    "cargo_clippy": "pass",
+    "cargo_test": "pass",
+    "cargo_deny": "pass",
+    "bad_rust_audit": "advisory_only",
+    "spec_drift": "clean"
+  },
+  "metrics": {
+    "acceptance_tests_passing_count": 7,
+    "acceptance_tests_total_count": 7,
+    "clippy_warning_count": 0,
+    "audit_blocking_count": 0,
+    "audit_advisory_count": 1,
+    "test_count_total": 33
+  },
+  "notes": "All 7 MUST ACs green. Cargo.lock at workspace root (audit false-positive for subdir). CI workflow has SHA-pinned actions. cargo-deny not installed locally (advisory only).",
+  "captured_at": "2026-06-05T01:02:42Z"
+}

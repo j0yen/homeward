@@ -1,0 +1,14 @@
+{
+  "schema": "spec-drift.v1",
+  "prd_path": "/home/jsy/wintermute/autobuilder/PRD-homeward-schema.md",
+  "head_sha": "1cfa0ef3169bfa6a6f88499dd4f2c4e30463913c",
+  "summary": {
+    "drift_count": 0,
+    "unavailable_count": 0,
+    "help_fails_count": 0,
+    "checked_count": 0
+  },
+  "tools": [],
+  "verdict": "clean",
+  "captured_at": "2026-06-05T01:02:30Z"
+}
