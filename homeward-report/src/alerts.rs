@@ -165,11 +165,10 @@ fn build_alert(
     now: DateTime<Utc>,
 ) -> MatchAlert {
     let shelter_area = candidate.record.location.as_ref().map(|loc| {
-        if let Some(ref state) = loc.state {
-            format!("{}, {}", loc.city_county, state)
-        } else {
-            loc.city_county.clone()
-        }
+        loc.state.as_ref().map_or_else(
+            || loc.city_county.clone(),
+            |state| format!("{}, {}", loc.city_county, state),
+        )
     });
 
     let source_url = None::<String>; // PhotoRef has no source_url field; link provided separately
@@ -203,7 +202,7 @@ fn build_alert(
     }
 }
 
-fn species_label(species: Species) -> &'static str {
+const fn species_label(species: Species) -> &'static str {
     match species {
         Species::Dog => "dog",
         Species::Cat => "cat",

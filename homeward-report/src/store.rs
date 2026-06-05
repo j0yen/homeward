@@ -24,7 +24,7 @@ pub enum SubmitError {
 /// Errors from store update operations.
 #[derive(Debug, Clone, PartialEq, Eq, Error)]
 pub enum StoreUpdateError {
-    /// No record found for the given report_id.
+    /// No record found for the given `report_id`.
     #[error("report not found: {0}")]
     NotFound(String),
 }
@@ -50,10 +50,11 @@ impl ReportStore {
     /// # Errors
     /// Returns [`SubmitError::Duplicate`] if `report_id` already exists.
     pub fn insert(&mut self, report: LostReport) -> Result<(), SubmitError> {
-        if self.records.contains_key(&report.report_id) {
-            return Err(SubmitError::Duplicate(report.report_id.clone()));
+        let id = report.report_id.clone();
+        if self.records.contains_key(&id) {
+            return Err(SubmitError::Duplicate(id));
         }
-        self.records.insert(report.report_id.clone(), report);
+        self.records.insert(id, report);
         Ok(())
     }
 
@@ -66,7 +67,7 @@ impl ReportStore {
     /// Update the status of an existing report.
     ///
     /// # Errors
-    /// Returns [`StoreUpdateError::NotFound`] if the report_id does not exist.
+    /// Returns [`StoreUpdateError::NotFound`] if the `report_id` does not exist.
     pub fn update_status(
         &mut self,
         report_id: &str,
@@ -84,7 +85,7 @@ impl ReportStore {
     /// Delete a report and purge all stored data immediately (CCPA AC4).
     ///
     /// # Errors
-    /// Returns [`StoreUpdateError::NotFound`] if the report_id does not exist.
+    /// Returns [`StoreUpdateError::NotFound`] if the `report_id` does not exist.
     pub fn delete(&mut self, report_id: &str) -> Result<(), StoreUpdateError> {
         self.records
             .remove(report_id)

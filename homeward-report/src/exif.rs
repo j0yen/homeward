@@ -17,10 +17,10 @@
 /// - Otherwise returns a new buffer with every APP1–APP15 marker removed.
 #[must_use]
 pub fn strip_exif(bytes: &[u8]) -> Vec<u8> {
-    // JPEG SOI marker
-    if bytes.len() < 2 || bytes[0] != 0xFF || bytes[1] != 0xD8 {
+    // JPEG SOI marker — need at least 2 bytes with 0xFF 0xD8.
+    let (Some(&0xFF), Some(&0xD8)) = (bytes.first(), bytes.get(1)) else {
         return bytes.to_vec();
-    }
+    };
 
     let mut out: Vec<u8> = Vec::with_capacity(bytes.len());
     // Write SOI
@@ -28,13 +28,14 @@ pub fn strip_exif(bytes: &[u8]) -> Vec<u8> {
 
     let mut pos = 2usize;
     while pos + 1 < bytes.len() {
-        // Each marker starts with 0xFF
-        if bytes[pos] != 0xFF {
-            // Not a valid marker; copy rest as-is and stop stripping
-            out.extend_from_slice(&bytes[pos..]);
+        // Each marker starts with 0xFF — use get() to avoid indexing lint.
+        let (Some(&0xFF), Some(&marker_type)) = (bytes.get(pos), bytes.get(pos + 1)) else {
+            // Not a valid marker byte; copy rest as-is and stop stripping.
+            if let Some(rest) = bytes.get(pos..) {
+                out.extend_from_slice(rest);
+            }
             break;
-        }
-        let marker_type = bytes[pos + 1];
+        };
 
         // Stand-alone markers (no length field): SOI, EOI, RST0-RST7, TEM
         let standalone = matches!(marker_type, 0xD8 | 0xD9 | 0xD0..=0xD7 | 0x01);
@@ -51,12 +52,14 @@ pub fn strip_exif(bytes: &[u8]) -> Vec<u8> {
 
         // All other markers have a 2-byte length field (inclusive of itself,
         // exclusive of the 0xFF marker byte).
-        if pos + 3 >= bytes.len() {
+        let (Some(&len_hi), Some(&len_lo)) = (bytes.get(pos + 2), bytes.get(pos + 3)) else {
             // Truncated — copy what's left
-            out.extend_from_slice(&bytes[pos..]);
+            if let Some(rest) = bytes.get(pos..) {
+                out.extend_from_slice(rest);
+            }
             break;
-        }
-        let seg_len = u16::from_be_bytes([bytes[pos + 2], bytes[pos + 3]]) as usize;
+        };
+        let seg_len = usize::from(u16::from_be_bytes([len_hi, len_lo]));
         let seg_end = pos + 2 + seg_len; // pos+2 is the length field start
 
         // APP markers: 0xFFE0 (APP0/JFIF) is kept; APP1–APP15 are dropped.
@@ -65,7 +68,9 @@ pub fn strip_exif(bytes: &[u8]) -> Vec<u8> {
 
         if keep {
             let end = seg_end.min(bytes.len());
-            out.extend_from_slice(&bytes[pos..end]);
+            if let Some(seg) = bytes.get(pos..end) {
+                out.extend_from_slice(seg);
+            }
         }
         // Advance past marker + segment
         pos = seg_end.min(bytes.len());
