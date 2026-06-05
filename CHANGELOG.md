@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.4.0 — 2026-06-05
+
+Adds homeward-ingest: sqlite-backed canonical store, AIMD-cadence multi-connector
+orchestrator, source_animal_id dedup, two-strikes + TTL departure detection,
+IngestEvent bus interface, and homeward-ingestd CLI (run/stats/get). All 7 ACs
+green (21 unit tests).
+
 ## v0.3.0 — 2026-06-05
 
 Add `homeward-report` crate: owner-side lost-pet reports with EXIF stripping,
