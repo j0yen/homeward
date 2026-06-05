@@ -1,0 +1,77 @@
+{
+  "data": [
+    {
+      "id": "rg-dog-1",
+      "type": "animals",
+      "attributes": {
+        "species": "Dog",
+        "sex": "male",
+        "ageString": "adult",
+        "sizeDescription": "large",
+        "name": "Buddy",
+        "breedString": "Labrador Retriever",
+        "primaryBreed": "Labrador Retriever",
+        "secondaryBreed": null,
+        "colors": ["black", "white"],
+        "description": "A friendly lab",
+        "updatedDate": "2024-01-15T10:00:00Z",
+        "pubDate": "2024-01-10T08:00:00Z",
+        "statusCode": "available",
+        "foundLocation": null,
+        "chipStatus": null
+      },
+      "relationships": {
+        "pictures": {
+          "data": [
+            {
+              "id": "pic-1",
+              "type": "pictures",
+              "attributes": {
+                "urlFull": "https://example.com/photos/buddy.jpg",
+                "isPrimary": true
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "rg-cat-1",
+      "type": "animals",
+      "attributes": {
+        "species": "Cat",
+        "sex": "spayed female",
+        "ageString": "young",
+        "sizeDescription": "small",
+        "name": "Mittens",
+        "breedString": "Domestic Shorthair",
+        "primaryBreed": "Domestic Shorthair",
+        "secondaryBreed": null,
+        "colors": ["orange"],
+        "description": "A playful cat",
+        "updatedDate": "2024-01-15T09:00:00Z",
+        "pubDate": "2024-01-10T07:00:00Z",
+        "statusCode": "available",
+        "foundLocation": null,
+        "chipStatus": "Scanned - Chip Present"
+      },
+      "relationships": {
+        "pictures": {
+          "data": [
+            {
+              "id": "pic-2",
+              "type": "pictures",
+              "attributes": {
+                "urlFull": "https://example.com/photos/mittens.jpg",
+                "isPrimary": true
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "meta": {
+    "totalRecords": 2
+  }
+}

@@ -1,0 +1,22 @@
+[
+  {
+    "animal_id": "A123456",
+    "animal_type": "Dog",
+    "intake_type": "STRAY",
+    "found_location": "500 W Martin Luther King Jr Blvd",
+    "datetime": "2024-01-15T10:00:00.000",
+    "breed": "Labrador Mix",
+    "name": "Lucky",
+    "color": "Brown/White"
+  },
+  {
+    "animal_id": "A123457",
+    "animal_type": "Cat",
+    "intake_type": "STRAY",
+    "found_location": "1200 N Lamar Blvd",
+    "datetime": "2024-01-14T14:30:00.000",
+    "breed": "Domestic Shorthair",
+    "name": "Shadow",
+    "color": "Black"
+  }
+]
