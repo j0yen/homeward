@@ -2,7 +2,7 @@
 //!
 //! One row per `canonical_id`; a companion `sources` table links each
 //! canonical record to its contributing source records (preserving all
-//! source URLs and ETags).  Cursors for each source are stored in the
+//! source URLs and `ETags`).  Cursors for each source are stored in the
 //! `source_cursors` table so restarts resume from the last watermark.
 //!
 //! All mutations go through transactions so a crash leaves the DB consistent.
@@ -140,7 +140,7 @@ impl Store {
         let species = format!("{:?}", record.species).to_lowercase();
         let avail = format!("{:?}", record.availability).to_lowercase();
         let last_seen = record.last_seen.to_rfc3339();
-        let last_confirmed = record.last_confirmed.as_ref().map(|d| d.to_rfc3339());
+        let last_confirmed = record.last_confirmed.as_ref().map(chrono::DateTime::to_rfc3339);
         let now = Utc::now().to_rfc3339();
 
         let tx = self.conn.transaction()?;
@@ -178,7 +178,7 @@ impl Store {
     /// # Errors
     /// Returns [`StoreError::NotFound`] if the id is absent; other errors on
     /// sqlite/json failures.
-    pub fn get(&self, id: &Ulid) -> Result<PetRecord, StoreError> {
+    pub fn get(&self, id: Ulid) -> Result<PetRecord, StoreError> {
         let json: Option<String> = self
             .conn
             .query_row(
@@ -187,7 +187,7 @@ impl Store {
                 |row| row.get(0),
             )
             .optional()?;
-        let json = json.ok_or(StoreError::NotFound(*id))?;
+        let json = json.ok_or(StoreError::NotFound(id))?;
         let record = serde_json::from_str(&json)?;
         Ok(record)
     }
@@ -197,7 +197,7 @@ impl Store {
     /// # Errors
     /// Returns [`StoreError::NotFound`] if the id is absent; other errors on
     /// sqlite/json failures.
-    pub fn mark_departed(&mut self, id: &Ulid, outcome_date: DateTime<Utc>) -> Result<(), StoreError> {
+    pub fn mark_departed(&mut self, id: Ulid, outcome_date: DateTime<Utc>) -> Result<(), StoreError> {
         let mut record = self.get(id)?;
         record.availability = Availability::Departed;
         record.outcome_date = Some(outcome_date);
@@ -206,7 +206,7 @@ impl Store {
 
     /// Delete all records belonging to a given org/source name.
     ///
-    /// Models the 1-business-day ToS SLA for "delete org X" requests.
+    /// Models the 1-business-day `ToS` SLA for "delete org X" requests.
     ///
     /// # Errors
     /// Propagates [`StoreError::Sqlite`] on sqlite errors.
@@ -243,7 +243,7 @@ impl Store {
     ///
     /// # Errors
     /// Propagates [`StoreError::Sqlite`] on sqlite errors.
-    pub fn save_cursor(&mut self, cursor: &SourceCursor) -> Result<(), StoreError> {
+    pub fn save_cursor(&self, cursor: &SourceCursor) -> Result<(), StoreError> {
         self.conn.execute(
             "INSERT INTO source_cursors (source_name, cursor_json, updated_at)
              VALUES (?1, ?2, ?3)
@@ -274,8 +274,7 @@ impl Store {
             .optional()?;
         Ok(row.map(|(cursor_json, updated_at_str)| {
             let updated_at = DateTime::parse_from_rfc3339(&updated_at_str)
-                .map(|d| d.with_timezone(&Utc))
-                .unwrap_or_else(|_| Utc::now());
+                .map_or_else(|_| Utc::now(), |d| d.with_timezone(&Utc));
             SourceCursor {
                 source_name: source_name.to_owned(),
                 cursor_json,
@@ -315,7 +314,7 @@ impl Store {
                    )",
             )?;
             let seen_json =
-                serde_json::to_string(&seen_ids.iter().map(|u| u.to_string()).collect::<Vec<_>>())?;
+                serde_json::to_string(&seen_ids.iter().map(Ulid::to_string).collect::<Vec<_>>())?;
             stmt.execute(params![source_name, seen_json])?;
         }
 
@@ -346,7 +345,7 @@ impl Store {
     ///
     /// # Errors
     /// Propagates [`StoreError::Sqlite`] on sqlite errors.
-    pub fn reset_absent(&mut self, canonical_id: &Ulid, source_name: &str) -> Result<(), StoreError> {
+    pub fn reset_absent(&self, canonical_id: Ulid, source_name: &str) -> Result<(), StoreError> {
         self.conn.execute(
             "UPDATE source_links SET absent_count = 0 WHERE canonical_id = ?1 AND source_name = ?2",
             params![canonical_id.to_string(), source_name],
@@ -379,7 +378,7 @@ impl Store {
 
         let now = Utc::now();
         for id in &ids {
-            self.mark_departed(id, now)?;
+            self.mark_departed(*id, now)?;
         }
         Ok(ids)
     }
@@ -395,60 +394,31 @@ impl Store {
         let h1 = (now - chrono::Duration::hours(1)).to_rfc3339();
         let h24 = (now - chrono::Duration::hours(24)).to_rfc3339();
 
-        let mut s = IngestStats::default();
-        s.total = self
-            .conn
-            .query_row("SELECT COUNT(*) FROM canonical_records", [], |r| r.get::<_, i64>(0))
-            .map(|n| u64::try_from(n).unwrap_or(0))?;
-        s.dogs = self
-            .conn
-            .query_row(
-                "SELECT COUNT(*) FROM canonical_records WHERE species = 'dog'",
-                [],
-                |r| r.get::<_, i64>(0),
-            )
-            .map(|n| u64::try_from(n).unwrap_or(0))?;
-        s.cats = self
-            .conn
-            .query_row(
-                "SELECT COUNT(*) FROM canonical_records WHERE species = 'cat'",
-                [],
-                |r| r.get::<_, i64>(0),
-            )
-            .map(|n| u64::try_from(n).unwrap_or(0))?;
-        s.departed = self
-            .conn
-            .query_row(
-                "SELECT COUNT(*) FROM canonical_records WHERE availability = 'departed'",
-                [],
-                |r| r.get::<_, i64>(0),
-            )
-            .map(|n| u64::try_from(n).unwrap_or(0))?;
-        s.fresh_1h = self
-            .conn
-            .query_row(
-                "SELECT COUNT(*) FROM canonical_records WHERE last_confirmed >= ?1",
-                params![h1],
-                |r| r.get::<_, i64>(0),
-            )
-            .map(|n| u64::try_from(n).unwrap_or(0))?;
-        s.fresh_24h = self
-            .conn
-            .query_row(
-                "SELECT COUNT(*) FROM canonical_records WHERE last_confirmed >= ?1",
-                params![h24],
-                |r| r.get::<_, i64>(0),
-            )
-            .map(|n| u64::try_from(n).unwrap_or(0))?;
-        s.stale = self
-            .conn
-            .query_row(
-                "SELECT COUNT(*) FROM canonical_records
+        let count = |sql: &str| -> Result<u64, StoreError> {
+            self.conn
+                .query_row(sql, [], |r| r.get::<_, i64>(0))
+                .map(|n| u64::try_from(n).unwrap_or(0))
+                .map_err(StoreError::from)
+        };
+        let count_p = |sql: &str, p: &str| -> Result<u64, StoreError> {
+            self.conn
+                .query_row(sql, params![p], |r| r.get::<_, i64>(0))
+                .map(|n| u64::try_from(n).unwrap_or(0))
+                .map_err(StoreError::from)
+        };
+        let s = IngestStats {
+            total:     count("SELECT COUNT(*) FROM canonical_records")?,
+            dogs:      count("SELECT COUNT(*) FROM canonical_records WHERE species = 'dog'")?,
+            cats:      count("SELECT COUNT(*) FROM canonical_records WHERE species = 'cat'")?,
+            departed:  count("SELECT COUNT(*) FROM canonical_records WHERE availability = 'departed'")?,
+            fresh_1h:  count_p("SELECT COUNT(*) FROM canonical_records WHERE last_confirmed >= ?1", &h1)?,
+            fresh_24h: count_p("SELECT COUNT(*) FROM canonical_records WHERE last_confirmed >= ?1", &h24)?,
+            stale:     count_p(
+                "SELECT COUNT(*) FROM canonical_records \
                  WHERE availability != 'departed' AND (last_confirmed IS NULL OR last_confirmed < ?1)",
-                params![h24],
-                |r| r.get::<_, i64>(0),
-            )
-            .map(|n| u64::try_from(n).unwrap_or(0))?;
+                &h24,
+            )?,
+        };
         Ok(s)
     }
 
@@ -616,7 +586,7 @@ mod tests {
         }
         {
             let store = Store::open(&db_path).expect("reopen");
-            let loaded = store.get(&id).expect("get after reopen");
+            let loaded = store.get(id).expect("get after reopen");
             assert_eq!(loaded.canonical_id, id, "record must survive reopen");
         }
     }
@@ -634,7 +604,7 @@ mod tests {
         rec.last_seen = t2;
         store.upsert(&rec).expect("second upsert");
 
-        let loaded = store.get(&rec.canonical_id).expect("get");
+        let loaded = store.get(rec.canonical_id).expect("get");
         assert!(
             loaded.last_seen >= t1,
             "last_seen must advance on re-observation"
@@ -657,7 +627,7 @@ mod tests {
         // delete; here we verify the store rejects re-insertion of the same org.)
         // After deletion the record is gone.
         assert!(
-            store.get(&id).is_err(),
+            store.get(id).is_err(),
             "deleted record must not be findable after delete_org"
         );
     }

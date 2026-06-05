@@ -32,12 +32,12 @@ struct ConnectorState {
     max_interval: Duration,
     /// Factor applied on a no-change poll.
     backoff_factor: f64,
-    /// Records-returned threshold that resets to cadence_floor.
+    /// Records-returned threshold that resets to `cadence_floor`.
     churn_threshold: usize,
 }
 
 impl ConnectorState {
-    fn new(name: String, cadence_hint: Duration) -> Self {
+    const fn new(name: String, cadence_hint: Duration) -> Self {
         Self {
             name,
             interval: cadence_hint,
@@ -49,6 +49,7 @@ impl ConnectorState {
     }
 
     /// Adjust the interval based on poll result size (AIMD).
+    #[allow(clippy::float_arithmetic)]
     fn adapt(&mut self, returned: usize) {
         if returned == 0 {
             // Additive increase toward max.
@@ -155,18 +156,18 @@ impl<S: EventSink> Orchestrator<S> {
 
                 for record in records {
                     let resolved = resolve(&store, record).map_err(OrchestratorError::Store)?;
-                    let is_new = store.get(&resolved.canonical_id).is_err();
+                    let is_new = store.get(resolved.canonical_id).is_err();
                     let is_departed = is_explicitly_departed(&resolved);
 
                     seen_ids.push(resolved.canonical_id);
                     store.upsert(&resolved).map_err(OrchestratorError::Store)?;
 
                     let kind = if is_departed {
-                        EventKind::IntakeDeparted
+                        EventKind::Departed
                     } else if is_new {
-                        EventKind::IntakeNew
+                        EventKind::New
                     } else {
-                        EventKind::IntakeUpdated
+                        EventKind::Updated
                     };
                     self.sink.publish(IngestEvent::new(kind, resolved));
                 }
@@ -181,9 +182,9 @@ impl<S: EventSink> Orchestrator<S> {
                 .map_err(OrchestratorError::Store)?;
 
                 for id in departed_ids {
-                    if let Ok(record) = store.get(&id) {
+                    if let Ok(record) = store.get(id) {
                         self.sink
-                            .publish(IngestEvent::new(EventKind::IntakeDeparted, record));
+                            .publish(IngestEvent::new(EventKind::Departed, record));
                     }
                 }
             }
@@ -192,7 +193,7 @@ impl<S: EventSink> Orchestrator<S> {
             {
                 let cursor_json = serde_json::to_string(&Cursor::Timestamp(chrono::Utc::now()))
                     .unwrap_or_default();
-                let mut store = self.store.lock().await;
+                let store = self.store.lock().await;
                 store
                     .save_cursor(&SourceCursor {
                         source_name: source_name.clone(),

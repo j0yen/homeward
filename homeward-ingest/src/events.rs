@@ -26,11 +26,11 @@ pub struct IngestEvent {
 #[serde(rename_all = "snake_case")]
 pub enum EventKind {
     /// A previously-unseen animal entered the store.
-    IntakeNew,
+    New,
     /// An existing animal's fields were updated.
-    IntakeUpdated,
+    Updated,
     /// An animal was marked departed (adopted, returned, etc.).
-    IntakeDeparted,
+    Departed,
 }
 
 impl IngestEvent {
