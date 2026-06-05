@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.7.0 — 2026-06-05
+
+Freshness engine: sqlite-backed canonical store, AIMD-cadence orchestrator, entity-resolution dedup, two-strikes departure detection, TTL expiry, and delete-org ToS hook — all clippy gates green, 21 tests passing.
+
 ## v0.6.0 — 2026-06-05
 
 Fix all clippy pedantic+nursery warnings in homeward-report; all 28 tests pass
