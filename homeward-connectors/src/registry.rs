@@ -30,7 +30,7 @@ impl ConnectorRegistry {
     pub fn get(&self, name: &str) -> Result<&dyn Connector, ConnectorError> {
         self.connectors
             .get(name)
-            .map(|b| b.as_ref())
+            .map(std::convert::AsRef::as_ref)
             .ok_or_else(|| ConnectorError::UnknownConnector(name.to_owned()))
     }
 

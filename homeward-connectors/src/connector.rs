@@ -18,7 +18,7 @@ use crate::error::ConnectorError;
 pub enum Cursor {
     /// Timestamp-based cursor (ISO 8601).
     Timestamp(DateTime<Utc>),
-    /// Opaque string cursor (e.g. a page token or ETag).
+    /// Opaque string cursor (e.g. a page token or `ETag`).
     Opaque(String),
 }
 

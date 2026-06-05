@@ -107,7 +107,7 @@ impl PoliteClient {
     pub async fn check_robots(&self, url: &Url) -> Result<(), ConnectorError> {
         let host = url
             .host_str()
-            .map(|h| h.to_owned())
+            .map(std::borrow::ToOwned::to_owned)
             .unwrap_or_default();
         let robots_url = format!(
             "{}://{}/robots.txt",
@@ -117,14 +117,13 @@ impl PoliteClient {
 
         let robots_text = {
             let mut cache = self.robots_cache.lock().await;
-            if let Some(entry) = cache.get(&host) {
-                if entry.cached_at.elapsed() < ROBOTS_TTL {
-                    Some(entry.text.clone())
-                } else {
-                    cache.remove(&host);
-                    None
-                }
+            let fresh = cache
+                .get(&host)
+                .is_some_and(|entry| entry.cached_at.elapsed() < ROBOTS_TTL);
+            if fresh {
+                cache.get(&host).map(|entry| entry.text.clone())
             } else {
+                cache.remove(&host);
                 None
             }
         };
@@ -173,8 +172,7 @@ impl PoliteClient {
             let state = self.rate_state.lock().await;
             state
                 .get(host)
-                .map(|s| s.next_allowed)
-                .unwrap_or(now)
+                .map_or(now, |s| s.next_allowed)
         };
         if next_allowed > now {
             let wait = next_allowed - now;
@@ -290,13 +288,13 @@ impl PoliteClient {
         }
     }
 
-    /// Extract ETag from a response, if present.
+    /// Extract `ETag` from a response, if present.
     #[must_use]
     pub fn extract_etag(resp: &Response) -> Option<String> {
         resp.headers()
             .get(ETAG)
             .and_then(|v| v.to_str().ok())
-            .map(|s| s.to_owned())
+            .map(std::borrow::ToOwned::to_owned)
     }
 
     /// Extract Last-Modified from a response, if present.
@@ -305,13 +303,13 @@ impl PoliteClient {
         resp.headers()
             .get(LAST_MODIFIED)
             .and_then(|v| v.to_str().ok())
-            .map(|s| s.to_owned())
+            .map(std::borrow::ToOwned::to_owned)
     }
 
     /// Return a reference to the inner [`reqwest::Client`] for connectors that
     /// need to build custom request builders.
     #[must_use]
-    pub fn inner(&self) -> &Client {
+    pub const fn inner(&self) -> &Client {
         &self.inner
     }
 }

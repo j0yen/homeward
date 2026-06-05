@@ -6,6 +6,8 @@
 
 #![allow(clippy::print_stdout)]
 #![allow(clippy::print_stderr)]
+// CLI argument indexing is guarded by explicit length checks before each access.
+#![allow(clippy::indexing_slicing)]
 
 use std::process;
 
@@ -82,88 +84,94 @@ async fn handle_connectors(args: &[String]) {
                 println!("{name}");
             }
         }
-        "poll" => {
-            if args.len() < 2 {
-                eprintln!("Usage: homeward connectors poll <name> [--since <ts>] [--limit <n>]");
-                process::exit(1);
-            }
-            let name = &args[1];
-            let mut since: Option<Cursor> = None;
-            let mut limit: Option<usize> = None;
-            let mut i = 2;
-            while i < args.len() {
-                match args[i].as_str() {
-                    "--since" => {
-                        i += 1;
-                        if i >= args.len() {
-                            eprintln!("--since requires a value");
-                            process::exit(1);
-                        }
-                        match DateTime::parse_from_rfc3339(&args[i]) {
-                            Ok(dt) => {
-                                since = Some(Cursor::Timestamp(dt.with_timezone(&chrono::Utc)));
-                            }
-                            Err(e) => {
-                                eprintln!("invalid --since timestamp: {e}");
-                                process::exit(1);
-                            }
-                        }
-                    }
-                    "--limit" => {
-                        i += 1;
-                        if i >= args.len() {
-                            eprintln!("--limit requires a value");
-                            process::exit(1);
-                        }
-                        match args[i].parse::<usize>() {
-                            Ok(n) => limit = Some(n),
-                            Err(e) => {
-                                eprintln!("invalid --limit value: {e}");
-                                process::exit(1);
-                            }
-                        }
-                    }
-                    other => {
-                        eprintln!("unknown argument: {other:?}");
-                        process::exit(1);
-                    }
-                }
-                i += 1;
-            }
-
-            let registry = build_registry();
-            let connector = match registry.get(name) {
-                Ok(c) => c,
-                Err(e) => {
-                    eprintln!("{e}");
-                    process::exit(1);
-                }
-            };
-
-            let mut records = match connector.poll(since).await {
-                Ok(r) => r,
-                Err(e) => {
-                    eprintln!("poll error: {e}");
-                    process::exit(1);
-                }
-            };
-
-            if let Some(n) = limit {
-                records.truncate(n);
-            }
-
-            for rec in &records {
-                match serde_json::to_string(rec) {
-                    Ok(json) => println!("{json}"),
-                    Err(e) => eprintln!("serialization error: {e}"),
-                }
-            }
-
-            eprintln!("polled {} records from {name}", records.len());
-        }
+        "poll" => handle_poll(args).await,
         other => {
             eprintln!("unknown connectors subcommand: {other:?}");
             process::exit(1);
         }
     }
+}
+
+/// Parse `--since`/`--limit` flags from `poll` arguments.
+fn parse_poll_flags(args: &[String]) -> (Option<Cursor>, Option<usize>) {
+    let mut since: Option<Cursor> = None;
+    let mut limit: Option<usize> = None;
+    let mut i = 2;
+    while i < args.len() {
+        match args[i].as_str() {
+            "--since" => {
+                i += 1;
+                if i >= args.len() {
+                    eprintln!("--since requires a value");
+                    process::exit(1);
+                }
+                match DateTime::parse_from_rfc3339(&args[i]) {
+                    Ok(dt) => since = Some(Cursor::Timestamp(dt.with_timezone(&chrono::Utc))),
+                    Err(e) => {
+                        eprintln!("invalid --since timestamp: {e}");
+                        process::exit(1);
+                    }
+                }
+            }
+            "--limit" => {
+                i += 1;
+                if i >= args.len() {
+                    eprintln!("--limit requires a value");
+                    process::exit(1);
+                }
+                match args[i].parse::<usize>() {
+                    Ok(n) => limit = Some(n),
+                    Err(e) => {
+                        eprintln!("invalid --limit value: {e}");
+                        process::exit(1);
+                    }
+                }
+            }
+            other => {
+                eprintln!("unknown argument: {other:?}");
+                process::exit(1);
+            }
+        }
+        i += 1;
+    }
+    (since, limit)
+}
+
+async fn handle_poll(args: &[String]) {
+    if args.len() < 2 {
+        eprintln!("Usage: homeward connectors poll <name> [--since <ts>] [--limit <n>]");
+        process::exit(1);
+    }
+    let name = &args[1];
+    let (since, limit) = parse_poll_flags(args);
+
+    let registry = build_registry();
+    let connector = match registry.get(name) {
+        Ok(c) => c,
+        Err(e) => {
+            eprintln!("{e}");
+            process::exit(1);
+        }
+    };
+
+    let mut records = match connector.poll(since).await {
+        Ok(r) => r,
+        Err(e) => {
+            eprintln!("poll error: {e}");
+            process::exit(1);
+        }
+    };
+
+    if let Some(n) = limit {
+        records.truncate(n);
+    }
+
+    for rec in &records {
+        match serde_json::to_string(rec) {
+            Ok(json) => println!("{json}"),
+            Err(e) => eprintln!("serialization error: {e}"),
+        }
+    }
+
+    eprintln!("polled {} records from {name}", records.len());
 }

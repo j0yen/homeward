@@ -7,7 +7,7 @@
 //! Delta polling uses `$where=:updated_at > 'ts'`. No photos — we store the
 //! shelter page URL in `found_location_text`.
 //!
-//! ToS notes:
+//! `ToS` notes:
 //! - Free open-data, app token lifts throttling
 //! - Provenance class: open-data
 
@@ -77,7 +77,7 @@ pub struct SocrataConfig {
 impl SocrataConfig {
     /// Austin Animal Center Intakes — `fdzn-9yqv`.
     #[must_use]
-    pub fn austin() -> Self {
+    pub const fn austin() -> Self {
         Self {
             domain: "data.austintexas.gov",
             dataset_id: "fdzn-9yqv",
@@ -101,7 +101,7 @@ impl SocrataConfig {
 
     /// Dallas Animal Services — `qgg6-h4bd`.
     #[must_use]
-    pub fn dallas() -> Self {
+    pub const fn dallas() -> Self {
         Self {
             domain: "www.dallasopendata.com",
             dataset_id: "qgg6-h4bd",
@@ -125,7 +125,7 @@ impl SocrataConfig {
 
     /// Sonoma County Animal Services — `924a-vesw`.
     #[must_use]
-    pub fn sonoma() -> Self {
+    pub const fn sonoma() -> Self {
         Self {
             domain: "data.sonomacounty.ca.gov",
             dataset_id: "924a-vesw",
@@ -149,7 +149,7 @@ impl SocrataConfig {
 
     /// Long Beach Animal Care Services.
     #[must_use]
-    pub fn long_beach() -> Self {
+    pub const fn long_beach() -> Self {
         Self {
             domain: "data.longbeach.gov",
             dataset_id: "d9np-nk5h",
@@ -190,7 +190,7 @@ impl SocrataConnector {
 
     /// Create a connector with a custom client (for tests).
     #[must_use]
-    pub fn with_client(config: SocrataConfig, client: PoliteClient) -> Self {
+    pub const fn with_client(config: SocrataConfig, client: PoliteClient) -> Self {
         Self { config, client }
     }
 
@@ -258,7 +258,7 @@ impl Connector for SocrataConnector {
             }
 
             let rows: Vec<serde_json::Value> = resp.json().await?;
-            let batch_len = rows.len() as u64;
+            let batch_len = u64::try_from(rows.len()).unwrap_or(u64::MAX);
 
             for row in rows {
                 match normalize_socrata_row(&row, &self.config) {
@@ -306,7 +306,7 @@ fn normalize_socrata_row(
 
     let get = |key: &str| -> Option<&str> { row.get(key).and_then(|v| v.as_str()) };
 
-    let animal_id = get(cm.animal_id).map(|s| s.to_owned());
+    let animal_id = get(cm.animal_id).map(std::borrow::ToOwned::to_owned);
 
     let animal_type_str = get(cm.animal_type).unwrap_or("unknown");
     let species = parse_socrata_species(animal_type_str)?;
@@ -318,28 +318,27 @@ fn normalize_socrata_row(
 
     let chip_status = cm
         .chip_status
-        .and_then(|col| get(col))
-        .map(parse_socrata_chip_status)
-        .unwrap_or(ChipStatus::Unknown);
+        .and_then(get)
+        .map_or(ChipStatus::Unknown, parse_socrata_chip_status);
 
-    let found_location_text = cm.found_location.and_then(|col| get(col)).map(str::to_owned);
+    let found_location_text = cm.found_location.and_then(get).map(str::to_owned);
 
     let intake_date = cm
         .intake_date
-        .and_then(|col| get(col))
-        .and_then(|s| parse_soda_datetime(s));
+        .and_then(get)
+        .and_then(parse_soda_datetime);
 
     let outcome_date = cm
         .outcome_date
-        .and_then(|col| get(col))
-        .and_then(|s| parse_soda_datetime(s));
+        .and_then(get)
+        .and_then(parse_soda_datetime);
 
     let now = Utc::now();
     let last_seen = intake_date.unwrap_or(now);
     let first_seen = last_seen;
 
-    let breed_primary = cm.breed.and_then(|col| get(col)).map(str::to_owned);
-    let color = cm.color.and_then(|col| get(col)).map(str::to_owned);
+    let breed_primary = cm.breed.and_then(get).map(str::to_owned);
+    let color = cm.color.and_then(get).map(str::to_owned);
 
     Ok(PetRecord {
         canonical_id: Ulid::new(),
@@ -386,7 +385,7 @@ fn parse_socrata_intake_type(s: &str) -> IntakeType {
     }
 }
 
-/// Determine availability from outcome_date / kennel_status columns.
+/// Determine availability from `outcome_date` / `kennel_status` columns.
 fn determine_availability(
     row: &serde_json::Value,
     cm: &SocrataColumnMap,

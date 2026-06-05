@@ -4,9 +4,9 @@
 //! to fetch adoptable animals. Paginates through JSON:API v5 responses and
 //! normalizes each record into a [`PetRecord`].
 //!
-//! ToS notes:
+//! `ToS` notes:
 //! - API key in `Authorization` header
-//! - Cache static lookups (breeds/species) — the ToS requires it
+//! - Cache static lookups (breeds/species) — the `ToS` requires it
 //! - Images are hotlinked only (never downloaded)
 
 use std::time::Duration;
@@ -30,13 +30,13 @@ use crate::{
     http::{HOMEWARD_USER_AGENT, PoliteClient},
 };
 
-/// Base URL for the RescueGroups JSON:API v5.
+/// Base URL for the `RescueGroups` JSON:API v5.
 const BASE_URL: &str = "https://api.rescuegroups.org/v5";
 
 /// Default page size for paging through results.
 const PAGE_SIZE: u64 = 250;
 
-/// Configuration for the RescueGroups connector.
+/// Configuration for the `RescueGroups` connector.
 #[derive(Debug, Clone)]
 pub struct RescueGroupsConfig {
     /// API key (from env `RESCUEGROUPS_API_KEY`).
@@ -79,11 +79,11 @@ impl RescueGroupsConnector {
 
     /// Create a connector with a custom [`PoliteClient`] (for tests).
     #[must_use]
-    pub fn with_client(config: RescueGroupsConfig, client: PoliteClient) -> Self {
+    pub const fn with_client(config: RescueGroupsConfig, client: PoliteClient) -> Self {
         Self { config, client }
     }
 
-    /// Fetch one page of animals from the RescueGroups API.
+    /// Fetch one page of animals from the `RescueGroups` API.
     async fn fetch_page(
         &self,
         offset: u64,
@@ -137,8 +137,7 @@ impl Connector for RescueGroupsConnector {
     async fn poll(&self, since: Option<Cursor>) -> Result<Vec<PetRecord>, ConnectorError> {
         let since_ts = match &since {
             Some(Cursor::Timestamp(ts)) => Some(*ts),
-            Some(Cursor::Opaque(_)) => None,
-            None => None,
+            Some(Cursor::Opaque(_)) | None => None,
         };
 
         let mut records = Vec::new();
@@ -147,7 +146,7 @@ impl Connector for RescueGroupsConnector {
         loop {
             let page = self.fetch_page(offset, since_ts.as_ref()).await?;
             let total = page.meta.total;
-            let batch_len = page.data.len() as u64;
+            let batch_len = u64::try_from(page.data.len()).unwrap_or(u64::MAX);
 
             for item in page.data {
                 match normalize_rg_record(item, &self.config) {
@@ -212,7 +211,7 @@ struct RgAttributes {
     sex: Option<String>,
     age_string: Option<String>,
     size_description: Option<String>,
-    /// Animal's name at shelter (not mapped to PetRecord yet).
+    /// Animal's name at shelter (not mapped to `PetRecord` yet).
     #[allow(dead_code)]
     name: Option<String>,
     #[serde(rename = "breedString")]
@@ -225,7 +224,7 @@ struct RgAttributes {
     description: Option<String>,
     #[serde(rename = "updatedDate")]
     updated_date: Option<String>,
-    /// Status code from RescueGroups (not normalized yet).
+    /// Status code from `RescueGroups` (not normalized yet).
     #[allow(dead_code)]
     #[serde(rename = "statusCode")]
     status_code: Option<String>,
@@ -286,15 +285,13 @@ fn normalize_rg_record(
         .updated_date
         .as_deref()
         .and_then(|s| DateTime::parse_from_rfc3339(s).ok())
-        .map(|dt| dt.with_timezone(&Utc))
-        .unwrap_or(now);
+        .map_or(now, |dt| dt.with_timezone(&Utc));
 
     let first_seen = attr
         .pub_date
         .as_deref()
         .and_then(|s| DateTime::parse_from_rfc3339(s).ok())
-        .map(|dt| dt.with_timezone(&Utc))
-        .unwrap_or(last_seen);
+        .map_or(last_seen, |dt| dt.with_timezone(&Utc));
 
     let sex = attr.sex.as_deref().map(parse_sex);
     let age_bucket = attr.age_string.as_deref().map(parse_age);
@@ -309,8 +306,7 @@ fn normalize_rg_record(
     let chip_status = attr
         .chip_status
         .as_deref()
-        .map(parse_chip_status)
-        .unwrap_or(ChipStatus::Unknown);
+        .map_or(ChipStatus::Unknown, parse_chip_status);
 
     let photos: Vec<PhotoRef> = animal
         .relationships

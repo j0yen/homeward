@@ -1,7 +1,7 @@
 //! `homeward-connectors` — source connectors for the homeward fleet.
 //!
 //! This crate provides:
-//! - The [`Connector`] async trait (poll, provenance, cadence_hint)
+//! - The [`Connector`] async trait (poll, provenance, `cadence_hint`)
 //! - A polite HTTP core (conditional requests, rate limiting, robots.txt)
 //! - [`RescueGroupsConnector`] — JSON:API v5 paging from RescueGroups.org
 //! - [`SocrataConnector`] — generic SODA client pre-configured for Austin,
