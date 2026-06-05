@@ -1,5 +1,5 @@
 [workspace]
-members = ["homeward-schema"]
+members = ["homeward-schema", "homeward-connectors"]
 resolver = "2"
 
 [workspace.package]

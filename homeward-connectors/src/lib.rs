@@ -1,0 +1,21 @@
+//! `homeward-connectors` — source connectors for the homeward fleet.
+//!
+//! This crate provides:
+//! - The [`Connector`] async trait (poll, provenance, cadence_hint)
+//! - A polite HTTP core (conditional requests, rate limiting, robots.txt)
+//! - [`RescueGroupsConnector`] — JSON:API v5 paging from RescueGroups.org
+//! - [`SocrataConnector`] — generic SODA client pre-configured for Austin,
+//!   Dallas, Sonoma, and Long Beach municipal shelter datasets
+//! - [`ConnectorRegistry`] for looking up connectors by name
+
+pub mod connector;
+pub mod connectors;
+pub mod error;
+pub mod http;
+pub mod registry;
+
+pub use connector::{Connector, Cursor};
+pub use connectors::rescuegroups::RescueGroupsConnector;
+pub use connectors::socrata::{SocrataColumnMap, SocrataConfig, SocrataConnector};
+pub use error::ConnectorError;
+pub use registry::ConnectorRegistry;
