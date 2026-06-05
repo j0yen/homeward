@@ -28,10 +28,13 @@ fn main() {
         process::exit(1);
     }
 
-    match args[1].as_str() {
-        "submit" => cmd_submit(&args[2..]),
-        "status" => cmd_status(&args[2..]),
-        "serve" => cmd_serve(&args[2..]),
+    let subcmd = args.get(1).map_or("", String::as_str);
+    let rest: &[String] = args.get(2..).unwrap_or(&[]);
+
+    match subcmd {
+        "submit" => cmd_submit(rest),
+        "status" => cmd_status(rest),
+        "serve" => cmd_serve(rest),
         "expire-stale" => cmd_expire_stale(),
         other => {
             eprintln!("unknown subcommand: {other:?}");
@@ -50,6 +53,7 @@ fn print_usage() {
     eprintln!("  expire-stale");
 }
 
+#[allow(clippy::too_many_lines)]
 fn cmd_submit(args: &[String]) {
     let mut species_str: Option<String> = None;
     let mut zip: Option<String> = None;
@@ -57,9 +61,10 @@ fn cmd_submit(args: &[String]) {
     let mut photo_path: Option<String> = None;
     let mut description: Option<String> = None;
 
-    let mut i = 0;
+    let mut i = 0usize;
     while i < args.len() {
-        match args[i].as_str() {
+        let Some(flag) = args.get(i) else { break };
+        match flag.as_str() {
             "--species" => {
                 i += 1;
                 species_str = args.get(i).cloned();
@@ -92,7 +97,7 @@ fn cmd_submit(args: &[String]) {
         Some("dog") => Species::Dog,
         Some("cat") => Species::Cat,
         other => {
-            eprintln!("--species must be 'dog' or 'cat', got: {:?}", other);
+            eprintln!("--species must be 'dog' or 'cat', got: {other:?}");
             process::exit(1);
         }
     };
@@ -108,7 +113,9 @@ fn cmd_submit(args: &[String]) {
     });
 
     let photo_bytes = photo_path.and_then(|p| {
-        std::fs::read(&p).map_err(|e| eprintln!("warning: could not read photo {p}: {e}")).ok()
+        std::fs::read(&p)
+            .map_err(|e| eprintln!("warning: could not read photo {p}: {e}"))
+            .ok()
     });
 
     let mut store = ReportStore::new();
@@ -142,12 +149,9 @@ fn cmd_submit(args: &[String]) {
 }
 
 fn cmd_status(args: &[String]) {
-    let report_id = match args.first() {
-        Some(id) => id,
-        None => {
-            eprintln!("Usage: homeward-reportd status <report-id>");
-            process::exit(1);
-        }
+    let Some(report_id) = args.first() else {
+        eprintln!("Usage: homeward-reportd status <report-id>");
+        process::exit(1);
     };
 
     // In production this would load from persistent store.
@@ -160,9 +164,10 @@ fn cmd_status(args: &[String]) {
 
 fn cmd_serve(args: &[String]) {
     let mut port: u16 = 8080;
-    let mut i = 0;
+    let mut i = 0usize;
     while i < args.len() {
-        if args[i] == "--port" {
+        let Some(flag) = args.get(i) else { break };
+        if flag == "--port" {
             i += 1;
             port = args.get(i).and_then(|s| s.parse().ok()).unwrap_or(8080);
         }

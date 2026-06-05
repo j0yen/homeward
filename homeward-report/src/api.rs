@@ -128,30 +128,30 @@ pub fn query_shelter(
             query
                 .species
                 .as_ref()
-                .map_or(true, |s| r.species == *s)
+                .is_none_or(|s| r.species == *s)
         })
         .filter(|r| {
             // ShelterLocation stores city_county, not zip. For zip queries
             // we check if the city_county string contains the zip (best-effort;
             // production would maintain a ZIP→city lookup).
-            query.zip_code.as_ref().map_or(true, |zip| {
+            query.zip_code.as_ref().is_none_or(|zip| {
                 r.location
                     .as_ref()
-                    .map_or(false, |l| l.city_county.contains(zip.as_str()))
+                    .is_some_and(|l| l.city_county.contains(zip.as_str()))
             })
         })
         .filter(|r| {
-            query.state.as_ref().map_or(true, |st| {
+            query.state.as_ref().is_none_or(|st| {
                 r.location
                     .as_ref()
                     .and_then(|l| l.state.as_deref())
-                    .map_or(false, |s| s == st)
+                    .is_some_and(|s| s == st)
             })
         })
         .filter(|r| {
             query
                 .intake_after
-                .map_or(true, |ts| r.intake_date.map_or(false, |d| d > ts))
+                .is_none_or(|ts| r.intake_date.is_some_and(|d| d > ts))
         })
         .take(limit + 1) // take one extra to detect truncation
         .collect::<Vec<_>>()
@@ -166,7 +166,7 @@ pub fn query_shelter(
             query
                 .species
                 .as_ref()
-                .map_or(true, |s| r.species == *s)
+                .is_none_or(|s| r.species == *s)
         })
         .count();
 
@@ -198,6 +198,7 @@ pub struct SimilarityCandidate {
 /// This function does NOT perform embedding/ML — it consumes pre-scored
 /// candidates from the match engine (homeward-match is a separate crate).
 /// The separation keeps homeward-report free of ML dependencies.
+#[must_use]
 pub fn image_similarity_search(
     prescored: Vec<crate::MatchCandidate>,
     cfg: &ApiConfig,
@@ -208,9 +209,11 @@ pub fn image_similarity_search(
         .into_iter()
         .take(cfg.max_results_per_query)
         .map(|c| {
+            // Display score as a percentage with one decimal place.
+            #[allow(clippy::float_arithmetic)]
+            let pct = f64::from(c.score) * 100.0_f64;
             let explanation = format!(
-                "This animal has a similarity score of {:.0}% — please review in person to confirm.",
-                c.score * 100.0
+                "This animal has a similarity score of {pct:.1}% — please review in person to confirm.",
             );
             SimilarityCandidate {
                 record: ShelterRecord::from(&c.record),

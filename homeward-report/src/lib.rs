@@ -104,24 +104,23 @@ pub fn submit(
     let contact = mint_token(&req.raw_contact);
 
     let ttl_secs = req.ttl_secs.unwrap_or(DEFAULT_TTL_SECS);
-    let expires = now + chrono::Duration::seconds(ttl_secs as i64);
+    let ttl_i64 = i64::try_from(ttl_secs).unwrap_or(i64::MAX);
+    let expires = now + chrono::Duration::seconds(ttl_i64);
 
     let report_id = Ulid::new().to_string();
 
     // Build photo list (store cleaned bytes as a data-URI stub for testing;
     // production would upload to object storage and store a hotlink).
-    let photos = if let Some(bytes) = clean_photo {
+    let photos = clean_photo.map_or_else(Vec::new, |bytes| {
         vec![homeward_schema::PhotoRef {
             url: format!("data:image/jpeg;base64,{}", base64_encode(&bytes)),
             attribution: None,
             is_primary: true,
         }]
-    } else {
-        vec![]
-    };
+    });
 
     let report = LostReport {
-        report_id: report_id.clone(),
+        report_id,
         species: req.species,
         breed_primary: req.breed_primary,
         breed_secondary: req.breed_secondary,
@@ -138,28 +137,37 @@ pub fn submit(
         status: LostStatus::Active,
     };
 
-    store.insert(report.clone())?;
-    Ok(report)
+    let cloned = report.clone();
+    store.insert(report)?;
+    Ok(cloned)
 }
 
 /// Minimal base64 encoder (no external dep — only used for test round-trips).
 fn base64_encode(input: &[u8]) -> String {
-    const CHARS: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+    const CHARS: &[u8; 64] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+    /// Look up a character by 6-bit index (0–63).
+    fn b64(idx: usize) -> char {
+        // Index is always masked to 0x3F (0–63); CHARS has exactly 64 elements.
+        // SAFETY: idx & 0x3F is always in 0..64, same as CHARS length.
+        #[allow(clippy::indexing_slicing)]
+        char::from(CHARS[idx & 0x3F])
+    }
+
     let mut out = String::with_capacity((input.len() + 2) / 3 * 4);
     for chunk in input.chunks(3) {
-        let b0 = chunk[0] as usize;
-        let b1 = chunk.get(1).copied().unwrap_or(0) as usize;
-        let b2 = chunk.get(2).copied().unwrap_or(0) as usize;
+        let b0 = usize::from(chunk.first().copied().unwrap_or(0));
+        let b1 = usize::from(chunk.get(1).copied().unwrap_or(0));
+        let b2 = usize::from(chunk.get(2).copied().unwrap_or(0));
         let triple = (b0 << 16) | (b1 << 8) | b2;
-        out.push(CHARS[(triple >> 18) & 0x3F] as char);
-        out.push(CHARS[(triple >> 12) & 0x3F] as char);
+        out.push(b64((triple >> 18) & 0x3F));
+        out.push(b64((triple >> 12) & 0x3F));
         if chunk.len() > 1 {
-            out.push(CHARS[(triple >> 6) & 0x3F] as char);
+            out.push(b64((triple >> 6) & 0x3F));
         } else {
             out.push('=');
         }
         if chunk.len() > 2 {
-            out.push(CHARS[triple & 0x3F] as char);
+            out.push(b64(triple & 0x3F));
         } else {
             out.push('=');
         }
@@ -172,7 +180,7 @@ fn base64_encode(input: &[u8]) -> String {
 /// Mark a report as reunited.
 ///
 /// # Errors
-/// Returns [`LifecycleError::NotFound`] if the report_id is unknown.
+/// Returns [`LifecycleError::NotFound`] if the `report_id` is unknown.
 pub fn mark_reunited(
     report_id: &str,
     store: &mut ReportStore,
@@ -186,7 +194,7 @@ pub fn mark_reunited(
 /// Delete a report and purge all stored PII immediately (CCPA AC4).
 ///
 /// # Errors
-/// Returns [`LifecycleError::NotFound`] if the report_id is unknown.
+/// Returns [`LifecycleError::NotFound`] if the `report_id` is unknown.
 pub fn delete_report(report_id: &str, store: &mut ReportStore) -> Result<(), LifecycleError> {
     store
         .delete(report_id)
@@ -203,7 +211,7 @@ pub fn expire_stale(store: &mut ReportStore, now: DateTime<Utc>) -> Vec<String> 
 /// Errors from lifecycle operations.
 #[derive(Debug, Clone, PartialEq, Eq, Error)]
 pub enum LifecycleError {
-    /// The requested report_id does not exist in the store.
+    /// The requested `report_id` does not exist in the store.
     #[error("report not found: {0}")]
     NotFound(String),
 }
