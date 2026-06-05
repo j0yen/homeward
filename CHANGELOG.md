@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.5.0 — 2026-06-05
+
+homeward-match: fusion matching crate — prefilter + visual kNN + calibrated scoring (AC1-7 green, 28 tests)
+
 ## v0.4.0 — 2026-06-05
 
 Adds homeward-ingest: sqlite-backed canonical store, AIMD-cadence multi-connector
