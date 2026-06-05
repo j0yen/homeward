@@ -1,5 +1,14 @@
+[package]
+name = "homeward"
+version = "0.2.0"
+edition = "2024"
+rust-version = "1.85"
+license = "MIT OR Apache-2.0"
+description = "Homeward — shelter-pet aggregator: schema, connectors, ingest, match, and report."
+publish = false
+
 [workspace]
-members = ["homeward-schema", "homeward-connectors"]
+members = ["homeward-schema", "homeward-connectors", "homeward-report"]
 resolver = "2"
 
 [workspace.package]

@@ -1,0 +1,23 @@
+[package]
+name = "homeward-report"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.85"
+license = "MIT OR Apache-2.0"
+description = "Owner-side lost-pet reports, continuous matching, match alerts, and the open read API."
+publish = false
+
+[lints]
+workspace = true
+
+[dependencies]
+homeward-schema = { path = "../homeward-schema" }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+ulid = { version = "1", features = ["serde"] }
+chrono = { version = "0.4", features = ["serde"] }
+thiserror = "1"
+
+[[bin]]
+name = "homeward-reportd"
+path = "src/bin/reportd.rs"
