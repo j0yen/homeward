@@ -8,7 +8,7 @@ description = "Homeward — shelter-pet aggregator: schema, connectors, ingest, 
 publish = false
 
 [workspace]
-members = ["homeward-schema", "homeward-connectors"]
+members = ["homeward-schema", "homeward-connectors", "homeward-report"]
 resolver = "2"
 
 [workspace.package]
