@@ -1,0 +1,12 @@
+{
+  "schema": "autobuilder.test_map.v1",
+  "entries": [
+    { "ac_id": "AC1", "test_file": "tests/acceptance_ac1.rs", "test_fn": "ac1_build_and_test_infrastructure" },
+    { "ac_id": "AC2", "test_file": "tests/acceptance_ac2.rs", "test_fn": "ac2_unknown_species_fails_with_typed_error" },
+    { "ac_id": "AC3", "test_file": "tests/acceptance_ac3.rs", "test_fn": "ac3_stray_adoptable_is_flagged" },
+    { "ac_id": "AC4", "test_file": "tests/acceptance_ac4.rs", "test_fn": "ac4_photo_ref_no_bytes_field" },
+    { "ac_id": "AC5", "test_file": "tests/acceptance_ac5.rs", "test_fn": "ac5_brokered_contact_token_no_raw_accessor" },
+    { "ac_id": "AC6", "test_file": "tests/acceptance_ac6.rs", "test_fn": "ac6_pet_record_json_roundtrip" },
+    { "ac_id": "AC7", "test_file": "tests/acceptance_ac7.rs", "test_fn": "ac7_precise_coord_stored_at_coarse_precision_2dp" }
+  ]
+}

@@ -1,0 +1,71 @@
+{
+  "schema": "autobuilder.bad_rust_audit.v1",
+  "head_sha": "HEAD\nunknown",
+  "findings": [
+    {
+      "rule_id": "HLT-016-SUPPLY-CHAIN-DRIFT",
+      "detector": "cargo_deny_check",
+      "severity": "advisory",
+      "path": "deny.toml",
+      "line": 0,
+      "snippet": "",
+      "explanation": "cargo-deny not installed; supply-chain check skipped"
+    },
+    {
+      "rule_id": "HLT-016-SUPPLY-CHAIN-DRIFT",
+      "detector": "check_cargo_lock_committed",
+      "severity": "blocking",
+      "path": "Cargo.lock",
+      "line": 0,
+      "snippet": "",
+      "explanation": "Cargo.lock missing; commit it for reproducible builds"
+    },
+    {
+      "rule_id": "HLT-020-CI-HARDENING-GAP",
+      "detector": "check_workflow_pinned_actions",
+      "severity": "blocking",
+      "path": ".github/workflows/ci.yml",
+      "line": 17,
+      "snippet": "      - uses: actions/checkout@v4",
+      "explanation": "GitHub Action not pinned to a commit SHA"
+    },
+    {
+      "rule_id": "HLT-020-CI-HARDENING-GAP",
+      "detector": "check_workflow_pinned_actions",
+      "severity": "blocking",
+      "path": ".github/workflows/ci.yml",
+      "line": 18,
+      "snippet": "      - uses: dtolnay/rust-toolchain@master",
+      "explanation": "GitHub Action not pinned to a commit SHA"
+    },
+    {
+      "rule_id": "HLT-020-CI-HARDENING-GAP",
+      "detector": "check_workflow_pinned_actions",
+      "severity": "blocking",
+      "path": ".github/workflows/ci.yml",
+      "line": 23,
+      "snippet": "      - uses: Swatinem/rust-cache@v2",
+      "explanation": "GitHub Action not pinned to a commit SHA"
+    },
+    {
+      "rule_id": "HLT-020-CI-HARDENING-GAP",
+      "detector": "check_workflow_pinned_actions",
+      "severity": "blocking",
+      "path": ".github/workflows/ci.yml",
+      "line": 37,
+      "snippet": "        uses: EmbarkStudios/cargo-deny-action@v1",
+      "explanation": "GitHub Action not pinned to a commit SHA"
+    },
+    {
+      "rule_id": "HLT-020-CI-HARDENING-GAP",
+      "detector": "check_workflow_minimal_permissions",
+      "severity": "blocking",
+      "path": ".github/workflows/ci.yml",
+      "line": 0,
+      "snippet": "",
+      "explanation": "workflow missing top-level permissions: block (defaults to write-all)"
+    }
+  ],
+  "blocking_count": 6,
+  "advisory_count": 1
+}

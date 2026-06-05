@@ -1,0 +1,119 @@
+::gate cargo check
+    Checking cfg-if v1.0.4
+    Checking libc v0.2.186
+    Checking zerocopy v0.8.50
+    Checking serde_core v1.0.228
+    Checking num-traits v0.2.19
+    Checking zmij v1.0.21
+    Checking memchr v2.8.1
+    Checking itoa v1.0.18
+    Checking iana-time-zone v0.1.65
+    Checking thiserror v1.0.69
+    Checking getrandom v0.3.4
+    Checking rand_core v0.9.5
+    Checking serde v1.0.228
+    Checking serde_json v1.0.150
+    Checking chrono v0.4.45
+    Checking ppv-lite86 v0.2.21
+    Checking rand_chacha v0.9.0
+    Checking rand v0.9.4
+    Checking ulid v1.2.1
+    Checking homeward-schema v0.1.0 (/home/jsy/wintermute/homeward/homeward-schema)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 3.78s
+::gate cargo clippy
+::gate cargo test
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.06s
+     Running unittests src/lib.rs (/home/jsy/wintermute/homeward/target/debug/deps/homeward_schema-8a8b73300d72abfb)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/acceptance_ac1.rs (/home/jsy/wintermute/homeward/target/debug/deps/acceptance_ac1-eb03bdaad66dee75)
+
+running 1 test
+test ac1_build_and_test_infrastructure ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/acceptance_ac2.rs (/home/jsy/wintermute/homeward/target/debug/deps/acceptance_ac2-cc443795b1f63a42)
+
+running 5 tests
+test ac2_known_species_aliases ... ok
+test ac2_known_species_cat ... ok
+test ac2_unknown_species_fails_with_typed_error ... ok
+test ac2_known_species_dog ... ok
+test ac2_unknown_species_no_silent_default ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/acceptance_ac3.rs (/home/jsy/wintermute/homeward/target/debug/deps/acceptance_ac3-279569caa62a9dfe)
+
+running 5 tests
+test ac3_intake_and_availability_are_distinct_fields ... ok
+test ac3_found_report_departed_is_valid ... ok
+test ac3_stray_adoptable_is_flagged ... ok
+test ac3_owner_surrender_adoptable_is_valid ... ok
+test ac3_stray_in_custody_is_valid ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/acceptance_ac4.rs (/home/jsy/wintermute/homeward/target/debug/deps/acceptance_ac4-bb8aa568098402bd)
+
+running 4 tests
+test ac4_photo_ref_has_url_field ... ok
+test ac4_photo_ref_no_bytes_field ... ok
+test ac4_photo_ref_with_attribution ... ok
+test ac4_photo_ref_json_roundtrip ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/acceptance_ac5.rs (/home/jsy/wintermute/homeward/target/debug/deps/acceptance_ac5-e925c1daa4dc9739)
+
+running 5 tests
+test ac5_brokered_contact_token_json_roundtrip ... ok
+test ac5_brokered_contact_token_no_raw_accessor ... ok
+test ac5_brokered_contact_token_opaque ... ok
+test ac5_coarse_location_no_street_address ... ok
+test ac5_coarse_location_json_roundtrip ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/acceptance_ac6.rs (/home/jsy/wintermute/homeward/target/debug/deps/acceptance_ac6-db6eb36fafc3d899)
+
+running 5 tests
+test ac6_lost_report_missing_optionals_default ... ok
+test ac6_provenance_json_roundtrip ... ok
+test ac6_pet_record_missing_optionals_use_defaults ... ok
+test ac6_lost_report_json_roundtrip ... ok
+test ac6_pet_record_json_roundtrip ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/acceptance_ac7.rs (/home/jsy/wintermute/homeward/target/debug/deps/acceptance_ac7-47413e5b548aeb14)
+
+running 5 tests
+test ac7_coarsened_location_json_roundtrip ... ok
+test ac7_precise_coord_stored_at_coarse_precision_2dp ... ok
+test ac7_none_coords_stay_none ... ok
+test ac7_precision_0_stores_integer_degrees ... ok
+test ac7_precision_4_preserves_more_detail ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/proptest_invariants.rs (/home/jsy/wintermute/homeward/target/debug/deps/proptest_invariants-2b9210ea32e26757)
+
+running 3 tests
+test geo_precision_bounded ... ok
+test species_json_roundtrip ... ok
+test unknown_species_always_errors ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+
+   Doc-tests homeward_schema
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+::gate audit

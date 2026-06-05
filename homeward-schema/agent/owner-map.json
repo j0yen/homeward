@@ -1,0 +1,14 @@
+{
+  "schema": "autobuilder.owner_map.v1",
+  "entries": [
+    { "path": "src/lib.rs", "owner": "edit-agent", "proof_lane": "core-types" },
+    { "path": "src/chip.rs", "owner": "edit-agent", "proof_lane": "core-types" },
+    { "path": "src/geo.rs", "owner": "edit-agent", "proof_lane": "geo" },
+    { "path": "src/intake.rs", "owner": "edit-agent", "proof_lane": "core-types" },
+    { "path": "src/lost.rs", "owner": "edit-agent", "proof_lane": "lost" },
+    { "path": "src/media.rs", "owner": "edit-agent", "proof_lane": "media" },
+    { "path": "src/provenance.rs", "owner": "edit-agent", "proof_lane": "provenance" },
+    { "path": "tests/acceptance_ac*.rs", "owner": "harness", "proof_lane": "acceptance" },
+    { "path": "tests/proptest_invariants.rs", "owner": "harness", "proof_lane": "proptest" }
+  ]
+}

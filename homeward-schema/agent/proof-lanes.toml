@@ -1,0 +1,37 @@
+# proof-lanes.toml — maps changed paths to verification lanes.
+# Every changed path in Stage 3 must resolve to >= 1 lane here.
+
+[lanes.core-types]
+paths = ["src/lib.rs", "src/chip.rs", "src/intake.rs"]
+gates = ["cargo check", "cargo clippy", "cargo test"]
+confidence = 0.95
+
+[lanes.geo]
+paths = ["src/geo.rs"]
+gates = ["cargo check", "cargo clippy", "cargo test --test acceptance_ac7", "cargo test --test proptest_invariants"]
+confidence = 0.95
+
+[lanes.lost]
+paths = ["src/lost.rs"]
+gates = ["cargo check", "cargo clippy", "cargo test --test acceptance_ac5", "cargo test --test acceptance_ac6"]
+confidence = 0.95
+
+[lanes.media]
+paths = ["src/media.rs"]
+gates = ["cargo check", "cargo clippy", "cargo test --test acceptance_ac4"]
+confidence = 0.95
+
+[lanes.provenance]
+paths = ["src/provenance.rs"]
+gates = ["cargo check", "cargo clippy", "cargo test --test acceptance_ac6"]
+confidence = 0.95
+
+[lanes.acceptance]
+paths = ["tests/acceptance_ac*.rs"]
+gates = ["cargo test --workspace"]
+confidence = 1.0
+
+[lanes.proptest]
+paths = ["tests/proptest_invariants.rs"]
+gates = ["cargo test --test proptest_invariants"]
+confidence = 0.90
