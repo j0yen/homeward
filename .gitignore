@@ -1,2 +1,9 @@
 /target/
 **/*.proptest-regressions
+
+# Python (homeward/embed sidecar)
+__pycache__/
+*.py[cod]
+.venv/
+*.egg-info/
+.pytest_cache/
