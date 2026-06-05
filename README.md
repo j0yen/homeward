@@ -36,6 +36,10 @@ It ships no network code — it is the vocabulary the rest of the fleet speaks.
    construction; a test asserts a precise coordinate is stored only at coarse
    resolution.
 
+## Recent
+
+- **v0.9.0** — `homeward/embed/`: Python photo-embedding pipeline (YOLO body-crop → DINOv2 ViT-B/14 → HNSW index); localhost HTTP sidecar (`enroll`/`query`/`reembed_all`); Rust `embed_client` in `homeward-ingest`; honest eval harness with anti-tautology guard.
+
 ## Install
 
 ```sh
