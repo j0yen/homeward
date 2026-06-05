@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.8.0 — 2026-06-05
+
+homeward-connectors: source-connector framework + RescueGroups (JSON:API v5) and municipal Socrata (Austin/Dallas/Sonoma/Long Beach) connectors. Polite conditional-request HTTP core (304 no-op, identifying UA, per-host backoff), PhotoRef stores source URLs only (never raw image bytes), normalizes dogs and cats into PetRecord. CLI `homeward connectors poll <name>`. All 7 ACs green (29 tests).
+
 ## v0.7.0 — 2026-06-05
 
 Freshness engine: sqlite-backed canonical store, AIMD-cadence orchestrator, entity-resolution dedup, two-strikes departure detection, TTL expiry, and delete-org ToS hook — all clippy gates green, 21 tests passing.
