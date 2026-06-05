@@ -1,3 +1,16 @@
+# Changelog
+
+## v0.2.0 — 2026-06-05
+
+Integration tests covering all 7 ACs using wiremock mock HTTP server:
+- AC1: 304 Not Modified returns empty result without error
+- AC2: RescueGroups JSON:API v5 normalizes species/breeds/photo URLs/last_seen; provenance=api
+- AC3: Socrata SODA normalizes STRAY intake_type, found_location, chip_status; provenance=open-data
+- AC4: Mixed dog+cat fixtures yield both species from both connectors
+- AC5: Polite HTTP sends User-Agent, If-None-Match, If-Modified-Since; per-host rate limit engaged
+- AC6: PhotoRef carries only source URLs (no raw bytes) — type-enforced
+- AC7: Unknown connector name returns clear error; registry poll outputs valid JSON
+
 # Changelog — homeward-connectors
 
 ## v0.1.0 (2026-06-04)
