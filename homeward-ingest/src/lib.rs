@@ -9,9 +9,11 @@
 //! - [`departure`] — explicit/implicit/TTL departure detection.
 //! - [`events`] — change-event types (`intake.new`, `intake.updated`,
 //!   `intake.departed`).
+//! - [`embed_client`] — async HTTP client for the homeward-embed Python sidecar.
 
 pub mod departure;
 pub mod dedup;
+pub mod embed_client;
 pub mod events;
 pub mod orchestrator;
 pub mod store;
