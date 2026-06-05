@@ -72,7 +72,7 @@ pub fn url_hash(record: &PetRecord) -> Option<u64> {
 
 /// Hamming distance between two 64-bit hashes.
 #[must_use]
-pub fn hamming_distance(a: u64, b: u64) -> u32 {
+pub const fn hamming_distance(a: u64, b: u64) -> u32 {
     (a ^ b).count_ones()
 }
 

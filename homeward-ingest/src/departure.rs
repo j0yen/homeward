@@ -51,13 +51,13 @@ pub fn run_departure_detection(
 
     // Reset absent counters for all records observed in this sync.
     for id in seen_ids {
-        store.reset_absent(id, source_name)?;
+        store.reset_absent(*id, source_name)?;
     }
 
     // Two-strikes absence — only for records NOT in seen_ids.
     let struck = store.increment_absent(source_name, seen_ids, config.absent_strikes)?;
     for id in &struck {
-        store.mark_departed(id, now)?;
+        store.mark_departed(*id, now)?;
         departed.push(*id);
     }
 
@@ -155,7 +155,7 @@ mod tests {
             departed.contains(&id),
             "two consecutive absences must trigger departure"
         );
-        let record = store.get(&id).expect("get");
+        let record = store.get(id).expect("get");
         assert_eq!(
             record.availability,
             Availability::Departed,

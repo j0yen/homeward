@@ -13,6 +13,7 @@ use std::process;
 use std::sync::Arc;
 use std::time::Duration;
 
+use homeward_connectors::connectors::socrata::{SocrataConfig, SocrataConnector};
 use homeward_ingest::departure::DepartureConfig;
 use homeward_ingest::events::NullSink;
 use homeward_ingest::orchestrator::Orchestrator;
@@ -27,8 +28,7 @@ fn default_db_path() -> PathBuf {
 
 fn dirs_or_home() -> PathBuf {
     std::env::var("HOME")
-        .map(PathBuf::from)
-        .unwrap_or_else(|_| PathBuf::from("/tmp"))
+        .map_or_else(|_| PathBuf::from("/tmp"), PathBuf::from)
         .join(".local")
         .join("share")
         .join("homeward")
@@ -38,14 +38,15 @@ fn dirs_or_home() -> PathBuf {
 async fn main() {
     tracing_subscriber_init();
     let args: Vec<String> = std::env::args().collect();
-    if args.len() < 2 {
+    let Some(subcmd) = args.get(1) else {
         print_usage();
         process::exit(1);
-    }
-    match args[1].as_str() {
-        "run" => cmd_run(&args[2..]).await,
-        "stats" => cmd_stats(&args[2..]),
-        "get" => cmd_get(&args[2..]),
+    };
+    let rest = args.get(2..).unwrap_or(&[]);
+    match subcmd.as_str() {
+        "run" => cmd_run(rest).await,
+        "stats" => cmd_stats(rest),
+        "get" => cmd_get(rest),
         other => {
             eprintln!("unknown subcommand: {other:?}");
             print_usage();
@@ -64,9 +65,9 @@ fn print_usage() {
 fn parse_db_flag(args: &[String]) -> PathBuf {
     let mut i = 0;
     while i < args.len() {
-        if args[i] == "--db" {
-            if i + 1 < args.len() {
-                return PathBuf::from(&args[i + 1]);
+        if args.get(i).map(String::as_str) == Some("--db") {
+            if let Some(path) = args.get(i + 1) {
+                return PathBuf::from(path);
             }
         }
         i += 1;
@@ -90,7 +91,6 @@ async fn cmd_run(args: &[String]) {
     let mut orchestrator = Orchestrator::new(Arc::clone(&store), NullSink, config);
 
     // Register Socrata connectors (no API key required).
-    use homeward_connectors::connectors::socrata::{SocrataConfig, SocrataConnector};
     for cfg in [
         SocrataConfig::austin(),
         SocrataConfig::dallas(),
@@ -165,11 +165,14 @@ fn cmd_stats(args: &[String]) {
 }
 
 fn cmd_get(args: &[String]) {
-    if args.is_empty() || args[0].starts_with('-') {
+    let Some(id_str) = args.first() else {
+        eprintln!("Usage: homeward-ingestd get <canonical_id> [--db <path>]");
+        process::exit(1);
+    };
+    if id_str.starts_with('-') {
         eprintln!("Usage: homeward-ingestd get <canonical_id> [--db <path>]");
         process::exit(1);
     }
-    let id_str = &args[0];
     let id = match id_str.parse::<Ulid>() {
         Ok(u) => u,
         Err(e) => {
@@ -177,7 +180,8 @@ fn cmd_get(args: &[String]) {
             process::exit(1);
         }
     };
-    let db_path = parse_db_flag(&args[1..]);
+    let rest = args.get(1..).unwrap_or(&[]);
+    let db_path = parse_db_flag(rest);
     let store = match Store::open(&db_path) {
         Ok(s) => s,
         Err(e) => {
@@ -185,7 +189,7 @@ fn cmd_get(args: &[String]) {
             process::exit(1);
         }
     };
-    match store.get(&id) {
+    match store.get(id) {
         Ok(record) => match serde_json::to_string_pretty(&record) {
             Ok(json) => println!("{json}"),
             Err(e) => {
