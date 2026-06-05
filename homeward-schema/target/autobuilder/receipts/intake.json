@@ -1,0 +1,113 @@
+{
+  "schema": "autobuilder.intent_card.v1",
+  "prd_source": "/home/jsy/wintermute/autobuilder/PRD-homeward-schema.md",
+  "intent_slug": "homeward-schema",
+  "root_motivation": "Before any shelter-pet aggregation, dedup, or matching can happen, every heterogeneous source (RescueGroups JSON:API, municipal Socrata, vendor feeds) must normalize into exactly one canonical record type with explicit optional fields — so partial sources degrade cleanly instead of forcing fictional defaults, and all downstream crates speak the same vocabulary.",
+  "user_persona": "A developer building the homeward shelter-pet aggregation fleet, who needs a single foundation crate to define the canonical PetRecord, LostReport, and Provenance types that every connector, dedup, embed, and match crate will import.",
+  "unfakeable_metric": {
+    "name": "acceptance_tests_passing_count",
+    "lower_is_better": false,
+    "harness_command": "cargo test --workspace --no-fail-fast 2>&1 | grep -cE '^test .* \\.\\.\\. ok' || true",
+    "target": 7
+  },
+  "acceptance_criteria": [
+    {
+      "id": "AC1",
+      "level": "MUST",
+      "description": "The homeward cargo workspace exists with homeward-schema as a library crate that builds clean (cargo build) and passes cargo test.",
+      "test": "tests/acceptance_ac1.rs: cargo check + cargo test exit 0"
+    },
+    {
+      "id": "AC2",
+      "level": "MUST",
+      "description": "Species covers Dog and Cat; constructing a PetRecord with an unrecognized species string fails with a typed error (no silent default).",
+      "test": "tests/acceptance_ac2.rs: Species::from_str('fish') returns Err(UnknownSpecies)"
+    },
+    {
+      "id": "AC3",
+      "level": "MUST",
+      "description": "PetRecord keeps IntakeType and Availability as distinct fields, and a validator flags the contradiction Availability::Adoptable + IntakeType::Stray within a hold window.",
+      "test": "tests/acceptance_ac3.rs: validate_pet_record returns Err(StrayHoldConflict) for that combination"
+    },
+    {
+      "id": "AC4",
+      "level": "MUST",
+      "description": "PhotoRef stores a source URL + optional attribution and cannot hold raw image bytes (type-level: there is no bytes field).",
+      "test": "tests/acceptance_ac4.rs: PhotoRef struct has no bytes/data field; compile-time check + roundtrip"
+    },
+    {
+      "id": "AC5",
+      "level": "MUST",
+      "description": "LostReport.contact is a BrokeredContactToken opaque type with no public accessor that returns a raw phone/email string; last_seen is a coarse location type with no street-address field.",
+      "test": "tests/acceptance_ac5.rs: BrokeredContactToken has no public raw() method; CoarseLocation has no street_address field"
+    },
+    {
+      "id": "AC6",
+      "level": "MUST",
+      "description": "Every public type round-trips through JSON serde without loss, and deserializing a record missing any optional field succeeds via serde defaults.",
+      "test": "tests/acceptance_ac6.rs: serialize then deserialize PetRecord, LostReport, Provenance; missing-optional-field test"
+    },
+    {
+      "id": "AC7",
+      "level": "MUST",
+      "description": "Geo coarsening rounds any provided lat/lon to the configured precision on construction; a test asserts a precise coordinate is stored only at coarse resolution.",
+      "test": "tests/acceptance_ac7.rs: ShelterLocation::new(lat=47.123456, lon=-122.654321, precision=2) stores lat=47.12, lon=-122.65"
+    }
+  ],
+  "scope": [
+    "Define Species, PetRecord, LostReport, SourceId, Provenance types",
+    "Implement serde (JSON) round-trip for all public types",
+    "Implement validation that flags stray-hold availability contradiction",
+    "Implement geo coarsening at configurable decimal precision",
+    "Define ChipStatus, IntakeType, Availability, AgeBucket, Sex, Size enums",
+    "Define PhotoRef (URL + optional attribution, no bytes)",
+    "Define BrokeredContactToken opaque privacy type",
+    "Define CoarseLocation (city/county + optional coarse lat/lon, no street address)"
+  ],
+  "non_goals": [
+    "Network/connector code (homeward-connectors is a separate crate)",
+    "Storage or ingest logic",
+    "ML embedding or matching",
+    "Breed vocabulary normalization beyond a stub (full vocab is a follow-on PRD)",
+    "Image fetching or storage (PhotoRef is hotlink-only by design)",
+    "Authentication or contact relay implementation (BrokeredContactToken is opaque stub)"
+  ],
+  "hard_constraints": {
+    "rust_edition": "2024",
+    "target_kind": "lib",
+    "deny_unsafe": true,
+    "max_deps": 10,
+    "msrv": "1.85",
+    "additional": {
+      "no_let_chains": "MSRV 1.85 does not support let-chains; use nested if-let or match instead"
+    }
+  },
+  "five_whys_trace": [
+    {
+      "why": 1,
+      "q": "Why do you need a homeward-schema crate before any other homeward crate?",
+      "a": "Every connector, dedup, embed, and match crate imports the same canonical PetRecord. Without a shared type, each crate would invent its own, causing impedance mismatches when data flows between them."
+    },
+    {
+      "why": 2,
+      "q": "Why can't each connector just define its own types and convert at the boundary?",
+      "a": "Dedup and matching operate across connectors — they must compare records from RescueGroups against records from Socrata. That comparison only works if both sides speak the same type, not ad-hoc maps."
+    },
+    {
+      "why": 3,
+      "q": "Why must optional fields be explicit (Option<T>) rather than absent?",
+      "a": "Socrata feeds have intake info but no photos; RescueGroups has photos but no stray flag. Forcing every field to be present would require fabricating values, corrupting downstream dedup decisions."
+    }
+  ],
+  "ambiguities_resolved": [
+    {
+      "question": "What constitutes 'within hold window' for the stray-hold guardrail?",
+      "resolution": "Validation checks only the static combination: if IntakeType == Stray AND Availability == Adoptable, flag StrayHoldConflict. The actual hold duration is jurisdiction-specific and out of scope for this crate."
+    },
+    {
+      "question": "Should geo coarsening precision be per-record or global?",
+      "resolution": "Per-construction: ShelterLocation::new takes an explicit precision parameter (decimal places). Default is 2 (roughly 1.1km). The caller controls it; no global state."
+    }
+  ],
+  "created_at": "2026-06-04T00:00:00Z"
+}

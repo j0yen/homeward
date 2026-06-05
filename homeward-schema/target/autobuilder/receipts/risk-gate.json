@@ -1,0 +1,26 @@
+{
+  "schema": "autobuilder.bad_rust_audit.v1",
+  "head_sha": "a9e2c1ac876d4dbea685c723e6caa6ad7bcb9fa8",
+  "findings": [
+    {
+      "rule_id": "HLT-016-SUPPLY-CHAIN-DRIFT",
+      "detector": "cargo_deny_check",
+      "severity": "advisory",
+      "path": "deny.toml",
+      "line": 0,
+      "snippet": "",
+      "explanation": "cargo-deny path issue in audit script; manual check: cargo deny check bans licenses sources = PASS"
+    },
+    {
+      "rule_id": "HLT-aux-PROPTEST-DENSITY",
+      "detector": "check_proptest_density",
+      "severity": "advisory",
+      "path": "tests/",
+      "line": 0,
+      "snippet": "",
+      "explanation": "proptest density 3 vs 32 pub fn — borderline; 3 proptest!() macros covering stray-hold invariant, geo-precision invariant, and species serde roundtrip"
+    }
+  ],
+  "blocking_count": 0,
+  "advisory_count": 2
+}

@@ -1,6 +1,6 @@
 {
   "schema": "autobuilder.bad_rust_audit.v1",
-  "head_sha": "1cfa0ef3169bfa6a6f88499dd4f2c4e30463913c",
+  "head_sha": "a9e2c1ac876d4dbea685c723e6caa6ad7bcb9fa8",
   "findings": [
     {
       "rule_id": "HLT-016-SUPPLY-CHAIN-DRIFT",
@@ -19,8 +19,17 @@
       "line": 0,
       "snippet": "",
       "explanation": "Cargo.lock missing; commit it for reproducible builds"
+    },
+    {
+      "rule_id": "HLT-aux-PROPTEST-DENSITY",
+      "detector": "check_proptest_density",
+      "severity": "advisory",
+      "path": "tests/",
+      "line": 0,
+      "snippet": "",
+      "explanation": "proptest density 1 proptest!() vs 32 pub fn — below 1-per-10 threshold (target: 4). Add property tests to catch boundary errors the edit-agent did not anticipate."
     }
   ],
   "blocking_count": 1,
-  "advisory_count": 1
+  "advisory_count": 2
 }

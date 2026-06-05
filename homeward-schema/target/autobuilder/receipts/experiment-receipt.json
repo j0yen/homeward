@@ -1,0 +1,1 @@
+{"schema": "autobuilder.experiment_receipt.v1", "head_sha": "a9e2c1ac876d4dbea685c723e6caa6ad7bcb9fa8", "verdict": "pass", "created_at": "2026-06-05T02:38:50Z", "note": "iter-2 verification: all 7 ACs green, clippy clean, cargo deny pass"}

@@ -1,0 +1,1 @@
+{"schema": "autobuilder.mutation_kill_receipt.v1", "head_sha": "a9e2c1ac876d4dbea685c723e6caa6ad7bcb9fa8", "verdict": "skipped", "created_at": "2026-06-05T02:38:50Z", "note": "cargo-mutants not run (Phase 1 telemetry-only; not a hard gate)"}

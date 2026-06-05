@@ -1,0 +1,31 @@
+{
+  "schema": "autobuilder.iteration_receipt.v1",
+  "head_sha": "a9e2c1ac876d4dbea685c723e6caa6ad7bcb9fa8",
+  "verdict": "advance",
+  "created_at": "2026-06-05T02:39:56Z",
+  "iteration": 2,
+  "quality_score": 75,
+  "ac_passing_count": 7,
+  "ac_total_count": 7,
+  "clippy_warning_count": 0,
+  "test_coverage_pct": null,
+  "doc_coverage_pct": null,
+  "hypothesis": "iter-2: verify all 7 ACs green; clippy -D warnings clean; cargo deny pass; cargo test --release passes",
+  "detail": {
+    "cargo_check": "pass",
+    "cargo_clippy_warnings": 0,
+    "cargo_clippy_errors": 0,
+    "cargo_test_passed": 47,
+    "cargo_test_failed": 0,
+    "cargo_deny_bans_licenses_sources": "pass",
+    "ac_results": {
+      "AC1": "pass",
+      "AC2": "pass",
+      "AC3": "pass",
+      "AC4": "pass",
+      "AC5": "pass",
+      "AC6": "pass",
+      "AC7": "pass"
+    }
+  }
+}

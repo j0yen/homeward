@@ -1,54 +1,174 @@
 ::gate cargo check
-    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.04s
+    Checking bytes v1.11.1
+    Checking pin-project-lite v0.2.17
+    Checking libc v0.2.186
+    Checking futures-core v0.3.32
+    Checking smallvec v1.15.1
+    Checking zerofrom v0.1.8
+    Checking percent-encoding v2.3.2
+    Checking once_cell v1.21.4
+    Checking zeroize v1.8.2
+    Checking memchr v2.8.1
+    Checking yoke v0.7.5
+    Checking adler2 v2.0.1
+    Checking untrusted v0.9.0
+    Checking slab v0.4.12
+    Checking rustls-pki-types v1.14.1
+    Checking simd-adler32 v0.3.9
+    Checking futures-task v0.3.32
+    Checking zerovec v0.10.4
+    Checking form_urlencoded v1.2.2
+    Checking futures-util v0.3.32
+    Checking miniz_oxide v0.8.9
+    Checking serde v1.0.228
+    Checking crc32fast v1.5.0
+    Checking tower-service v0.3.3
+    Checking http v1.4.1
+    Checking try-lock v0.2.5
+    Checking httparse v1.10.1
+    Checking want v0.3.1
+    Checking tracing-core v0.1.36
+    Checking flate2 v1.1.9
+    Checking futures-channel v0.3.32
+    Checking atomic-waker v1.1.2
+    Checking subtle v2.6.1
+    Checking compression-core v0.4.32
+    Checking sync_wrapper v1.0.2
+    Checking tracing v0.1.44
+    Checking compression-codecs v0.4.38
+    Checking ipnet v2.12.0
+    Checking base64 v0.22.1
+    Checking mio v1.2.1
+    Checking tinystr v0.7.6
+    Checking socket2 v0.6.4
+    Checking icu_collections v1.5.0
+    Checking http-body v1.0.1
+    Checking icu_locid v1.5.0
+    Checking getrandom v0.2.17
+    Checking getrandom v0.3.4
+    Checking tower-layer v0.3.3
+    Checking futures-sink v0.3.32
+    Checking ring v0.17.14
+    Checking rand_core v0.9.5
+    Checking http-body-util v0.1.3
+    Checking serde_json v1.0.150
+    Checking tokio v1.52.3
+    Checking rand_chacha v0.9.0
+    Checking webpki-roots v1.0.7
+    Checking ryu v1.0.23
+    Checking bitflags v2.12.1
+    Checking serde_urlencoded v0.7.1
+    Checking rand v0.9.4
+    Checking icu_provider v1.5.0
+    Checking chrono v0.4.45
+    Checking thiserror v1.0.69
+    Checking unicase v2.9.0
+    Checking log v0.4.32
+    Checking icu_locid_transform v1.5.0
+    Checking ulid v1.2.1
+    Checking rustls-webpki v0.103.13
+    Checking icu_properties v1.5.1
+    Checking homeward-schema v0.1.0 (/home/jsy/wintermute/homeward/homeward-schema)
+    Checking rustls v0.23.40
+    Checking icu_normalizer v1.5.0
+    Checking idna_adapter v1.2.0
+    Checking idna v1.1.0
+    Checking url v2.5.8
+    Checking hyper v1.10.1
+    Checking tower v0.5.3
+    Checking async-compression v0.4.42
+    Checking tokio-util v0.7.18
+    Checking robots_txt v0.7.0
+    Checking tokio-rustls v0.26.4
+    Checking tower-http v0.6.11
+    Checking hyper-util v0.1.20
+    Checking hyper-rustls v0.27.9
+    Checking reqwest v0.12.28
+    Checking homeward-connectors v0.1.0 (/home/jsy/wintermute/homeward/homeward-connectors)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 7.93s
 ::gate cargo clippy
 ::gate cargo test
-    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.07s
-     Running unittests src/lib.rs (/home/jsy/wintermute/homeward/target/debug/deps/homeward_schema-8a8b73300d72abfb)
+   Compiling chrono v0.4.45
+   Compiling tempfile v3.27.0
+   Compiling tower-http v0.6.11
+   Compiling rusty-fork v0.3.1
+   Compiling proptest v1.11.0
+   Compiling reqwest v0.12.28
+   Compiling homeward-schema v0.1.0 (/home/jsy/wintermute/homeward/homeward-schema)
+   Compiling homeward-connectors v0.1.0 (/home/jsy/wintermute/homeward/homeward-connectors)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 6.62s
+     Running unittests src/lib.rs (/home/jsy/wintermute/homeward/target/debug/deps/homeward_connectors-6934b809290320ee)
+
+running 14 tests
+test connectors::rescuegroups::tests::photos_carry_only_url_not_bytes ... ok
+test connectors::rescuegroups::tests::unknown_species_returns_error ... ok
+test connectors::socrata::tests::intake_type_stray_maps_correctly ... ok
+test connectors::rescuegroups::tests::normalizes_cat_record ... ok
+test connectors::rescuegroups::tests::mixed_species_both_normalized ... ok
+test connectors::rescuegroups::tests::normalizes_dog_record ... ok
+test connectors::socrata::tests::austin_stray_dog_normalizes ... ok
+test connectors::socrata::tests::dallas_chip_status_maps ... ok
+test connectors::socrata::tests::mixed_species_both_yield_records ... ok
+test connectors::rescuegroups::tests::provenance_class_is_api ... ok
+test connectors::socrata::tests::parse_soda_datetime_formats ... ok
+test connectors::socrata::tests::outcome_date_present_means_departed ... ok
+test connectors::socrata::tests::provenance_class_is_open_data ... ok
+test connectors::socrata::tests::socrata_photos_always_empty ... ok
+
+test result: ok. 14 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/main.rs (/home/jsy/wintermute/homeward/target/debug/deps/homeward-e9e7a3d74eca2b6a)
 
 running 0 tests
 
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 
-     Running tests/acceptance_ac1.rs (/home/jsy/wintermute/homeward/target/debug/deps/acceptance_ac1-eb03bdaad66dee75)
+     Running unittests src/lib.rs (/home/jsy/wintermute/homeward/target/debug/deps/homeward_schema-61f2583c849c440f)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/acceptance_ac1.rs (/home/jsy/wintermute/homeward/target/debug/deps/acceptance_ac1-3ed73c71665237e1)
 
 running 1 test
 test ac1_build_and_test_infrastructure ... ok
 
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 
-     Running tests/acceptance_ac2.rs (/home/jsy/wintermute/homeward/target/debug/deps/acceptance_ac2-cc443795b1f63a42)
+     Running tests/acceptance_ac2.rs (/home/jsy/wintermute/homeward/target/debug/deps/acceptance_ac2-dff98059ef78f4ea)
 
 running 5 tests
 test ac2_known_species_cat ... ok
-test ac2_known_species_dog ... ok
 test ac2_known_species_aliases ... ok
-test ac2_unknown_species_fails_with_typed_error ... ok
+test ac2_known_species_dog ... ok
 test ac2_unknown_species_no_silent_default ... ok
+test ac2_unknown_species_fails_with_typed_error ... ok
 
 test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 
-     Running tests/acceptance_ac3.rs (/home/jsy/wintermute/homeward/target/debug/deps/acceptance_ac3-279569caa62a9dfe)
+     Running tests/acceptance_ac3.rs (/home/jsy/wintermute/homeward/target/debug/deps/acceptance_ac3-1956c21ad581aeee)
 
 running 5 tests
 test ac3_owner_surrender_adoptable_is_valid ... ok
-test ac3_stray_adoptable_is_flagged ... ok
 test ac3_found_report_departed_is_valid ... ok
 test ac3_intake_and_availability_are_distinct_fields ... ok
+test ac3_stray_adoptable_is_flagged ... ok
 test ac3_stray_in_custody_is_valid ... ok
 
 test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 
-     Running tests/acceptance_ac4.rs (/home/jsy/wintermute/homeward/target/debug/deps/acceptance_ac4-bb8aa568098402bd)
+     Running tests/acceptance_ac4.rs (/home/jsy/wintermute/homeward/target/debug/deps/acceptance_ac4-7152156fda204720)
 
 running 4 tests
 test ac4_photo_ref_has_url_field ... ok
+test ac4_photo_ref_json_roundtrip ... ok
 test ac4_photo_ref_no_bytes_field ... ok
 test ac4_photo_ref_with_attribution ... ok
-test ac4_photo_ref_json_roundtrip ... ok
 
 test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 
-     Running tests/acceptance_ac5.rs (/home/jsy/wintermute/homeward/target/debug/deps/acceptance_ac5-e925c1daa4dc9739)
+     Running tests/acceptance_ac5.rs (/home/jsy/wintermute/homeward/target/debug/deps/acceptance_ac5-6590c0921dde2778)
 
 running 5 tests
 test ac5_brokered_contact_token_no_raw_accessor ... ok
@@ -59,29 +179,29 @@ test ac5_coarse_location_json_roundtrip ... ok
 
 test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 
-     Running tests/acceptance_ac6.rs (/home/jsy/wintermute/homeward/target/debug/deps/acceptance_ac6-db6eb36fafc3d899)
+     Running tests/acceptance_ac6.rs (/home/jsy/wintermute/homeward/target/debug/deps/acceptance_ac6-b42bec7e7bbc28bd)
 
 running 5 tests
+test ac6_provenance_json_roundtrip ... ok
 test ac6_lost_report_missing_optionals_default ... ok
 test ac6_pet_record_missing_optionals_use_defaults ... ok
-test ac6_pet_record_json_roundtrip ... ok
-test ac6_provenance_json_roundtrip ... ok
 test ac6_lost_report_json_roundtrip ... ok
+test ac6_pet_record_json_roundtrip ... ok
 
 test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 
-     Running tests/acceptance_ac7.rs (/home/jsy/wintermute/homeward/target/debug/deps/acceptance_ac7-47413e5b548aeb14)
+     Running tests/acceptance_ac7.rs (/home/jsy/wintermute/homeward/target/debug/deps/acceptance_ac7-50867f56c44e8957)
 
 running 5 tests
 test ac7_none_coords_stay_none ... ok
-test ac7_precise_coord_stored_at_coarse_precision_2dp ... ok
 test ac7_coarsened_location_json_roundtrip ... ok
-test ac7_precision_0_stores_integer_degrees ... ok
 test ac7_precision_4_preserves_more_detail ... ok
+test ac7_precise_coord_stored_at_coarse_precision_2dp ... ok
+test ac7_precision_0_stores_integer_degrees ... ok
 
 test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 
-     Running tests/proptest_invariants.rs (/home/jsy/wintermute/homeward/target/debug/deps/proptest_invariants-2b9210ea32e26757)
+     Running tests/proptest_invariants.rs (/home/jsy/wintermute/homeward/target/debug/deps/proptest_invariants-c9cedc7162854c26)
 
 running 3 tests
 test geo_precision_bounded ... ok
@@ -89,6 +209,12 @@ test species_json_roundtrip ... ok
 test unknown_species_always_errors ... ok
 
 test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+
+   Doc-tests homeward_connectors
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 
    Doc-tests homeward_schema
 
