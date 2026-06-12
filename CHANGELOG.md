@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.9.2 — 2026-06-12
+
+Extends homeward-ingest dedup.rs with federated_merge: reconciles Pet FBI / HeLP found/stray records against shelter intakes using species + geo + date-window + perceptual-hash guards. Conservative thresholds bias toward false-split over false-merge. Merged records carry both provenances. Lost-report pairs never merge.
+
 ## v0.9.1 — 2026-06-12
 
 Adds homeward-report export module: LostReportExport JSON-LD serializer (schema.org + homeward namespace), deterministic text flyer renderer, and Syndicator trait. LocalArtifactSyndicator writes both artifacts. Gated channels (PawBoost/Nextdoor/Facebook/Petco) return ManualOnly with documented reason — no fictional transports. PetFbiPartnerSyndicator behind feature flag, dry-run by default.
