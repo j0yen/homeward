@@ -229,6 +229,16 @@ impl PhotoExport {
 
 // ─── Export builder ───────────────────────────────────────────────────────────
 
+impl LostReportExport {
+    /// Build a [`LostReportExport`] from a [`LostReport`].
+    ///
+    /// Convenience constructor that delegates to [`to_export`].
+    #[must_use]
+    pub fn from_report(report: &LostReport) -> Self {
+        to_export(report)
+    }
+}
+
 /// Serialise a [`LostReport`] to a [`LostReportExport`] JSON-LD document.
 ///
 /// - Photos are EXIF-stripped via [`PhotoExport::from_photo_ref`].
