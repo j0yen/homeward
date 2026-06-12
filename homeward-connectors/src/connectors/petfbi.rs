@@ -180,7 +180,7 @@ impl Connector for PetFbiConnector {
 
     fn provenance(&self) -> Provenance {
         Provenance {
-            source: SourceId::new(SOURCE_PETFBI, TosClass::Attribution),
+            source: SourceId::new(SOURCE_PETFBI, TosClass::NonprofitAttributionRequired),
             fetched_at: Utc::now(),
             source_url: Some("https://petfbi.org".to_owned()),
             source_etag: None,
@@ -276,8 +276,8 @@ struct PfbReport {
 /// `source` field, not hardcoded to one value (AC4).
 fn source_id_from_str(source: &str) -> SourceId {
     match source.to_lowercase().as_str() {
-        "helpinglostpets" | "help" => SourceId::new(SOURCE_HELPINGLOSTPETS, TosClass::Attribution),
-        _ => SourceId::new(SOURCE_PETFBI, TosClass::Attribution),
+        "helpinglostpets" | "help" => SourceId::new(SOURCE_HELPINGLOSTPETS, TosClass::NonprofitAttributionRequired),
+        _ => SourceId::new(SOURCE_PETFBI, TosClass::NonprofitAttributionRequired),
     }
 }
 
@@ -466,7 +466,7 @@ mod tests {
         assert_eq!(rec.intake_type, IntakeType::LostReport);
         assert_eq!(rec.availability, Availability::Missing);
         assert_eq!(rec.source.name, SOURCE_PETFBI);
-        assert_eq!(rec.source.tos_class, TosClass::Attribution);
+        assert_eq!(rec.source.tos_class, TosClass::NonprofitAttributionRequired);
         assert_eq!(rec.source_animal_id.as_deref(), Some("pfb-001"));
         assert_eq!(rec.breed_primary.as_deref(), Some("Labrador Retriever"));
         assert_eq!(rec.sex, Some(Sex::Male));
@@ -521,7 +521,7 @@ mod tests {
         let report = make_lost_report("p-1", "petfbi", "dog", json!({}));
         let rec = normalize_pfb_report(report).expect("normalize");
         assert_eq!(rec.source.name, SOURCE_PETFBI);
-        assert_eq!(rec.source.tos_class, TosClass::Attribution);
+        assert_eq!(rec.source.tos_class, TosClass::NonprofitAttributionRequired);
     }
 
     #[test]
@@ -529,7 +529,7 @@ mod tests {
         let report = make_lost_report("h-1", "helpinglostpets", "cat", json!({}));
         let rec = normalize_pfb_report(report).expect("normalize");
         assert_eq!(rec.source.name, SOURCE_HELPINGLOSTPETS);
-        assert_eq!(rec.source.tos_class, TosClass::Attribution);
+        assert_eq!(rec.source.tos_class, TosClass::NonprofitAttributionRequired);
     }
 
     #[test]
@@ -626,6 +626,6 @@ mod tests {
         );
         let prov = connector.provenance();
         assert_eq!(prov.source.name, SOURCE_PETFBI);
-        assert_eq!(prov.source.tos_class, TosClass::Attribution);
+        assert_eq!(prov.source.tos_class, TosClass::NonprofitAttributionRequired);
     }
 }
