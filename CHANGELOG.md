@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.9.3 — 2026-06-12
+
+Adds PetFbiConnector pulling lost/found reports from Pet FBI + Helping Lost Pets (HeLP) network via the report widget feed. Maps type=lost → LostReport, type=found/sighting → PetRecord, with honest HeLP vs PetFbi source attribution. Connector registers only when HOMEWARD_PETFBI_DATA_FILE is set.
+
 ## v0.9.2 — 2026-06-12
 
 Extends homeward-ingest dedup.rs with federated_merge: reconciles Pet FBI / HeLP found/stray records against shelter intakes using species + geo + date-window + perceptual-hash guards. Conservative thresholds bias toward false-split over false-merge. Merged records carry both provenances. Lost-report pairs never merge.
