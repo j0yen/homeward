@@ -17,6 +17,7 @@
 pub mod alerts;
 pub mod api;
 pub mod exif;
+pub mod export;
 pub mod store;
 
 #[cfg(test)]
@@ -33,6 +34,10 @@ use ulid::Ulid;
 pub use alerts::{MatchAlert, MatchCandidate};
 pub use api::{ApiConfig, ShelterQuery, ShelterQueryResult};
 pub use exif::strip_exif;
+pub use export::{
+    LostReportExport, LocalArtifactSyndicator, SyndicationOutcome, Syndicator, render_flyer,
+    to_export,
+};
 pub use store::{ReportStore, SubmitError};
 
 // ─── Report submission ───────────────────────────────────────────────────────

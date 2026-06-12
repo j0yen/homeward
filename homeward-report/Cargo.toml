@@ -18,6 +18,13 @@ ulid = { version = "1", features = ["serde"] }
 chrono = { version = "0.4", features = ["serde"] }
 thiserror = "1"
 
+[features]
+default = []
+petfbi-partner = []
+
+[dev-dependencies]
+tempfile = "3"
+
 [[bin]]
 name = "homeward-reportd"
 path = "src/bin/reportd.rs"
