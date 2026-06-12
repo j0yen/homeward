@@ -205,6 +205,7 @@ mod tests {
             last_confirmed: None,
             intake_date,
             outcome_date: None,
+            secondary_provenances: vec![],
         }
     }
 

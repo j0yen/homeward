@@ -91,5 +91,6 @@ pub fn make_pet_record(species: Species, city: Option<&str>, state: Option<&str>
         last_confirmed: None,
         intake_date: Some(now),
         outcome_date: None,
+        secondary_provenances: vec![],
     }
 }

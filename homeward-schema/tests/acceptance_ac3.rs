@@ -34,6 +34,7 @@ fn make_pet(intake_type: IntakeType, availability: Availability) -> PetRecord {
         last_confirmed: None,
         intake_date: None,
         outcome_date: None,
+        secondary_provenances: vec![],
     }
 }
 

@@ -120,6 +120,7 @@ mod tests {
             last_confirmed: Some(Utc::now()),
             intake_date: None,
             outcome_date: None,
+            secondary_provenances: vec![],
         };
         store.upsert(&record).expect("upsert");
         id
@@ -212,6 +213,7 @@ mod tests {
             last_confirmed: Some(old_time),
             intake_date: None,
             outcome_date: None,
+            secondary_provenances: vec![],
         };
         store.upsert(&record).expect("upsert");
 
@@ -253,6 +255,7 @@ mod tests {
             last_confirmed: Some(Utc::now()),
             intake_date: None,
             outcome_date: Some(Utc::now()),
+            secondary_provenances: vec![],
         };
         assert!(is_explicitly_departed(&record));
     }

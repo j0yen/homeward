@@ -541,6 +541,7 @@ mod tests {
             last_confirmed: Some(Utc::now()),
             intake_date: None,
             outcome_date: None,
+            secondary_provenances: vec![],
         }
     }
 
@@ -552,7 +553,7 @@ mod tests {
 
         // Write cursor in one Store instance (simulates pre-restart).
         {
-            let mut store = Store::open(&db_path).expect("open");
+            let store = Store::open(&db_path).expect("open");
             let cursor = SourceCursor {
                 source_name: "src-a".to_owned(),
                 cursor_json: r#"{"Timestamp":"2024-01-15T10:00:00Z"}"#.to_owned(),

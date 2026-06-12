@@ -45,6 +45,7 @@ fn make_full_pet() -> PetRecord {
         last_confirmed: None,
         intake_date: None,
         outcome_date: None,
+        secondary_provenances: vec![],
     }
 }
 
