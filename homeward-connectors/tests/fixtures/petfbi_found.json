@@ -1,0 +1,47 @@
+{
+  "total": 2,
+  "reports": [
+    {
+      "id": "pfb-003",
+      "type": "found",
+      "source": "petfbi",
+      "species": "dog",
+      "breed": "Beagle",
+      "secondary_breed": null,
+      "sex": "unknown",
+      "age": "adult",
+      "size": "medium",
+      "colors": ["brown", "white"],
+      "description": "Found wandering near the park. No collar.",
+      "photo_url": "https://petfbi.org/photos/pfb-003-primary.jpg",
+      "city": "Dallas",
+      "state": "TX",
+      "zip": "75201",
+      "date_found": "2024-03-12T08:00:00Z",
+      "date_created": "2024-03-12T09:00:00Z",
+      "status": "active",
+      "contact_token": null
+    },
+    {
+      "id": "pfb-004",
+      "type": "found",
+      "source": "helpinglostpets",
+      "species": "cat",
+      "breed": "Tabby",
+      "secondary_breed": null,
+      "sex": "unknown",
+      "age": "unknown",
+      "size": "small",
+      "colors": ["orange", "striped"],
+      "description": "Orange tabby found in backyard. Very friendly.",
+      "photo_url": null,
+      "city": "Dallas",
+      "state": "TX",
+      "zip": "75202",
+      "date_found": "2024-03-13T10:00:00Z",
+      "date_created": "2024-03-13T11:00:00Z",
+      "status": "active",
+      "contact_token": null
+    }
+  ]
+}

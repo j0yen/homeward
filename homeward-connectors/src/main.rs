@@ -14,6 +14,7 @@ use std::process;
 use chrono::DateTime;
 use homeward_connectors::{
     ConnectorRegistry, Cursor,
+    connectors::petfbi::{PetFbiConfig, PetFbiConnector},
     connectors::socrata::{SocrataConfig, SocrataConnector},
 };
 
@@ -31,6 +32,14 @@ fn build_registry() -> ConnectorRegistry {
         match SocrataConnector::new(config) {
             Ok(c) => registry.register(name, Box::new(c)),
             Err(e) => eprintln!("warning: could not init {name} connector: {e}"),
+        }
+    }
+
+    // Register Pet FBI if data-file UUID is set.
+    if let Some(config) = PetFbiConfig::from_env() {
+        match PetFbiConnector::new(config) {
+            Ok(c) => registry.register("petfbi", Box::new(c)),
+            Err(e) => eprintln!("warning: could not init petfbi connector: {e}"),
         }
     }
 

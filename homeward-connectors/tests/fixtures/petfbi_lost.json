@@ -1,0 +1,47 @@
+{
+  "total": 2,
+  "reports": [
+    {
+      "id": "pfb-001",
+      "type": "lost",
+      "source": "petfbi",
+      "species": "dog",
+      "breed": "Labrador Retriever",
+      "secondary_breed": null,
+      "sex": "male",
+      "age": "adult",
+      "size": "large",
+      "colors": ["yellow", "golden"],
+      "description": "Friendly yellow lab, answers to Buddy. Wearing red collar.",
+      "photo_url": "https://petfbi.org/photos/pfb-001-primary.jpg",
+      "city": "Austin",
+      "state": "TX",
+      "zip": "78701",
+      "date_lost": "2024-03-10T14:00:00Z",
+      "date_created": "2024-03-10T15:00:00Z",
+      "status": "active",
+      "contact_token": "relay://pfb-001-owner"
+    },
+    {
+      "id": "pfb-002",
+      "type": "lost",
+      "source": "helpinglostpets",
+      "species": "cat",
+      "breed": "Domestic Shorthair",
+      "secondary_breed": null,
+      "sex": "female",
+      "age": "young",
+      "size": "small",
+      "colors": ["black", "white"],
+      "description": "Black and white tuxedo cat, indoor only.",
+      "photo_url": "https://helpinglostpets.com/photos/pfb-002-primary.jpg",
+      "city": "Austin",
+      "state": "TX",
+      "zip": "78702",
+      "date_lost": "2024-03-11T09:00:00Z",
+      "date_created": "2024-03-11T10:00:00Z",
+      "status": "active",
+      "contact_token": "relay://pfb-002-owner"
+    }
+  ]
+}

@@ -19,6 +19,8 @@ pub enum IntakeType {
     Transfer,
     /// Animal is listed as available for adoption (origin unspecified).
     Adoptable,
+    /// An owner-filed report of a lost pet (community network, not a shelter intake).
+    LostReport,
     /// Intake type not recorded.
     Unknown,
 }
@@ -35,6 +37,10 @@ pub enum Availability {
     Adoptable,
     /// Animal has left the shelter (adopted, transferred, deceased, etc.).
     Departed,
+    /// Animal is available for pickup / claiming (community found reports).
+    Available,
+    /// Pet is actively missing (from a community lost report).
+    Missing,
     /// Availability status not recorded.
     Unknown,
 }
