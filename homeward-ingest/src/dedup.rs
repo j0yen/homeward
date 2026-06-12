@@ -9,11 +9,224 @@
 //! pHash here is a simple 64-bit difference hash on the photo URL (we don't
 //! download images; the URL-based hash is a stand-in until homeward-embed lands
 //! the full perceptual hash pipeline).
+//!
+//! The [`federated_merge`] pass reconciles community found/stray reports from
+//! federated sources (e.g. PetFBI, HelpingLostPets) against shelter intake
+//! records using species + geo + date-window + perceptual-hash guards.
 
-use homeward_schema::{PetRecord, Species};
+use chrono::DateTime;
+use homeward_schema::{PetRecord, Provenance, Species, intake::IntakeType};
 use ulid::Ulid;
 
 use crate::store::{Store, StoreError};
+
+// ── DedupConfig ───────────────────────────────────────────────────────────────
+
+/// Configuration for dedup and federated reconciliation.
+///
+/// Defaults are biased toward **false-split over false-merge**: merging two
+/// different animals is worse than listing one animal twice.
+#[derive(Debug, Clone)]
+pub struct DedupConfig {
+    /// Max distance (km) between found-location and intake-location for a
+    /// candidate federated merge.  Default: 10.0 km.
+    pub federated_geo_max_km: f64,
+
+    /// Max days between found-date and intake-date for a candidate federated
+    /// merge.  Default: 7 days.
+    pub federated_date_window_days: u32,
+
+    /// Max normalised perceptual-hash distance (0.0 = identical, 1.0 =
+    /// completely different) for a candidate federated merge.
+    /// Default: 0.15 (conservative — requires photos to look very similar).
+    pub federated_phash_max_distance: f64,
+}
+
+impl Default for DedupConfig {
+    fn default() -> Self {
+        Self {
+            federated_geo_max_km: 10.0,
+            federated_date_window_days: 7,
+            federated_phash_max_distance: 0.15,
+        }
+    }
+}
+
+// ── Haversine helper ──────────────────────────────────────────────────────────
+
+/// Great-circle distance in kilometres between two (lat, lon) points.
+///
+/// Uses the Haversine formula; accurate to within ~0.5% for distances up to
+/// a few hundred km — more than adequate for shelter-geo matching.
+#[must_use]
+fn haversine_km(lat1: f64, lon1: f64, lat2: f64, lon2: f64) -> f64 {
+    const EARTH_RADIUS_KM: f64 = 6_371.0;
+    let dlat = (lat2 - lat1).to_radians();
+    let dlon = (lon2 - lon1).to_radians();
+    let lat1r = lat1.to_radians();
+    let lat2r = lat2.to_radians();
+    let a = (dlat / 2.0).sin().powi(2)
+        + lat1r.cos() * lat2r.cos() * (dlon / 2.0).sin().powi(2);
+    let c = 2.0 * a.sqrt().asin();
+    EARTH_RADIUS_KM * c
+}
+
+// ── Federated merge ───────────────────────────────────────────────────────────
+
+/// Returns `true` if `record` is a federated community found/stray report.
+///
+/// A federated record is one whose `intake_type` is [`IntakeType::FoundReport`]
+/// or [`IntakeType::Stray`] (community-submitted stray sightings).  Only these
+/// are eligible to be reconciled against shelter intakes; two lost-reports
+/// (records that describe an animal the owner is *searching* for) must never
+/// be merged with each other.
+///
+/// In practice PetFBI/HelpingLostPets records arrive as `FoundReport`.
+fn is_federated_found(record: &PetRecord) -> bool {
+    matches!(record.intake_type, IntakeType::FoundReport)
+}
+
+/// Whether two [`DateTime`] values are within `window_days` of each other.
+fn within_date_window(
+    a: Option<&DateTime<chrono::Utc>>,
+    b: Option<&DateTime<chrono::Utc>>,
+    window_days: u32,
+) -> bool {
+    match (a, b) {
+        (Some(a), Some(b)) => {
+            let diff = (*a - *b).num_days().unsigned_abs();
+            diff <= u64::from(window_days)
+        }
+        // If either date is absent we cannot rule out a match on this
+        // dimension alone, so we conservatively allow it through.
+        _ => true,
+    }
+}
+
+/// Whether two records are within the configured geo radius.
+fn within_geo(shelter: &PetRecord, federated: &PetRecord, max_km: f64) -> bool {
+    let s_loc = match &shelter.location {
+        Some(l) => l,
+        None => return true, // no geo → can't filter on this dimension
+    };
+    let f_loc = match &federated.location {
+        Some(l) => l,
+        None => return true,
+    };
+    let (s_lat, s_lon) = match (s_loc.lat, s_loc.lon) {
+        (Some(lat), Some(lon)) => (lat, lon),
+        _ => return true,
+    };
+    let (f_lat, f_lon) = match (f_loc.lat, f_loc.lon) {
+        (Some(lat), Some(lon)) => (lat, lon),
+        _ => return true,
+    };
+    haversine_km(s_lat, s_lon, f_lat, f_lon) <= max_km
+}
+
+/// Normalised Hamming distance between two 64-bit URL-based hashes.
+///
+/// Returns a value in `[0.0, 1.0]` where `0.0` means identical and `1.0`
+/// means every bit differs.
+#[must_use]
+fn normalised_phash_distance(a: u64, b: u64) -> f64 {
+    f64::from(hamming_distance(a, b)) / 64.0
+}
+
+/// Whether two records are within the configured perceptual-hash distance.
+fn within_phash(shelter: &PetRecord, federated: &PetRecord, max_distance: f64) -> bool {
+    let sh = url_hash(shelter);
+    let fh = url_hash(federated);
+    match (sh, fh) {
+        (Some(a), Some(b)) => normalised_phash_distance(a, b) <= max_distance,
+        // If either record lacks a photo we cannot filter on this dimension.
+        _ => true,
+    }
+}
+
+/// Reconcile federated community found/stray records against existing shelter
+/// intakes.
+///
+/// For each federated record (identified by [`IntakeType::FoundReport`]) this
+/// function searches `shelter_records` within the bounds set by `config`:
+///
+/// 1. Same species.
+/// 2. Intake/first-seen dates within `federated_date_window_days`.
+/// 3. Locations within `federated_geo_max_km` (when both have lat/lon).
+/// 4. Perceptual-hash distance within `federated_phash_max_distance` (when
+///    both have photos).
+///
+/// On the **first** shelter record that passes all filters the federated
+/// record's [`Provenance`] is appended to `shelter.secondary_provenances`
+/// (additive, non-destructive).  No shelter record is modified more than once
+/// per call.
+///
+/// **Two lost-reports are never merged with each other.**  Only
+/// `IntakeType::FoundReport` federated records are eligible.
+///
+/// Returns the count of merges performed, which is observable in tests and
+/// metrics.
+pub fn federated_merge(
+    shelter_records: &mut [PetRecord],
+    federated_records: &[PetRecord],
+    config: &DedupConfig,
+) -> usize {
+    let mut merge_count = 0;
+
+    // Track which shelter indices have already been merged in this pass so
+    // one federated record can't absorb multiple shelter records (and vice
+    // versa — first-match wins, greedy left-to-right).
+    let mut already_merged: Vec<bool> = vec![false; shelter_records.len()];
+
+    'outer: for fed in federated_records {
+        // Guard: only reconcile found/stray federated records.
+        if !is_federated_found(fed) {
+            continue;
+        }
+
+        for (i, shelter) in shelter_records.iter_mut().enumerate() {
+            if already_merged[i] {
+                continue;
+            }
+
+            // Filter 1: species must match.
+            if shelter.species != fed.species {
+                continue;
+            }
+
+            // Filter 2: date window.
+            let shelter_date = shelter.intake_date.as_ref().or(Some(&shelter.first_seen));
+            let fed_date = fed.intake_date.as_ref().or(Some(&fed.first_seen));
+            if !within_date_window(shelter_date, fed_date, config.federated_date_window_days) {
+                continue;
+            }
+
+            // Filter 3: geo proximity.
+            if !within_geo(shelter, fed, config.federated_geo_max_km) {
+                continue;
+            }
+
+            // Filter 4: perceptual hash distance.
+            if !within_phash(shelter, fed, config.federated_phash_max_distance) {
+                continue;
+            }
+
+            // All filters passed — merge federated provenance into shelter record.
+            let prov = Provenance {
+                source: fed.source.clone(),
+                fetched_at: fed.first_seen,
+                source_url: None,
+                source_etag: None,
+            };
+            shelter.secondary_provenances.push(prov);
+            already_merged[i] = true;
+            merge_count += 1;
+            continue 'outer;
+        }
+    }
+
+    merge_count
+}
 
 // ── Attribute key ─────────────────────────────────────────────────────────────
 
@@ -147,6 +360,7 @@ mod tests {
             last_confirmed: Some(Utc::now()),
             intake_date: None,
             outcome_date: None,
+            secondary_provenances: vec![],
         }
     }
 

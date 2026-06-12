@@ -191,6 +191,18 @@ pub struct PetRecord {
     /// Date the animal left custody (adopted, euthanized, transferred, etc.).
     #[serde(default)]
     pub outcome_date: Option<DateTime<Utc>>,
+
+    /// Additional provenance entries added during federated reconciliation.
+    ///
+    /// The primary source is [`PetRecord::source`]. When [`federated_merge`]
+    /// reconciles a community found/stray report against this shelter intake,
+    /// the federated source's [`Provenance`] is appended here rather than
+    /// replacing the primary source. This is additive-only: existing entries
+    /// are never removed.
+    ///
+    /// [`federated_merge`]: homeward_ingest::dedup::federated_merge
+    #[serde(default)]
+    pub secondary_provenances: Vec<Provenance>,
 }
 
 // ─── Validation ──────────────────────────────────────────────────────────────

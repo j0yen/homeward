@@ -363,6 +363,7 @@ fn normalize_socrata_row(
         last_confirmed: Some(now),
         intake_date,
         outcome_date,
+        secondary_provenances: vec![],
     })
 }
 

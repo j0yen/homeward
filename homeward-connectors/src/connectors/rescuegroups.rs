@@ -353,6 +353,7 @@ fn normalize_rg_record(
         last_confirmed: Some(now),
         intake_date: None,
         outcome_date: None,
+        secondary_provenances: vec![],
     })
 }
 

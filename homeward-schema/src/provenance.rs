@@ -13,6 +13,8 @@ pub enum TosClass {
     OpenData,
     /// Scraped (no explicit API permission).
     Scraped,
+    /// Nonprofit community source requiring attribution on display.
+    NonprofitAttributionRequired,
 }
 
 /// Identifies a data source.
