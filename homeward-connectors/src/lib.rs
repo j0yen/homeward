@@ -10,6 +10,7 @@
 
 pub mod connector;
 pub mod connectors;
+pub mod coverage;
 pub mod error;
 pub mod http;
 pub mod registry;
