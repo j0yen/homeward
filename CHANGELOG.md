@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.10.0 — homeward-alert-delivery — 2026-06-13
+
+Adds the last-mile delivery pipeline to `homeward-report`: `Deliverer` trait with `DryRunDeliverer` default (renders the would-send message, records a `DryRun` ledger entry, transmits nothing), `RelayEmailDeliverer` that degrades to dry-run when `HOMEWARD_RELAY_ENDPOINT`/credential are unset (never errors, never leaks a raw address), and an append-only delivery ledger (`DeliveryLedger`) with per-attempt records `{alert_id, report_id, deliverer, outcome, ts}`. Dedup on `alert_id` ensures at-most-once delivery. Two new `reportd` subcommands: `deliver --report <id> [--dry-run]` (full generate→deliver→ledger path) and `alerts-log` (prints ledger). All rendered messages preserve candidate-not-confirmation framing and contain no raw phone/email. 43 tests green.
+
 ## embed-provision — 2026-06-13
 
 Adds `homeward-embed warmup` and `homeward-embed smoke` CLI subcommands. `warmup` prefetches DINOv2-small weights into a pinned `HF_HOME` cache dir and exits 0; a second run with `HF_HUB_OFFLINE=1` confirms no network dependency after provisioning. `smoke` enrolls bundled fixture images, asserts rank-1 self-match and discriminative ordering, and records/prints query wall-clock latency. Committed synthetic PNG fixtures (solid-colour squares) for offline CI use; `SOURCES.md` documents CC-licensed real photo URLs. `service.py` now calls `_run_warmup()` at startup so first `/enroll` never blocks on a model download. 25 unit tests + 1 integration test (skip-guarded) pass.
