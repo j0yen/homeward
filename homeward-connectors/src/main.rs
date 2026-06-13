@@ -26,6 +26,7 @@ use homeward_connectors::{
     connectors::petfbi::{PetFbiConfig, PetFbiConnector},
     connectors::socrata::{SocrataConfig, SocrataConnector, SourceCatalog},
     coverage::{CoverageArgs, RECENT_WINDOW_SECS, STALE_MULTIPLIER, run_coverage},
+    probe::run_probe_cmd,
 };
 
 fn build_registry() -> ConnectorRegistry {
@@ -103,11 +104,16 @@ async fn main() {
         eprintln!("       homeward connectors poll <name> [--since <ts>] [--limit <n>]");
         eprintln!("       homeward connectors list");
         eprintln!("       homeward connectors coverage [--store <path>] [--json]");
+        eprintln!("       homeward probe <domain> <dataset_id> [--name <slug>] [--json]");
         process::exit(1);
     }
 
     match args[1].as_str() {
         "connectors" => handle_connectors(&args[2..]).await,
+        "probe" => {
+            let code = run_probe_cmd(&args[2..]).await;
+            process::exit(code);
+        }
         other => {
             eprintln!("unknown subcommand: {other:?}");
             process::exit(1);

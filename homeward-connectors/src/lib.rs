@@ -13,6 +13,7 @@ pub mod connectors;
 pub mod coverage;
 pub mod error;
 pub mod http;
+pub mod probe;
 pub mod registry;
 
 pub use connector::{Connector, Cursor};
