@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.15.0 — 2026-06-13
+
+homeward-coverage-report: iter-1 scaffold — coverage subcommand with LIVE/STALE/SILENT/UNKNOWN statuses, --json output, fixture tests green
+
 ## v0.13.0 — 2026-06-13
 
 homeward-source-registry: make Socrata sources loadable from HOMEWARD_SOURCES toml; four built-ins unchanged as fallback

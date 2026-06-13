@@ -927,7 +927,7 @@ dependencies = [
 
 [[package]]
 name = "homeward"
-version = "0.13.0"
+version = "0.14.0"
 
 [[package]]
 name = "homeward-connectors"
@@ -940,6 +940,7 @@ dependencies = [
  "http-types",
  "reqwest",
  "robots_txt",
+ "rusqlite",
  "serde",
  "serde_json",
  "tempfile",
