@@ -30,6 +30,7 @@ url = "2"
 robots_txt = "0.7"
 bytes = "1"
 toml = "0.8"
+rusqlite = { version = "0.31", features = ["bundled"] }
 
 [dev-dependencies]
 tokio = { version = "1", features = ["rt-multi-thread", "macros"] }
