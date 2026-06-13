@@ -20,14 +20,23 @@ UNITS=(
 )
 TARGET=homeward.target
 
-# Read HOMEWARD_EMBED_URL from env file if present, default otherwise
+# Read HOMEWARD_EMBED_URL and HOMEWARD_SOURCES from env file if present.
 HOMEWARD_EMBED_URL="${HOMEWARD_EMBED_URL:-}"
+HOMEWARD_SOURCES="${HOMEWARD_SOURCES:-}"
 ENV_FILE="${HOME}/.config/homeward/homeward.env"
-if [[ -z "${HOMEWARD_EMBED_URL}" && -f "${ENV_FILE}" ]]; then
+if [[ -f "${ENV_FILE}" ]]; then
     # shellcheck source=/dev/null
-    HOMEWARD_EMBED_URL="$(grep -E '^HOMEWARD_EMBED_URL=' "${ENV_FILE}" | cut -d= -f2- | tr -d '[:space:]')" || true
+    if [[ -z "${HOMEWARD_EMBED_URL}" ]]; then
+        HOMEWARD_EMBED_URL="$(grep -E '^HOMEWARD_EMBED_URL=' "${ENV_FILE}" | cut -d= -f2- | tr -d '[:space:]')" || true
+    fi
+    if [[ -z "${HOMEWARD_SOURCES}" ]]; then
+        HOMEWARD_SOURCES="$(grep -E '^HOMEWARD_SOURCES=' "${ENV_FILE}" | cut -d= -f2- | tr -d '[:space:]')" || true
+    fi
 fi
 HOMEWARD_EMBED_URL="${HOMEWARD_EMBED_URL:-http://127.0.0.1:8082}"
+# HOMEWARD_SOURCES is propagated to child processes via the environment.
+# If set, homeward-ingestd will load sources from this file instead of built-ins.
+export HOMEWARD_SOURCES
 
 die() { printf '[homeward] ERROR: %s\n' "$*" >&2; exit 1; }
 log() { printf '[homeward] %s\n' "$*"; }
