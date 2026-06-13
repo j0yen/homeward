@@ -7,14 +7,23 @@
 //!   homeward-reportd serve  [--port <N>]
 //!   homeward-reportd expire-stale
 //!   homeward-reportd deliver --report <id> [--dry-run]
+//!   homeward-reportd match   --report <id>
 //!   homeward-reportd alerts-log [--ledger <path>]
 
 #![allow(clippy::print_stdout)]
 #![allow(clippy::print_stderr)]
 
+use std::collections::HashMap;
 use std::process;
 
 use chrono::Utc;
+use homeward_embed_client::{EmbedClient, EmbedClientConfig, EmbedClientError, QueryRequest};
+use homeward_match::{
+    MatchParams, RankedCandidates,
+    calibration::BucketThresholds,
+    hold::DEFAULT_HOLD_DAYS,
+    report::{MatchContext, ReportInput, match_report},
+};
 use homeward_report::{
     DeliveryLedger, DeliveryOutcome, Deliverer, DryRunDeliverer,
     ReportStore, SubmitRequest,
@@ -45,6 +54,7 @@ fn main() {
         "serve" => cmd_serve(rest),
         "expire-stale" => cmd_expire_stale(),
         "deliver" => cmd_deliver(rest),
+        "match" => cmd_match(rest),
         "alerts-log" => cmd_alerts_log(rest),
         other => {
             eprintln!("unknown subcommand: {other:?}");
@@ -63,6 +73,7 @@ fn print_usage() {
     eprintln!("  expire-stale");
     eprintln!("  deliver     --report <id> [--dry-run]");
     eprintln!("              [--ledger <path>]");
+    eprintln!("  match       --report <id>");
     eprintln!("  alerts-log  [--ledger <path>]");
 }
 
@@ -203,8 +214,8 @@ fn cmd_expire_stale() {
 /// `deliver --report <id> [--dry-run] [--ledger <path>]`
 ///
 /// Runs the full generate→deliver→ledger path for the given report ID.
-/// In phase-1 the store is in-memory, so this synthesises a stub candidate
-/// to demonstrate the end-to-end pipeline.
+/// In phase-1 the store is in-memory, so this synthesises a candidate
+/// from homeward-match to demonstrate the end-to-end pipeline.
 ///
 /// AC5: exits 0 with a `DryRun` ledger entry when `--dry-run` is set.
 fn cmd_deliver(args: &[String]) {
@@ -255,10 +266,10 @@ fn cmd_deliver(args: &[String]) {
         })
     };
 
-    // Phase-1: build a synthetic report and candidate to exercise the pipeline.
+    // Phase-1: build a synthetic report and use the real match pipeline.
     // In production, these would be loaded from the persistent store.
-    let report = make_stub_report(&report_id);
-    let candidate = make_stub_candidate(0.9);
+    let report = build_synthetic_report_for_deliver(&report_id);
+    let candidate = build_candidate_via_match(&report);
 
     let now = Utc::now();
     let mut dedup = AlertDedup::new();
@@ -303,10 +314,193 @@ fn cmd_deliver(args: &[String]) {
     }
 }
 
-// ─── Phase-1 stubs ────────────────────────────────────────────────────────────
+/// `match --report <id>`
+///
+/// The real embed+match flow: load the stored report, embed its photo via
+/// the sidecar `/query` endpoint, fuse visual scores with homeward-match,
+/// and print the ranked shortlist. Degrades gracefully when the sidecar is
+/// unreachable.
+fn cmd_match(args: &[String]) {
+    let mut report_id: Option<String> = None;
 
-/// Build a minimal stub [`LostReport`] for CLI pipeline demonstration.
-fn make_stub_report(report_id: &str) -> LostReport {
+    let mut i = 0usize;
+    while i < args.len() {
+        let Some(flag) = args.get(i) else { break };
+        if flag == "--report" {
+            i += 1;
+            report_id = args.get(i).cloned();
+        }
+        i += 1;
+    }
+
+    let report_id = report_id.unwrap_or_else(|| {
+        eprintln!("--report <id> is required");
+        print_usage();
+        process::exit(1);
+    });
+
+    // Phase-1: load from in-memory store; in production, load from persistent store.
+    let store = ReportStore::new();
+    let report = store.get(&report_id).cloned().unwrap_or_else(|| {
+        // Demo: synthesise a report so the match path can be exercised end-to-end.
+        build_synthetic_report_for_deliver(&report_id)
+    });
+
+    // Attempt visual similarity query via embed sidecar.
+    let visual_scores = query_visual_scores_for_report(&report);
+    let (visual_scores_map, visual_available) = match visual_scores {
+        Ok(m) => (m, true),
+        Err(warn) => {
+            eprintln!("warning: visual matching unavailable — falling back to geo+date only");
+            eprintln!("  reason: {warn}");
+            (HashMap::new(), false)
+        }
+    };
+
+    if !visual_available {
+        println!("visual matching unavailable — shortlist uses geo+date signals only");
+    }
+
+    // In production, load shelter records from the persistent store.
+    // Phase-1: empty gallery produces an empty shortlist with an informative message.
+    let records: Vec<PetRecord> = vec![];
+
+    let report_input = ReportInput {
+        report_id: &report.report_id,
+        species: report.species,
+        lat: None,
+        lon: None,
+        date: report.created,
+        size: None,
+        colors: &[],
+    };
+
+    let params = MatchParams::default();
+    let ctx = MatchContext {
+        records: &records,
+        visual_scores: &visual_scores_map,
+        thresholds: BucketThresholds::default(),
+        hold_days: DEFAULT_HOLD_DAYS,
+    };
+
+    match match_report(&report_input, &params, &ctx) {
+        Ok(ranked) if ranked.is_empty() => {
+            println!(
+                "No candidates found for report {} (species: {:?}).",
+                report.report_id, report.species
+            );
+            println!("Hint: enroll shelter animals before matching.");
+        }
+        Ok(ranked) => {
+            print_shortlist(&ranked);
+        }
+        Err(e) => {
+            eprintln!("error running match pipeline: {e}");
+            process::exit(1);
+        }
+    }
+}
+
+/// Print a ranked shortlist with candidate-not-confirmation framing.
+///
+/// No owner contact and no precise coordinates are printed.
+fn print_shortlist(ranked: &RankedCandidates) {
+    println!(
+        "Possible matches for human review — report {} ({} candidates):",
+        ranked.report_id,
+        ranked.candidates.len()
+    );
+    println!("These are candidates to investigate, not confirmed matches.");
+    println!();
+    for (idx, c) in ranked.candidates.iter().enumerate() {
+        println!(
+            "  {}. canonical_id={} score={:.2} bucket={} signals=[{}]",
+            idx + 1,
+            c.canonical_id,
+            c.score,
+            c.bucket,
+            c.why.narrative
+        );
+        if let Some(deadline) = c.reclaimable_until {
+            println!(
+                "     *** STRAY IN HOLD — reclaim by {} ***",
+                deadline.format("%Y-%m-%d %H:%M UTC")
+            );
+        }
+    }
+}
+
+// ─── Embed/match helpers ──────────────────────────────────────────────────────
+
+/// Visual scores keyed by canonical_id, or an error string if unavailable.
+type VisualScoreResult = Result<HashMap<Ulid, f64>, String>;
+
+/// Query the embed sidecar for visual similarity scores for a stored report.
+///
+/// Returns `Err(reason)` if the sidecar is unreachable, the report has no
+/// photo, or the response cannot be decoded. Never panics.
+fn query_visual_scores_for_report(report: &LostReport) -> VisualScoreResult {
+    if report.photos.is_empty() {
+        return Err("report has no photo".to_owned());
+    }
+    // Phase-1: photo URLs are stored but blob retrieval is not yet wired.
+    // When a blob store is available, load the first photo bytes and call
+    // `query_visual_scores_with_bytes`.
+    Err("photo blob retrieval not yet wired (phase-1 in-memory store)".to_owned())
+}
+
+/// Query the embed sidecar with raw photo bytes.
+///
+/// Used from tests (with a mock endpoint) and will be the production path
+/// once blob storage is wired. Returns `Err` on transport failure.
+pub(crate) fn query_visual_scores_with_bytes(
+    photo_bytes: &[u8],
+    species: Species,
+    k: u32,
+) -> VisualScoreResult {
+    let cfg = EmbedClientConfig::from_env();
+    let rt = tokio::runtime::Runtime::new()
+        .map_err(|e| format!("tokio runtime init failed: {e}"))?;
+
+    let client = EmbedClient::new(cfg).map_err(|e| format!("embed client build failed: {e}"))?;
+
+    use base64::Engine as _;
+    let image_b64 = base64::engine::general_purpose::STANDARD.encode(photo_bytes);
+
+    let species_str = match species {
+        Species::Dog => "dog",
+        Species::Cat => "cat",
+    };
+
+    let req = QueryRequest {
+        image_url: None,
+        image_b64: Some(image_b64),
+        k,
+        species_filter: Some(species_str.to_owned()),
+    };
+
+    let matches = rt
+        .block_on(client.query(req))
+        .map_err(|e: EmbedClientError| match e {
+            EmbedClientError::Transport(_) => {
+                "visual matching unavailable — embed sidecar unreachable".to_owned()
+            }
+            other => format!("embed sidecar error: {other}"),
+        })?;
+
+    let mut scores: HashMap<Ulid, f64> = HashMap::new();
+    for m in matches {
+        if let Ok(id) = m.canonical_id.parse::<Ulid>() {
+            scores.insert(id, m.score);
+        }
+    }
+    Ok(scores)
+}
+
+// ─── Deliver-path helpers ─────────────────────────────────────────────────────
+
+/// Build a minimal synthetic [`LostReport`] for the deliver pipeline demo.
+fn build_synthetic_report_for_deliver(report_id: &str) -> LostReport {
     let now = Utc::now();
     LostReport {
         report_id: report_id.to_owned(),
@@ -332,14 +526,16 @@ fn make_stub_report(report_id: &str) -> LostReport {
     }
 }
 
-/// Build a stub [`MatchCandidate`] for CLI pipeline demonstration.
-fn make_stub_candidate(score: f32) -> MatchCandidate {
+/// Build a [`MatchCandidate`] using the real match pipeline for the deliver demo.
+///
+/// Visual score of 0.9 is used as a demo value (no sidecar call made here).
+fn build_candidate_via_match(report: &LostReport) -> MatchCandidate {
     let now = Utc::now();
     let record = PetRecord {
         canonical_id: Ulid::new(),
-        source: SourceId::new("stub-source", TosClass::OpenData),
+        source: SourceId::new("demo-source", TosClass::OpenData),
         source_animal_id: None,
-        species: Species::Dog,
+        species: report.species,
         breed_primary: Some("Labrador".to_owned()),
         breed_secondary: None,
         sex: None,
@@ -366,16 +562,50 @@ fn make_stub_candidate(score: f32) -> MatchCandidate {
         outcome_date: None,
         secondary_provenances: vec![],
     };
+
+    // Use real fusion with a demo visual score of 0.9.
+    let mut visual_scores = HashMap::new();
+    visual_scores.insert(record.canonical_id, 0.9_f64);
+
+    let report_input = ReportInput {
+        report_id: &report.report_id,
+        species: report.species,
+        lat: None,
+        lon: None,
+        date: report.created,
+        size: None,
+        colors: &[],
+    };
+
+    let params = MatchParams::default();
+    let ctx = MatchContext {
+        records: &[record.clone()],
+        visual_scores: &visual_scores,
+        thresholds: BucketThresholds::default(),
+        hold_days: DEFAULT_HOLD_DAYS,
+    };
+
+    let ranked = match_report(&report_input, &params, &ctx).unwrap_or_else(|_| RankedCandidates {
+        report_id: report.report_id.clone(),
+        candidates: vec![],
+        params,
+    });
+
+    let score = ranked
+        .candidates
+        .first()
+        .map_or(0.9_f32, |c| c.score as f32);
+
     MatchCandidate {
         record,
         score,
-        reclaimable_until: None,
+        reclaimable_until: ranked.candidates.first().and_then(|c| c.reclaimable_until),
     }
 }
 
 /// `alerts-log [--ledger <path>]`
 ///
-/// Print all entries in the delivery ledger (AC3).
+/// Print all entries in the delivery ledger.
 fn cmd_alerts_log(args: &[String]) {
     let mut ledger_path: Option<String> = None;
 
@@ -404,7 +634,10 @@ fn cmd_alerts_log(args: &[String]) {
         return;
     }
 
-    println!("{:<40} {:<20} {:<30} {:<12} {}", "alert_id", "report_id", "deliverer", "outcome", "ts");
+    println!(
+        "{:<40} {:<20} {:<30} {:<12} {}",
+        "alert_id", "report_id", "deliverer", "outcome", "ts"
+    );
     println!("{}", "-".repeat(120));
     for r in &records {
         println!(
