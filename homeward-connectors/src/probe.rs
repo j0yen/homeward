@@ -20,7 +20,7 @@ use url::Url;
 use crate::{
     connectors::socrata::SocrataColumnMap,
     error::ConnectorError,
-    http::{HOMEWARD_USER_AGENT, PoliteClient},
+    http::PoliteClient,
 };
 
 // ─── Stray value set ─────────────────────────────────────────────────────────
@@ -96,18 +96,6 @@ fn slot_keywords(slot: &'static str) -> &'static [&'static str] {
         "outcome_date"    => &["outcome_date", "outcomedate", "outcome_datetime", "date_outcome"],
         _                 => &[],
     }
-}
-
-/// Try to match a column field_name or human name to a slot keyword.
-fn matches_slot(col: &SodaColumn, slot: &'static str) -> bool {
-    let field_lower = col.field_name.to_lowercase();
-    let name_lower = col.name.to_lowercase();
-    for kw in slot_keywords(slot) {
-        if field_lower == *kw || field_lower.contains(kw) || name_lower.contains(kw) {
-            return true;
-        }
-    }
-    false
 }
 
 // ─── Probe client trait (injectable for tests) ───────────────────────────────
@@ -218,16 +206,27 @@ pub struct ProbeResult {
 /// A draft column map with per-column confidence annotations.
 #[derive(Debug, Clone)]
 pub struct ColumnMapDraft {
+    /// Mapped animal ID column.
     pub animal_id: Option<MappedColumn>,
+    /// Mapped animal type/species column.
     pub animal_type: Option<MappedColumn>,
+    /// Mapped intake type column (may be confirmed STRAY-bearing).
     pub intake_type: Option<MappedColumn>,
+    /// Mapped intake date column.
     pub intake_date: Option<MappedColumn>,
+    /// Mapped found-location column.
     pub found_location: Option<MappedColumn>,
+    /// Mapped chip/microchip status column.
     pub chip_status: Option<MappedColumn>,
+    /// Mapped kennel/custody status column.
     pub kennel_status: Option<MappedColumn>,
+    /// Mapped breed column.
     pub breed: Option<MappedColumn>,
+    /// Mapped animal name column.
     pub name: Option<MappedColumn>,
+    /// Mapped color column.
     pub color: Option<MappedColumn>,
+    /// Mapped outcome date column.
     pub outcome_date: Option<MappedColumn>,
 }
 
@@ -246,10 +245,6 @@ impl ColumnMapDraft {
             color: None,
             outcome_date: None,
         }
-    }
-
-    fn required_all_present(&self) -> bool {
-        self.animal_id.is_some() && self.animal_type.is_some() && self.intake_type.is_some()
     }
 
     /// Convert to a `SocrataColumnMap` for TOML round-trip testing.
@@ -273,10 +268,14 @@ impl ColumnMapDraft {
 
 // ─── JSON output for --json flag ─────────────────────────────────────────────
 
+/// Structured JSON output emitted when `--json` is passed to `probe`.
 #[derive(Debug, Serialize)]
 pub struct JsonOutput {
+    /// `"GREEN"` or `"RED"`.
     pub verdict: String,
+    /// Human-readable explanation.
     pub reason: String,
+    /// Draft column map or TOML block (GREEN), or partial findings (RED).
     pub draft: Option<serde_json::Value>,
 }
 
@@ -750,6 +749,7 @@ pub async fn run_probe_cmd(args: &[String]) -> i32 {
 
 #[cfg(test)]
 pub mod tests {
+    //! Unit tests for the probe module — all use fixture-backed HTTP (no live network).
     use super::*;
     use std::collections::HashMap;
 
@@ -760,12 +760,14 @@ pub mod tests {
     }
 
     impl FixtureClient {
+        /// Create a new fixture client with no responses registered.
         pub fn new() -> Self {
             Self {
                 responses: HashMap::new(),
             }
         }
 
+        /// Register a fixture: any URL containing `url_contains` returns `body`.
         pub fn add(&mut self, url_contains: &str, body: &str) {
             self.responses.insert(url_contains.to_owned(), body.to_owned());
         }
