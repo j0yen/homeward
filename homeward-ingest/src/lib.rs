@@ -10,10 +10,13 @@
 //! - [`events`] — change-event types (`intake.new`, `intake.updated`,
 //!   `intake.departed`).
 //! - [`embed_client`] — async HTTP client for the homeward-embed Python sidecar.
+//! - [`enroll`] — enrollment worker that wires the delta event stream to
+//!   `EmbedClient::enroll`, populating the vector gallery the matcher searches.
 
 pub mod departure;
 pub mod dedup;
 pub mod embed_client;
+pub mod enroll;
 pub mod events;
 pub mod orchestrator;
 pub mod store;
