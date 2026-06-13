@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.12.0 — 2026-06-13
+
+Real DINOv2 round-trip attest — prove owner round-trip by enrolling fixture photos and verifying rank-1 self-match with real embedding.
+
 ## v0.11.0 — 2026-06-13
 
 Wire ingest daemon to call EmbedClient.enroll() for each intake photo via delta events, populating the vector gallery that the matcher searches.
