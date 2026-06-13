@@ -1,5 +1,9 @@
 # Changelog
 
+## embed-provision — 2026-06-13
+
+Adds `homeward-embed warmup` and `homeward-embed smoke` CLI subcommands. `warmup` prefetches DINOv2-small weights into a pinned `HF_HOME` cache dir and exits 0; a second run with `HF_HUB_OFFLINE=1` confirms no network dependency after provisioning. `smoke` enrolls bundled fixture images, asserts rank-1 self-match and discriminative ordering, and records/prints query wall-clock latency. Committed synthetic PNG fixtures (solid-colour squares) for offline CI use; `SOURCES.md` documents CC-licensed real photo URLs. `service.py` now calls `_run_warmup()` at startup so first `/enroll` never blocks on a model download. 25 unit tests + 1 integration test (skip-guarded) pass.
+
 ## v0.9.3 — 2026-06-12
 
 Adds PetFbiConnector pulling lost/found reports from Pet FBI + Helping Lost Pets (HeLP) network via the report widget feed. Maps type=lost → LostReport, type=found/sighting → PetRecord, with honest HeLP vs PetFbi source attribution. Connector registers only when HOMEWARD_PETFBI_DATA_FILE is set.
