@@ -36,7 +36,7 @@
 //! appear **only** as [`SyndicationOutcome::ManualOnly`] entries. Zero code
 //! pretends to deliver to them.
 
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 use chrono::{DateTime, Utc};
 use homeward_schema::{CoarseLocation, LostReport, LostStatus, PhotoRef, Species};

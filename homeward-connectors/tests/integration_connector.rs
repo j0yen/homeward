@@ -386,8 +386,7 @@ async fn ac5_polite_client_sends_if_modified_since() {
     let mock_server = MockServer::start().await;
     let lm = "Wed, 15 Jan 2024 10:00:00 GMT";
 
-    // Mount a catch-all that returns 200 for robots.txt and resource path.
-    // We verify the request was sent with the correct header via received_requests.
+    // Catch-all: returns 200 for any GET (including robots.txt preflight and resource).
     Mock::given(method("GET"))
         .respond_with(ResponseTemplate::new(200).set_body_string("[]"))
         .mount(&mock_server)
@@ -399,13 +398,25 @@ async fn ac5_polite_client_sends_if_modified_since() {
     let result = pc.get(&url, None, Some(lm)).await;
     assert!(result.is_ok(), "request with If-Modified-Since must succeed");
 
-    // Verify the If-Modified-Since header was sent on one of the requests.
+    // Verify the If-Modified-Since header was sent on the resource request.
+    // In wiremock 0.5, headers is HashMap<HeaderName, HeaderValues> from http_types;
+    // keys are always lowercase.
     let requests = mock_server.received_requests().await.expect("requests");
     let has_lm = requests.iter().any(|req| {
-        req.headers
-            .get("if-modified-since")
-            .map(|v| v.as_bytes() == lm.as_bytes())
-            .unwrap_or(false)
+        // In wiremock 0.5 (http_types), header values with commas are split into parts.
+        // "Wed, 15 Jan 2024 10:00:00 GMT" → ["Wed", " 15 Jan 2024 10:00:00 GMT"].
+        // Rejoin with ", " to reconstruct the original value for comparison.
+        req.headers.iter().any(|(k, v)| {
+            if k.as_str().to_ascii_lowercase() != "if-modified-since" {
+                return false;
+            }
+            let joined: String = v
+                .iter()
+                .map(|hv| hv.as_str())
+                .collect::<Vec<_>>()
+                .join(", ");
+            joined == lm
+        })
     });
     assert!(has_lm, "If-Modified-Since header must be sent");
 }

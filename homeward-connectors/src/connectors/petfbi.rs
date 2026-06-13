@@ -361,6 +361,7 @@ fn normalize_pfb_report(report: PfbReport) -> Result<PetRecord, ConnectorError> 
         last_confirmed: Some(now),
         intake_date: None,
         outcome_date: None,
+        secondary_provenances: vec![],
     })
 }
 
