@@ -14,8 +14,9 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use homeward_connectors::connectors::socrata::{SocrataConfig, SocrataConnector};
+use homeward_embed_client::EmbedClientConfig;
 use homeward_ingest::departure::DepartureConfig;
-use homeward_ingest::events::NullSink;
+use homeward_ingest::enroll::EnrollWorker;
 use homeward_ingest::orchestrator::Orchestrator;
 use homeward_ingest::store::Store;
 use tokio::sync::Mutex;
@@ -88,7 +89,14 @@ async fn cmd_run(args: &[String]) {
     };
     let store = Arc::new(Mutex::new(store));
     let config = DepartureConfig::default();
-    let mut orchestrator = Orchestrator::new(Arc::clone(&store), NullSink, config);
+
+    // Wire enrollment: consume delta events and enroll photos into the embed gallery.
+    // Honest degradation: if the sidecar is absent, EnrollWorker skips with a warning.
+    let embed_cfg = EmbedClientConfig::from_env();
+    let (enroll_sink, enroll_worker) = EnrollWorker::new(embed_cfg, 512);
+    tokio::spawn(enroll_worker.run());
+
+    let mut orchestrator = Orchestrator::new(Arc::clone(&store), enroll_sink, config);
 
     // Register Socrata connectors (no API key required).
     for cfg in [
