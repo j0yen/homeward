@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.13.0 — 2026-06-13
+
+homeward-source-registry: make Socrata sources loadable from HOMEWARD_SOURCES toml; four built-ins unchanged as fallback
+
 ## v0.12.0 — 2026-06-13
 
 Real DINOv2 round-trip attest — prove owner round-trip by enrolling fixture photos and verifying rank-1 self-match with real embedding.
