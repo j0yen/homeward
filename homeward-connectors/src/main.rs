@@ -15,20 +15,36 @@ use chrono::DateTime;
 use homeward_connectors::{
     ConnectorRegistry, Cursor,
     connectors::petfbi::{PetFbiConfig, PetFbiConnector},
-    connectors::socrata::{SocrataConfig, SocrataConnector},
+    connectors::socrata::{SocrataConfig, SocrataConnector, SourceCatalog},
 };
 
 fn build_registry() -> ConnectorRegistry {
     let mut registry = ConnectorRegistry::new();
 
-    // Register Socrata connectors (no API key required).
-    for config in [
-        SocrataConfig::austin(),
-        SocrataConfig::dallas(),
-        SocrataConfig::sonoma(),
-        SocrataConfig::long_beach(),
-    ] {
-        let name = config.name;
+    // Determine which Socrata sources to register.
+    // If HOMEWARD_SOURCES is set, load from that TOML file.
+    // If unset, fall back to the four built-in configs.
+    let socrata_configs: Vec<SocrataConfig> = if let Ok(path_str) = std::env::var("HOMEWARD_SOURCES") {
+        let path = std::path::Path::new(&path_str);
+        match SourceCatalog::from_path(path) {
+            Ok(configs) => configs,
+            Err(e) => {
+                eprintln!("error: HOMEWARD_SOURCES={path_str} could not be loaded: {e}");
+                vec![]
+            }
+        }
+    } else {
+        vec![
+            SocrataConfig::austin(),
+            SocrataConfig::dallas(),
+            SocrataConfig::sonoma(),
+            SocrataConfig::long_beach(),
+        ]
+    };
+
+    // Register Socrata connectors.
+    for config in socrata_configs {
+        let name = config.name.clone();
         match SocrataConnector::new(config) {
             Ok(c) => registry.register(name, Box::new(c)),
             Err(e) => eprintln!("warning: could not init {name} connector: {e}"),

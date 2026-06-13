@@ -17,6 +17,6 @@ pub mod registry;
 pub use connector::{Connector, Cursor};
 pub use connectors::petfbi::{PetFbiConfig, PetFbiConnector};
 pub use connectors::rescuegroups::RescueGroupsConnector;
-pub use connectors::socrata::{SocrataColumnMap, SocrataConfig, SocrataConnector};
+pub use connectors::socrata::{SocrataColumnMap, SocrataConfig, SocrataConnector, SourceCatalog};
 pub use error::ConnectorError;
 pub use registry::ConnectorRegistry;
