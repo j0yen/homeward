@@ -16,6 +16,11 @@ edition = "2024"
 rust-version = "1.85"
 license = "MIT OR Apache-2.0"
 
+# Pin url to 2.5.4 to avoid icu_* crates that require rustc 1.86 (MSRV is 1.85).
+# url 2.5.5+ pulls in idna_adapter 1.2.2 → icu_* 2.2 → rustc 1.86 requirement.
+[workspace.dependencies]
+url = "=2.5.4"
+
 [workspace.lints.rust]
 unsafe_code = "deny"
 missing_docs = "warn"
