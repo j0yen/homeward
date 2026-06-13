@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.10.0 — 2026-06-13
+
+Wire stored lost-report photo through embed sidecar and homeward-match fusion into a real ranked shortlist, replacing hardcoded stubs.
+
 ## v0.10.0 — homeward-alert-delivery — 2026-06-13
 
 Adds the last-mile delivery pipeline to `homeward-report`: `Deliverer` trait with `DryRunDeliverer` default (renders the would-send message, records a `DryRun` ledger entry, transmits nothing), `RelayEmailDeliverer` that degrades to dry-run when `HOMEWARD_RELAY_ENDPOINT`/credential are unset (never errors, never leaks a raw address), and an append-only delivery ledger (`DeliveryLedger`) with per-attempt records `{alert_id, report_id, deliverer, outcome, ts}`. Dedup on `alert_id` ensures at-most-once delivery. Two new `reportd` subcommands: `deliver --report <id> [--dry-run]` (full generate→deliver→ledger path) and `alerts-log` (prints ledger). All rendered messages preserve candidate-not-confirmation framing and contain no raw phone/email. 43 tests green.
