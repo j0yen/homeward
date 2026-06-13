@@ -16,6 +16,8 @@
 
 pub mod alerts;
 pub mod api;
+pub mod delivery;
+pub mod delivery_log;
 pub mod exif;
 pub mod export;
 pub mod flyer;
@@ -35,6 +37,10 @@ use ulid::Ulid;
 
 pub use alerts::{MatchAlert, MatchCandidate};
 pub use api::{ApiConfig, ShelterQuery, ShelterQueryResult};
+pub use delivery::{
+    DeliveryOutcome, Deliverer, DryRunDeliverer, RelayEmailDeliverer, render_alert_message,
+};
+pub use delivery_log::{DeliveryLedger, DeliveryRecord};
 pub use exif::strip_exif;
 pub use export::{LostReportExport, to_export};
 pub use flyer::render_flyer;
