@@ -7,10 +7,15 @@ correctness property (see [[feedback_agent_written_fixtures_tautology]]).
 
 from __future__ import annotations
 
+from pathlib import Path
+
+import numpy as np
 import pytest
 
 from homeward_embed.eval import (
     EvalSample,
+    EvalResult,
+    assert_disjoint_individuals,
     assert_no_overlap,
     average_precision,
     build_gallery_and_queries,
@@ -96,6 +101,178 @@ class TestBuildGalleryAndQueries:
         assert "lone_dog" in gallery_ids
         query_ids = {s.individual_id for s in queries}
         assert "lone_dog" not in query_ids  # no second image → no query contribution
+
+
+class TestAssertDisjointIndividuals:
+    """AC1: assert_disjoint_individuals raises on gallery/query overlap."""
+
+    def test_raises_when_id_in_both(self) -> None:
+        """If dog1 appears in both gallery and query, raise ValueError."""
+        with pytest.raises(ValueError, match="Anti-tautology"):
+            assert_disjoint_individuals(
+                gallery_ids=["dog1", "cat1"],
+                query_ids=["dog1", "cat2"],
+            )
+
+    def test_no_raise_for_disjoint(self) -> None:
+        """Disjoint gallery/query — no error."""
+        # Should not raise
+        assert_disjoint_individuals(
+            gallery_ids=["dog1", "cat1"],
+            query_ids=["dog2", "cat2"],
+        )
+
+    def test_error_message_names_offender(self) -> None:
+        """The error message includes the overlapping individual ID."""
+        with pytest.raises(ValueError) as exc_info:
+            assert_disjoint_individuals(["overlap_id"], ["overlap_id"])
+        assert "overlap_id" in str(exc_info.value)
+
+    def test_accepts_sets_as_input(self) -> None:
+        """Function accepts set inputs as well as lists."""
+        assert_disjoint_individuals(
+            gallery_ids={"g1", "g2"},
+            query_ids={"q1", "q2"},
+        )
+
+
+class TestFixtureCorrectness:
+    """AC3: correctness fixture validates harness arithmetic without real model.
+
+    Uses a mock embedder that maps solid-color images to known vectors, so we
+    can assert Rank-1 self-match and discriminative ordering deterministically.
+    """
+
+    def _fixture_dir(self) -> Path:
+        """Return path to the eval-smoke fixture directory."""
+        return Path(__file__).parent.parent / "fixtures" / "eval-smoke"
+
+    def test_fixture_images_exist(self) -> None:
+        """Fixture images are committed and accessible."""
+        fixture_dir = self._fixture_dir()
+        assert fixture_dir.exists(), f"Fixture dir missing: {fixture_dir}"
+        gallery_imgs = list((fixture_dir / "gallery").glob("*.png"))
+        query_imgs = list((fixture_dir / "query").glob("*.png"))
+        assert len(gallery_imgs) >= 2, "Need ≥2 gallery images"
+        assert len(query_imgs) >= 2, "Need ≥2 query images"
+
+    def test_fixture_sources_md_exists(self) -> None:
+        """SOURCES.md documents fixture provenance."""
+        sources = self._fixture_dir() / "SOURCES.md"
+        assert sources.exists(), "SOURCES.md must document fixture image licenses"
+
+    def test_rank1_self_match_with_mock_embedder(self) -> None:
+        """AC3: an identical gallery/query image yields Rank-1 = 1.0.
+
+        Uses a mock embedder that returns the mean pixel RGB as a 3-d vector,
+        so similar-colored images get nearby embeddings.  dog1_photo1 (gallery)
+        and dog1_photo2 (query, similar color) should Rank-1 match each other.
+        """
+        import unittest.mock as mock
+        from pathlib import Path
+        from PIL import Image as PILImage
+
+        fixture_dir = self._fixture_dir()
+        if not fixture_dir.exists():
+            pytest.skip("eval-smoke fixture dir not present")
+
+        # Build samples from gallery + query directories.
+        # Filename format: <species><n>_photo<m>.png, e.g. dog1_photo1.png
+        # individual_id = first underscore-delimited token, e.g. "dog1"
+        samples: list[EvalSample] = []
+        for split in ("gallery", "query"):
+            for img_path in sorted((fixture_dir / split).glob("*.png")):
+                stem = img_path.stem  # e.g. dog1_photo1
+                individual_id = stem.split("_")[0]  # "dog1", "cat1", "dog2"
+                # species is the alpha prefix of the individual_id
+                species = "".join(c for c in individual_id if c.isalpha())  # "dog" or "cat"
+                samples.append(EvalSample(
+                    individual_id=individual_id,
+                    image_path=img_path,
+                    species=species,
+                ))
+
+        # Mock embedder: embed = mean RGB of the image as a float32 vector (768-d padded)
+        def mock_embed(img: PILImage.Image) -> np.ndarray:
+            arr = np.array(img.convert("RGB"), dtype=np.float32)
+            mean_rgb = arr.reshape(-1, 3).mean(axis=0)  # shape (3,)
+            # Pad to 768-d to match embedder interface
+            vec = np.zeros(768, dtype=np.float32)
+            vec[:3] = mean_rgb
+            norm = np.linalg.norm(vec)
+            return vec / norm if norm > 0 else vec
+
+        # Import index for a real-similarity lookup
+        import tempfile
+        from homeward_embed.index import EmbedIndex
+
+        gallery, queries = build_gallery_and_queries(samples)
+        assert queries, "Need ≥2 images per individual for queries"
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            index = EmbedIndex(index_dir=tmpdir, embed_dim=768)
+            for g in gallery:
+                img = PILImage.open(g.image_path).convert("RGB")
+                vec = mock_embed(img)
+                index.enroll(g.individual_id, vec, species=g.species)
+
+            rank1_correct = 0
+            for q in queries:
+                img = PILImage.open(q.image_path).convert("RGB")
+                vec = mock_embed(img)
+                results = index.query(vec, k=len(gallery))
+                if results and results[0][0] == q.individual_id:
+                    rank1_correct += 1
+
+        rank1_accuracy = rank1_correct / len(queries)
+        assert rank1_accuracy == pytest.approx(1.0), (
+            f"Expected Rank-1 = 1.0 on eval-smoke fixture with mock embedder, "
+            f"got {rank1_accuracy:.2f} ({rank1_correct}/{len(queries)} correct)"
+        )
+
+    def test_discriminative_ordering_with_mock_embedder(self) -> None:
+        """AC3: dog1's query is ranked closer to dog1's gallery than to dog2's.
+
+        With the solid-color fixture and mean-RGB mock embedder, dog1_photo2
+        (orange-ish) should be closer to dog1_photo1 (gallery, orange) than to
+        dog2_photo1 (gallery, lime-green).
+        """
+        import tempfile
+        from PIL import Image as PILImage
+
+        fixture_dir = self._fixture_dir()
+        if not fixture_dir.exists():
+            pytest.skip("eval-smoke fixture dir not present")
+
+        dog1_gallery = fixture_dir / "gallery" / "dog1_photo1.png"
+        dog2_gallery = fixture_dir / "gallery" / "dog2_photo1.png"
+        dog1_query = fixture_dir / "query" / "dog1_photo2.png"
+
+        if not all(p.exists() for p in [dog1_gallery, dog2_gallery, dog1_query]):
+            pytest.skip("Expected dog1/dog2 fixture images not present")
+
+        def mock_embed(img: PILImage.Image) -> np.ndarray:
+            arr = np.array(img.convert("RGB"), dtype=np.float32)
+            mean_rgb = arr.reshape(-1, 3).mean(axis=0)
+            vec = np.zeros(768, dtype=np.float32)
+            vec[:3] = mean_rgb
+            norm = np.linalg.norm(vec)
+            return vec / norm if norm > 0 else vec
+
+        from homeward_embed.index import EmbedIndex
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            index = EmbedIndex(index_dir=tmpdir, embed_dim=768)
+            index.enroll("dog1", mock_embed(PILImage.open(dog1_gallery).convert("RGB")))
+            index.enroll("dog2", mock_embed(PILImage.open(dog2_gallery).convert("RGB")))
+
+            results = index.query(mock_embed(PILImage.open(dog1_query).convert("RGB")), k=2)
+
+        assert results, "No results from index"
+        top_id, top_score = results[0]
+        assert top_id == "dog1", (
+            f"dog1_photo2 should Rank-1 match dog1's gallery, but got {top_id}"
+        )
 
 
 class TestAveragePrecision:

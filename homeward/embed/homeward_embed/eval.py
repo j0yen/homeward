@@ -125,6 +125,29 @@ def assert_no_overlap(
             raise ValueError(msg)
 
 
+def assert_disjoint_individuals(
+    gallery_ids: list[str] | set[str],
+    query_ids: list[str] | set[str],
+) -> None:
+    """Raise ValueError if any individual_id appears in both gallery and query splits.
+
+    This is a convenience wrapper around :func:`assert_no_overlap` with
+    positional semantics matching the PRD's function signature (gallery first,
+    query second).
+
+    Args:
+        gallery_ids: Individual IDs in the gallery split.
+        query_ids: Individual IDs in the query split.
+
+    Raises:
+        ValueError: If any individual_id is shared between the two splits.
+    """
+    assert_no_overlap(
+        query_ids=set(query_ids),
+        gallery_ids=set(gallery_ids),
+    )
+
+
 # ---------------------------------------------------------------------------
 # Eval harness
 # ---------------------------------------------------------------------------

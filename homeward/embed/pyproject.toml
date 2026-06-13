@@ -29,6 +29,7 @@ dev = [
 
 [project.scripts]
 homeward-embed-svc = "homeward_embed.service:main"
+homeward-embed = "homeward_embed.cli:main"
 
 [build-system]
 requires = ["hatchling"]
@@ -40,3 +41,6 @@ packages = ["homeward_embed"]
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]
+markers = [
+    "integration: end-to-end test requiring real model weights (skipped if not cached locally)",
+]

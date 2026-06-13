@@ -89,12 +89,42 @@ _embedder: PhotoEmbedder | None = None
 _index: EmbedIndex | None = None
 
 
+def _run_warmup(variant: str) -> None:
+    """Prefetch model weights into the pinned cache dir before serving.
+
+    Sets HF_HOME / TRANSFORMERS_CACHE so the subsequent PhotoEmbedder()
+    instantiation hits the local cache rather than the network.
+
+    If the model is already cached this is a no-op (weights load from disk).
+    If HF_HUB_OFFLINE=1 is set and weights are absent, this raises — which is
+    the correct behaviour: fail loudly at startup, not silently at first request.
+    """
+    import time  # noqa: PLC0415
+
+    hf_home = os.environ.get("HF_HOME", str(Path.home() / ".cache" / "homeward" / "hf"))
+    os.environ["HF_HOME"] = hf_home
+    os.environ["TRANSFORMERS_CACHE"] = str(Path(hf_home) / "hub")
+    os.environ["HF_HUB_CACHE"] = str(Path(hf_home) / "hub")
+
+    logger.info("homeward-embed warmup: variant=%s hf_home=%s", variant, hf_home)
+    t0 = time.perf_counter()
+    # Import here to avoid circular import at module level.
+    from homeward_embed.embedder import PhotoEmbedder as _PE  # noqa: PLC0415
+
+    tmp = _PE(variant=variant)  # type: ignore[arg-type]
+    elapsed = time.perf_counter() - t0
+    logger.info("homeward-embed warmup complete: variant=%s embed_dim=%d elapsed=%.1fs",
+                variant, tmp.embed_dim, elapsed)
+
+
 @app.on_event("startup")  # type: ignore[misc]
 async def _startup() -> None:
     global _detector, _embedder, _index
     logger.info("homeward-embed startup: variant=%s index_dir=%s", _MODEL_VARIANT, _INDEX_DIR)
+    # Warmup: prefetch model weights before serving so the first /enroll
+    # never blocks on a network download or fails offline.
+    _run_warmup(_MODEL_VARIANT)
     _embedder = PhotoEmbedder(variant=_MODEL_VARIANT)
-    _index = EmbedIndex(index_dir=_INDEX_DIR, embed_dim=_embedder.embed_dim)
     try:
         _detector = AnimalDetector()
     except ImportError:
