@@ -1,0 +1,19 @@
+[Unit]
+Description=Homeward ingest daemon (AIMD cadence loop)
+Documentation=https://github.com/j0yen/homeward
+After=network.target homeward-embed.service
+Wants=homeward-embed.service
+PartOf=homeward.target
+
+[Service]
+Type=exec
+EnvironmentFile=-%h/.config/homeward/homeward.env
+ExecStart=%h/.local/bin/homeward-ingestd run --db %h/.local/share/homeward/homeward-ingest.db
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=homeward-ingest
+
+[Install]
+WantedBy=homeward.target

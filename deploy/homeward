@@ -1,0 +1,132 @@
+#!/usr/bin/env bash
+# homeward — fleet lifecycle wrapper
+#
+# Commands:
+#   homeward up           install units + start homeward.target
+#   homeward down         stop homeward.target (and its Wants)
+#   homeward status       show each unit's active-state + embed /health JSON
+#   homeward logs [unit]  tail journald logs for unit (default: all three)
+#   homeward health       exit 0 if all legs are up, non-zero otherwise
+#
+# The script is installed to ~/.local/bin/homeward by deploy/install.sh.
+set -uo pipefail
+
+DEPLOY_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+UNITS=(
+    homeward-embed.service
+    homeward-ingest.service
+    homeward-report.service
+)
+TARGET=homeward.target
+
+# Read HOMEWARD_EMBED_URL from env file if present, default otherwise
+HOMEWARD_EMBED_URL="${HOMEWARD_EMBED_URL:-}"
+ENV_FILE="${HOME}/.config/homeward/homeward.env"
+if [[ -z "${HOMEWARD_EMBED_URL}" && -f "${ENV_FILE}" ]]; then
+    # shellcheck source=/dev/null
+    HOMEWARD_EMBED_URL="$(grep -E '^HOMEWARD_EMBED_URL=' "${ENV_FILE}" | cut -d= -f2- | tr -d '[:space:]')" || true
+fi
+HOMEWARD_EMBED_URL="${HOMEWARD_EMBED_URL:-http://127.0.0.1:8082}"
+
+die() { printf '[homeward] ERROR: %s\n' "$*" >&2; exit 1; }
+log() { printf '[homeward] %s\n' "$*"; }
+
+cmd_up() {
+    log "Installing units..."
+    bash "${DEPLOY_DIR}/install.sh"
+    log "Starting ${TARGET}..."
+    systemctl --user enable --now "${TARGET}"
+    log "Fleet started."
+    cmd_status
+}
+
+cmd_down() {
+    log "Stopping ${TARGET}..."
+    systemctl --user stop "${TARGET}"
+    log "Fleet stopped."
+}
+
+cmd_status() {
+    echo "=== Homeward Fleet Status ==="
+    for unit in "${UNITS[@]}"; do
+        state="$(systemctl --user is-active "${unit}" 2>/dev/null || true)"
+        printf '  %-35s  %s\n' "${unit}" "${state}"
+    done
+
+    echo ""
+    echo "=== Embed sidecar /health ==="
+    if command -v curl &>/dev/null; then
+        health_json="$(curl -sf --max-time 3 "${HOMEWARD_EMBED_URL}/health" 2>/dev/null)" || health_json=""
+    elif command -v wget &>/dev/null; then
+        health_json="$(wget -qO- --timeout=3 "${HOMEWARD_EMBED_URL}/health" 2>/dev/null)" || health_json=""
+    else
+        health_json=""
+    fi
+    if [[ -n "${health_json}" ]]; then
+        echo "  ${health_json}"
+    else
+        echo "  (embed sidecar unreachable at ${HOMEWARD_EMBED_URL}/health)"
+    fi
+}
+
+cmd_logs() {
+    local unit="${1:-}"
+    if [[ -n "${unit}" ]]; then
+        # Ensure .service suffix
+        [[ "${unit}" == *.service ]] || unit="${unit}.service"
+        exec journalctl --user -u "${unit}" -f
+    else
+        # Tail all three at once
+        exec journalctl --user -u homeward-embed.service \
+                               -u homeward-ingest.service \
+                               -u homeward-report.service \
+                               -f
+    fi
+}
+
+cmd_health() {
+    local all_ok=1
+
+    # Check each systemd unit
+    for unit in "${UNITS[@]}"; do
+        state="$(systemctl --user is-active "${unit}" 2>/dev/null || true)"
+        if [[ "${state}" != "active" ]]; then
+            log "FAIL: ${unit} is ${state}"
+            all_ok=0
+        fi
+    done
+
+    # Check embed sidecar HTTP health endpoint
+    if command -v curl &>/dev/null; then
+        if ! curl -sf --max-time 3 "${HOMEWARD_EMBED_URL}/health" &>/dev/null; then
+            log "FAIL: embed sidecar /health unreachable at ${HOMEWARD_EMBED_URL}"
+            all_ok=0
+        fi
+    else
+        log "WARNING: curl not found; skipping embed sidecar HTTP health check"
+    fi
+
+    if [[ "${all_ok}" -eq 1 ]]; then
+        log "All systems nominal."
+        exit 0
+    else
+        exit 1
+    fi
+}
+
+# ---------------------------------------------------------------------------
+# Dispatch
+# ---------------------------------------------------------------------------
+SUBCMD="${1:-}"
+shift || true
+
+case "${SUBCMD}" in
+    up)      cmd_up ;;
+    down)    cmd_down ;;
+    status)  cmd_status ;;
+    logs)    cmd_logs "${1:-}" ;;
+    health)  cmd_health ;;
+    "")      die "Usage: homeward <up|down|status|logs|health>" ;;
+    *)       die "Unknown command: ${SUBCMD}. Try: up down status logs health" ;;
+esac

@@ -1,0 +1,8 @@
+[Unit]
+Description=Homeward fleet target (embed + ingest + report)
+Documentation=https://github.com/j0yen/homeward
+Wants=homeward-embed.service homeward-ingest.service homeward-report.service
+After=homeward-embed.service homeward-ingest.service homeward-report.service
+
+[Install]
+WantedBy=default.target

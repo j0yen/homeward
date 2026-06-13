@@ -1,0 +1,19 @@
+[Unit]
+Description=Homeward embed sidecar (FastAPI / DINOv2)
+Documentation=https://github.com/j0yen/homeward
+After=network.target
+PartOf=homeward.target
+
+[Service]
+Type=exec
+EnvironmentFile=-%h/.config/homeward/homeward.env
+WorkingDirectory=%h/wintermute/homeward/homeward/embed
+ExecStart=uv run homeward-embed-svc
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=homeward-embed
+
+[Install]
+WantedBy=homeward.target

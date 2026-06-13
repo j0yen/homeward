@@ -1,0 +1,18 @@
+[Unit]
+Description=Homeward report service (owner lost-pet API)
+Documentation=https://github.com/j0yen/homeward
+After=network.target
+PartOf=homeward.target
+
+[Service]
+Type=exec
+EnvironmentFile=-%h/.config/homeward/homeward.env
+ExecStart=%h/.local/bin/homeward-reportd serve --port ${HOMEWARD_REPORT_PORT:-8081}
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=homeward-report
+
+[Install]
+WantedBy=homeward.target
