@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.11.0 — 2026-06-13
+
+Wire ingest daemon to call EmbedClient.enroll() for each intake photo via delta events, populating the vector gallery that the matcher searches.
+
 ## v0.10.0 — 2026-06-13
 
 Wire stored lost-report photo through embed sidecar and homeward-match fusion into a real ranked shortlist, replacing hardcoded stubs.
