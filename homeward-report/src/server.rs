@@ -22,12 +22,12 @@ use axum::response::{IntoResponse, Json};
 use axum::routing::{get, post};
 use axum::Router;
 use base64::Engine as _;
-use homeward_connectors::coverage::{CoverageArgs, build_report};
 use homeward_connectors::registry::ConnectorRegistry;
 use homeward_embed_client::{EmbedClient, EmbedClientConfig, QueryRequest};
 use homeward_schema::{PetRecord, Species};
 use serde::{Deserialize, Serialize};
 use tokio::net::TcpListener;
+use tokio::sync::RwLock;
 use tower_http::cors::CorsLayer;
 use tower_http::trace::TraceLayer;
 
@@ -48,8 +48,8 @@ const INDEX_HTML: &str = include_str!("../static/index.html");
 pub struct AppState {
     /// API configuration (rate-limit caps etc.).
     pub cfg: Arc<ApiConfig>,
-    /// In-memory shelter intake records (read-only view for the HTTP layer).
-    pub intake: Arc<Vec<PetRecord>>,
+    /// In-memory shelter intake records, populated from the ingest DB.
+    pub intake: Arc<RwLock<Vec<PetRecord>>>,
     /// Connector registry for coverage reporting.
     pub registry: Arc<ConnectorRegistry>,
     /// Optional embed sidecar client (None when `--no-embed` or env absent).
@@ -131,6 +131,48 @@ pub fn build_router(state: AppState) -> Router {
 
 // ─── Server entry point ───────────────────────────────────────────────────────
 
+/// Build the optional embed sidecar client.
+fn build_embed_client(no_embed: bool) -> Option<Arc<EmbedClient>> {
+    if no_embed {
+        tracing::info!("embed sidecar disabled via --no-embed");
+        return None;
+    }
+    let host_set = std::env::var("HW_EMBED_HOST").is_ok();
+    let port_set = std::env::var("HW_EMBED_PORT").is_ok();
+    if !host_set && !port_set {
+        tracing::info!("HW_EMBED_HOST/HW_EMBED_PORT not set; embed sidecar disabled");
+        return None;
+    }
+    let cfg = EmbedClientConfig::from_env();
+    match EmbedClient::new(cfg) {
+        Ok(c) => {
+            tracing::info!("embed sidecar client initialised");
+            Some(Arc::new(c))
+        }
+        Err(e) => {
+            tracing::warn!("embed sidecar client failed to build: {e}; search will degrade gracefully");
+            None
+        }
+    }
+}
+
+/// Wait up to `max_secs` for the intake vec to become non-empty.
+async fn wait_for_initial_load(intake: &Arc<RwLock<Vec<PetRecord>>>, max_secs: u64) {
+    let mut waited = 0u64;
+    let step = 2u64;
+    while waited < max_secs {
+        tokio::time::sleep(tokio::time::Duration::from_secs(step)).await;
+        waited += step;
+        let n = intake.read().await.len();
+        if n > 0 {
+            tracing::info!("ingest DB initial load complete: {n} records");
+            return;
+        }
+        tracing::info!("waiting for ingest DB initial load… ({waited}s elapsed)");
+    }
+    tracing::info!("ingest DB not yet loaded after {max_secs}s (will load in background)");
+}
+
 /// Start the HTTP server, binding to `bind:port`.
 ///
 /// Pass `no_embed = true` to bypass embed client construction even if the
@@ -141,36 +183,22 @@ pub fn build_router(state: AppState) -> Router {
 /// # Errors
 /// Returns an error if the TCP listener cannot be bound or the server exits.
 pub async fn serve(port: u16, bind: &str, no_embed: bool) -> Result<(), String> {
-    let embed_client = if no_embed {
-        tracing::info!("embed sidecar disabled via --no-embed");
-        None
-    } else {
-        // Only construct the client if at least one env var is set; otherwise
-        // fall back to None so that an unconfigured deployment doesn't attempt
-        // connections to 127.0.0.1:8741 unexpectedly.
-        let host_set = std::env::var("HW_EMBED_HOST").is_ok();
-        let port_set = std::env::var("HW_EMBED_PORT").is_ok();
-        if host_set || port_set {
-            let cfg = EmbedClientConfig::from_env();
-            match EmbedClient::new(cfg) {
-                Ok(c) => {
-                    tracing::info!("embed sidecar client initialised");
-                    Some(Arc::new(c))
-                }
-                Err(e) => {
-                    tracing::warn!("embed sidecar client failed to build: {e}; search will degrade gracefully");
-                    None
-                }
-            }
-        } else {
-            tracing::info!("HW_EMBED_HOST/HW_EMBED_PORT not set; embed sidecar disabled");
-            None
-        }
-    };
+    let embed_client = build_embed_client(no_embed);
+
+    // Build shared intake and spawn DB reader background task.
+    let shared_intake: Arc<RwLock<Vec<PetRecord>>> = Arc::new(RwLock::new(vec![]));
+    let reader = crate::db_reader::IngestDbReader::new();
+    let intake_for_reader = Arc::clone(&shared_intake);
+    tokio::spawn(async move {
+        reader.run(intake_for_reader).await;
+    });
+
+    // Wait up to 10 seconds for initial DB load (log progress every 2s).
+    wait_for_initial_load(&shared_intake, 10).await;
 
     let state = AppState {
         cfg: Arc::new(ApiConfig::default()),
-        intake: Arc::new(vec![]),
+        intake: shared_intake,
         registry: Arc::new(ConnectorRegistry::new()),
         embed_client,
     };
@@ -203,22 +231,40 @@ async fn handle_health() -> Json<HealthResponse> {
     Json(HealthResponse { status: "ok" })
 }
 
-/// `GET /coverage` — per-source coverage report.
-async fn handle_coverage(State(state): State<AppState>) -> impl IntoResponse {
-    let args = CoverageArgs {
-        store_path: None,
-        json: true,
-        registry: &state.registry,
-        cadence_hints: std::collections::HashMap::new(),
-    };
+/// `GET /coverage` — per-source coverage report, backed by the ingest DB.
+async fn handle_coverage(State(_state): State<AppState>) -> impl IntoResponse {
+    // Derive DB path the same way IngestDbReader does.
+    let db_path = std::env::var("HOMEWARD_INGEST_DB")
+        .map(std::path::PathBuf::from)
+        .unwrap_or_else(|_| {
+            let home = std::env::var("HOME").unwrap_or_else(|_| "/root".to_owned());
+            std::path::PathBuf::from(home)
+                .join(".local/share/homeward/homeward-ingest.db")
+        });
 
-    match build_report(&args) {
-        Ok(report) => (StatusCode::OK, Json(report)).into_response(),
-        Err(e) => (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            Json(serde_json::json!({"error": e})),
-        )
-            .into_response(),
+    #[derive(Serialize)]
+    struct CoverageResponse {
+        sources: Vec<crate::db_reader::DbCoverageItem>,
+        generated_at: String,
+    }
+
+    match crate::db_reader::query_coverage(&db_path) {
+        Ok(sources) => {
+            let resp = CoverageResponse {
+                sources,
+                generated_at: chrono::Utc::now().to_rfc3339(),
+            };
+            (StatusCode::OK, Json(resp)).into_response()
+        }
+        Err(e) => {
+            tracing::warn!("coverage DB query failed: {e}");
+            // Return empty sources rather than an error so the UI still renders.
+            let resp = CoverageResponse {
+                sources: vec![],
+                generated_at: chrono::Utc::now().to_rfc3339(),
+            };
+            (StatusCode::OK, Json(resp)).into_response()
+        }
     }
 }
 
@@ -248,8 +294,9 @@ async fn handle_intake(
         limit: params.limit,
     };
 
+    let intake_guard = state.intake.read().await;
     let result: ShelterQueryResult =
-        crate::api::query_shelter(&state.intake, &query, &state.cfg);
+        crate::api::query_shelter(&intake_guard, &query, &state.cfg);
 
     (StatusCode::OK, Json(IntakeResponse {
         records: result.records,
@@ -355,12 +402,12 @@ async fn handle_search(
                 }
                 Ok(matches) => {
                     // Map QueryMatch → MatchCandidate by looking up canonical_id in intake.
-                    let intake = &*state.intake;
+                    let intake_guard = state.intake.read().await;
                     matches
                         .into_iter()
                         .filter_map(|qm| {
                             // Find the PetRecord in intake by canonical_id string.
-                            let record = intake
+                            let record = intake_guard
                                 .iter()
                                 .find(|r| r.canonical_id.to_string() == qm.canonical_id)?
                                 .clone();
@@ -403,7 +450,7 @@ mod tests {
     fn make_state() -> AppState {
         AppState {
             cfg: Arc::new(ApiConfig::default()),
-            intake: Arc::new(vec![]),
+            intake: Arc::new(RwLock::new(vec![])),
             registry: Arc::new(ConnectorRegistry::new()),
             embed_client: None,
         }
