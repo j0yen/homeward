@@ -188,6 +188,7 @@ fn cmd_status(args: &[String]) {
 fn cmd_serve(args: &[String]) {
     let mut port: u16 = 8080;
     let mut bind = "0.0.0.0".to_owned();
+    let mut no_embed = false;
     let mut i = 0usize;
     while i < args.len() {
         let Some(flag) = args.get(i) else { break };
@@ -201,6 +202,9 @@ fn cmd_serve(args: &[String]) {
                 if let Some(b) = args.get(i) {
                     bind = b.clone();
                 }
+            }
+            "--no-embed" => {
+                no_embed = true;
             }
             other => {
                 eprintln!("unknown serve argument: {other:?}");
@@ -227,7 +231,7 @@ fn cmd_serve(args: &[String]) {
         });
 
     println!("homeward-reportd: listening on {bind}:{port}");
-    if let Err(e) = rt.block_on(homeward_report::server::serve(port, &bind)) {
+    if let Err(e) = rt.block_on(homeward_report::server::serve(port, &bind, no_embed)) {
         eprintln!("error: {e}");
         process::exit(1);
     }

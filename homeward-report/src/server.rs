@@ -19,8 +19,10 @@ use axum::http::StatusCode;
 use axum::response::{IntoResponse, Json};
 use axum::routing::{get, post};
 use axum::Router;
+use base64::Engine as _;
 use homeward_connectors::coverage::{CoverageArgs, build_report};
 use homeward_connectors::registry::ConnectorRegistry;
+use homeward_embed_client::{EmbedClient, EmbedClientConfig, QueryRequest};
 use homeward_schema::{PetRecord, Species};
 use serde::{Deserialize, Serialize};
 use tokio::net::TcpListener;
@@ -43,6 +45,8 @@ pub struct AppState {
     pub intake: Arc<Vec<PetRecord>>,
     /// Connector registry for coverage reporting.
     pub registry: Arc<ConnectorRegistry>,
+    /// Optional embed sidecar client (None when `--no-embed` or env absent).
+    pub embed_client: Option<Arc<EmbedClient>>,
 }
 
 // ─── Query params ─────────────────────────────────────────────────────────────
@@ -79,6 +83,9 @@ struct IntakeResponse {
 #[derive(Debug, Serialize)]
 struct SearchResponse {
     candidates: Vec<SearchCandidate>,
+    /// Optional note (e.g. "embed sidecar unavailable").
+    #[serde(skip_serializing_if = "Option::is_none")]
+    note: Option<String>,
 }
 
 /// A single candidate in the `/search` response — candidate-framed, no PII.
@@ -113,15 +120,46 @@ pub fn build_router(state: AppState) -> Router {
 
 /// Start the HTTP server, binding to `bind:port`.
 ///
+/// Pass `no_embed = true` to bypass embed client construction even if the
+/// `HW_EMBED_HOST`/`HW_EMBED_PORT` env vars are set (corresponds to `--no-embed`).
+///
 /// This function runs until the process is killed.
 ///
 /// # Errors
 /// Returns an error if the TCP listener cannot be bound or the server exits.
-pub async fn serve(port: u16, bind: &str) -> Result<(), String> {
+pub async fn serve(port: u16, bind: &str, no_embed: bool) -> Result<(), String> {
+    let embed_client = if no_embed {
+        tracing::info!("embed sidecar disabled via --no-embed");
+        None
+    } else {
+        // Only construct the client if at least one env var is set; otherwise
+        // fall back to None so that an unconfigured deployment doesn't attempt
+        // connections to 127.0.0.1:8741 unexpectedly.
+        let host_set = std::env::var("HW_EMBED_HOST").is_ok();
+        let port_set = std::env::var("HW_EMBED_PORT").is_ok();
+        if host_set || port_set {
+            let cfg = EmbedClientConfig::from_env();
+            match EmbedClient::new(cfg) {
+                Ok(c) => {
+                    tracing::info!("embed sidecar client initialised");
+                    Some(Arc::new(c))
+                }
+                Err(e) => {
+                    tracing::warn!("embed sidecar client failed to build: {e}; search will degrade gracefully");
+                    None
+                }
+            }
+        } else {
+            tracing::info!("HW_EMBED_HOST/HW_EMBED_PORT not set; embed sidecar disabled");
+            None
+        }
+    };
+
     let state = AppState {
         cfg: Arc::new(ApiConfig::default()),
         intake: Arc::new(vec![]),
         registry: Arc::new(ConnectorRegistry::new()),
+        embed_client,
     };
 
     let addr = format!("{bind}:{port}");
@@ -202,6 +240,10 @@ async fn handle_intake(
 ///
 /// Accepts a multipart form with a `photo` field containing the image bytes.
 /// Returns a ranked candidate shortlist (zero candidates ok; 4xx on bad upload).
+///
+/// # Degradation
+/// If the embed sidecar is absent or returns an error the handler returns
+/// `HTTP 200` with `candidates: []` and `note: "embed sidecar unavailable"`.
 async fn handle_search(
     State(state): State<AppState>,
     mut multipart: Multipart,
@@ -239,17 +281,78 @@ async fn handle_search(
         }
     }
 
-    if photo_bytes.is_none() {
-        return (
-            StatusCode::BAD_REQUEST,
-            Json(serde_json::json!({"error": "missing 'photo' field in multipart body"})),
-        )
-            .into_response();
-    }
+    let photo_bytes = match photo_bytes {
+        Some(b) => b,
+        None => {
+            return (
+                StatusCode::BAD_REQUEST,
+                Json(serde_json::json!({"error": "missing 'photo' field in multipart body"})),
+            )
+                .into_response();
+        }
+    };
 
-    // With an empty intake gallery the prescored list is always empty.
-    // In production, homeward-match would score the photo against the gallery.
-    let prescored: Vec<MatchCandidate> = vec![];
+    // AC1: strip EXIF before any further processing.
+    let stripped = crate::exif::strip_exif(&photo_bytes);
+
+    // Try embed sidecar if available.
+    let prescored: Vec<MatchCandidate> = match &state.embed_client {
+        None => {
+            // Sidecar absent — graceful degradation.
+            return (
+                StatusCode::OK,
+                Json(SearchResponse {
+                    candidates: vec![],
+                    note: Some("embed sidecar unavailable".to_owned()),
+                }),
+            )
+                .into_response();
+        }
+        Some(client) => {
+            let b64 = base64::engine::general_purpose::STANDARD.encode(&stripped);
+            let req = QueryRequest {
+                image_url: None,
+                image_b64: Some(b64),
+                k: 10,
+                species_filter: None,
+            };
+
+            match client.query(req).await {
+                Err(e) => {
+                    tracing::warn!("embed sidecar query failed: {e}; returning empty candidates");
+                    return (
+                        StatusCode::OK,
+                        Json(SearchResponse {
+                            candidates: vec![],
+                            note: Some("embed sidecar unavailable".to_owned()),
+                        }),
+                    )
+                        .into_response();
+                }
+                Ok(matches) => {
+                    // Map QueryMatch → MatchCandidate by looking up canonical_id in intake.
+                    let intake = &*state.intake;
+                    matches
+                        .into_iter()
+                        .filter_map(|qm| {
+                            // Find the PetRecord in intake by canonical_id string.
+                            let record = intake
+                                .iter()
+                                .find(|r| r.canonical_id.to_string() == qm.canonical_id)?
+                                .clone();
+                            #[allow(clippy::cast_possible_truncation)]
+                            Some(MatchCandidate {
+                                record,
+                                score: qm.score as f32,
+                                reclaimable_until: None,
+                            })
+                        })
+                        .collect()
+                }
+            }
+        }
+    };
+
     let results = image_similarity_search(prescored, &state.cfg);
 
     let candidates: Vec<SearchCandidate> = results
@@ -261,7 +364,7 @@ async fn handle_search(
         })
         .collect();
 
-    (StatusCode::OK, Json(SearchResponse { candidates })).into_response()
+    (StatusCode::OK, Json(SearchResponse { candidates, note: None })).into_response()
 }
 
 // ─── Tests ────────────────────────────────────────────────────────────────────
@@ -278,6 +381,7 @@ mod tests {
             cfg: Arc::new(ApiConfig::default()),
             intake: Arc::new(vec![]),
             registry: Arc::new(ConnectorRegistry::new()),
+            embed_client: None,
         }
     }
 
@@ -378,6 +482,94 @@ mod tests {
 
         let resp = app.oneshot(req).await.expect("call handler");
         assert_eq!(resp.status(), StatusCode::BAD_REQUEST);
+    }
+
+    /// Graceful degradation: when embed_client is None, `/search` returns 200
+    /// with an empty candidates list and a note field.
+    #[tokio::test]
+    async fn search_no_embed_client_returns_empty_with_note() {
+        // State with no embed client.
+        let state = make_state(); // embed_client: None
+        let app = build_router(state);
+
+        let boundary = "photoboundary";
+        let photo_bytes = b"\xFF\xD8\xFF\xD9"; // minimal JPEG
+        let body_str = format!(
+            "--{boundary}\r\nContent-Disposition: form-data; name=\"photo\"; filename=\"pet.jpg\"\r\nContent-Type: image/jpeg\r\n\r\n{}\r\n--{boundary}--\r\n",
+            String::from_utf8_lossy(photo_bytes)
+        );
+
+        let req = Request::builder()
+            .method(Method::POST)
+            .uri("/search")
+            .header(
+                "content-type",
+                format!("multipart/form-data; boundary={boundary}"),
+            )
+            .body(Body::from(body_str))
+            .expect("build request");
+
+        let resp = app.oneshot(req).await.expect("call handler");
+        assert_eq!(resp.status(), StatusCode::OK);
+
+        let body = axum::body::to_bytes(resp.into_body(), usize::MAX)
+            .await
+            .expect("read body");
+        let json: serde_json::Value = serde_json::from_slice(&body).expect("parse JSON");
+        assert!(json["candidates"].is_array(), "must have candidates array");
+        assert_eq!(
+            json["candidates"].as_array().expect("array").len(),
+            0,
+            "candidates must be empty when embed client absent"
+        );
+        assert_eq!(
+            json["note"],
+            "embed sidecar unavailable",
+            "note field must indicate unavailability"
+        );
+    }
+
+    /// EXIF stripping: bytes uploaded with an APP1 marker must have 0xFFE1 absent
+    /// after the strip step inside handle_search.
+    ///
+    /// We verify this indirectly: `crate::exif::strip_exif` is called on the
+    /// uploaded bytes before any further processing. We test the stripping
+    /// function directly here as a unit test.
+    #[test]
+    fn exif_strip_removes_app1_before_b64() {
+        // Build a JPEG with an embedded APP1 marker (fake EXIF).
+        let mut jpeg = vec![0xFF_u8, 0xD8]; // SOI
+        // APP1 segment: marker + 2-byte length (inclusive) + payload
+        let payload = b"ExifFakeGPS!";
+        let seg_len: u16 = 2 + payload.len() as u16;
+        jpeg.push(0xFF);
+        jpeg.push(0xE1); // APP1
+        jpeg.extend_from_slice(&seg_len.to_be_bytes());
+        jpeg.extend_from_slice(payload);
+        // EOI
+        jpeg.push(0xFF);
+        jpeg.push(0xD9);
+
+        let stripped = crate::exif::strip_exif(&jpeg);
+
+        // The stripped output must not contain the APP1 marker 0xFFE1.
+        let has_app1 = stripped.windows(2).any(|w| w[0] == 0xFF && w[1] == 0xE1);
+        assert!(
+            !has_app1,
+            "APP1/EXIF marker (0xFFE1) must be absent after strip_exif"
+        );
+
+        // It must still be a valid JPEG (SOI present).
+        assert_eq!(stripped[0], 0xFF);
+        assert_eq!(stripped[1], 0xD8);
+
+        // Encode to base64 — the EXIF payload must not appear.
+        let b64 = base64::engine::general_purpose::STANDARD.encode(&stripped);
+        // base64("ExifFakeGPS!") = "RXhpZkZha2VHUFMh"
+        assert!(
+            !b64.contains("RXhpZkZha2VHUFMh"),
+            "EXIF payload must not appear in base64-encoded stripped bytes"
+        );
     }
 
     /// Handler unit test: `/search` with a valid photo field returns 200 with candidates array.
