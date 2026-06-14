@@ -1,8 +1,20 @@
 # Changelog
 
+## v0.16.0 — 2026-06-14
+
+`homeward-connectors probe <domain> <dataset_id>`: hits SODA metadata + a one-row
+sample, decides whether the dataset is a usable STRAY-bearing animal-intake feed,
+and emits either a draft `sources.toml` entry (best-guess column mapping) or an
+honest red verdict explaining why it isn't usable. Onboarding becomes probe →
+review → commit instead of manual archaeology.
+
 ## v0.15.0 — 2026-06-13
 
 homeward-coverage-report: iter-1 scaffold — coverage subcommand with LIVE/STALE/SILENT/UNKNOWN statuses, --json output, fixture tests green
+
+## v0.14.0 — 2026-06-13
+
+homeward-source-catalog: deploy/sources.toml (6 cities), CATCHMENT.md, catalog_load_test, homeward.env.sample, wrapper wired
 
 ## v0.13.0 — 2026-06-13
 
