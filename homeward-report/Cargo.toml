@@ -2,7 +2,7 @@
 name = "homeward-report"
 version = "0.3.0"
 edition = "2024"
-rust-version = "1.85"
+rust-version = "1.86"
 license = "MIT OR Apache-2.0"
 description = "Owner-side lost-pet reports, continuous matching, match alerts, and the open read API."
 publish = false

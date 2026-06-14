@@ -2,7 +2,7 @@
 name = "homeward-connectors"
 version = "0.2.0"
 edition = "2024"
-rust-version = "1.85"
+rust-version = "1.86"
 license = "MIT OR Apache-2.0"
 description = "Source connectors for the homeward shelter-pet aggregator: RescueGroups + Socrata."
 publish = false

@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.18.1 — 2026-06-14
+
+build and install homeward-ingestd binary; homeward-ingest.service now starts cleanly
+
+## v0.18.0 — 2026-06-14
+
+wired POST /search to embed sidecar with EXIF strip, graceful degradation, and --no-embed flag
+
 ## v0.17.0 — 2026-06-14
 
 `homeward-reportd serve [--port PORT] [--bind ADDR]`: axum HTTP server exposing the existing query API over the network. Four endpoints: `GET /health`, `GET /coverage`, `GET /intake` (shelter query with species/zip/state filters, capped at 50 results), `POST /search` (photo upload → ranked candidates). No LostReport PII exposed. homeward-report v0.3.0.

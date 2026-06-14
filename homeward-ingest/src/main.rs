@@ -48,6 +48,9 @@ async fn main() {
         "run" => cmd_run(rest).await,
         "stats" => cmd_stats(rest),
         "get" => cmd_get(rest),
+        "--help" | "-h" | "help" => {
+            print_usage_stdout();
+        }
         other => {
             eprintln!("unknown subcommand: {other:?}");
             print_usage();
@@ -61,6 +64,16 @@ fn print_usage() {
     eprintln!("  homeward-ingestd run    [--db <path>]");
     eprintln!("  homeward-ingestd stats  [--db <path>]");
     eprintln!("  homeward-ingestd get <canonical_id> [--db <path>]");
+}
+
+fn print_usage_stdout() {
+    println!("homeward-ingestd — homeward ingest daemon");
+    println!();
+    println!("Usage:");
+    println!("  homeward-ingestd run    [--db <path>]   Start the ingest loop");
+    println!("  homeward-ingestd stats  [--db <path>]   Print store statistics");
+    println!("  homeward-ingestd get <id> [--db <path>] Fetch one record by ULID");
+    println!("  homeward-ingestd --help                 Show this help");
 }
 
 fn parse_db_flag(args: &[String]) -> PathBuf {
