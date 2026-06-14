@@ -16,6 +16,7 @@
 
 pub mod alerts;
 pub mod api;
+pub mod db_reader;
 pub mod delivery;
 pub mod delivery_log;
 pub mod exif;
