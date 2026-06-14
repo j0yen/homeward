@@ -1,5 +1,6 @@
 /target/
 **/*.proptest-regressions
+*.pt
 
 # Python (homeward/embed sidecar)
 __pycache__/
