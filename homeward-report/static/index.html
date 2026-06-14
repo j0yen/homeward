@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Homeward — Find your lost pet</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #f8f9fa;
+      color: #212529;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    header {
+      background: #1a1a2e;
+      color: #fff;
+      padding: 1.25rem 1.5rem;
+      display: flex;
+      align-items: baseline;
+      gap: 0.75rem;
+    }
+    header h1 { font-size: 1.75rem; font-weight: 700; letter-spacing: -0.02em; }
+    header p { font-size: 1rem; opacity: 0.75; }
+    main { flex: 1; max-width: 720px; margin: 0 auto; padding: 2rem 1rem; width: 100%; }
+    .upload-zone {
+      border: 2px dashed #adb5bd;
+      border-radius: 12px;
+      padding: 2.5rem 2rem;
+      text-align: center;
+      background: #fff;
+      cursor: pointer;
+      transition: border-color 0.2s, background 0.2s;
+      margin-bottom: 1rem;
+    }
+    .upload-zone.drag-over {
+      border-color: #0d6efd;
+      background: #e7f1ff;
+    }
+    .upload-zone .icon { font-size: 3rem; margin-bottom: 0.5rem; }
+    .upload-zone p { color: #6c757d; margin-top: 0.5rem; font-size: 0.9rem; }
+    #preview-img {
+      display: none;
+      max-width: 200px;
+      max-height: 200px;
+      border-radius: 8px;
+      margin: 0 auto 0.75rem;
+    }
+    #file-input { display: none; }
+    .btn {
+      display: inline-block;
+      padding: 0.6rem 1.5rem;
+      border: none;
+      border-radius: 8px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.15s;
+    }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn-primary { background: #0d6efd; color: #fff; }
+    .btn-secondary { background: #6c757d; color: #fff; margin-left: 0.5rem; }
+    .btn:not(:disabled):hover { opacity: 0.88; }
+    .actions { display: flex; justify-content: center; gap: 0.5rem; flex-wrap: wrap; }
+    #status-msg {
+      margin-top: 1rem;
+      text-align: center;
+      color: #6c757d;
+      font-size: 0.9rem;
+      min-height: 1.4em;
+    }
+    #error-banner {
+      display: none;
+      background: #fff3cd;
+      border: 1px solid #ffc107;
+      border-radius: 8px;
+      padding: 0.75rem 1rem;
+      margin-bottom: 1rem;
+      font-size: 0.9rem;
+    }
+    #results-section { display: none; margin-top: 2rem; }
+    #results-section h2 { font-size: 1.2rem; font-weight: 600; margin-bottom: 1rem; color: #343a40; }
+    .card {
+      background: #fff;
+      border-radius: 10px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+      padding: 1rem;
+      display: flex;
+      gap: 1rem;
+      margin-bottom: 0.75rem;
+      align-items: flex-start;
+    }
+    .card-photo {
+      width: 80px;
+      height: 80px;
+      object-fit: cover;
+      border-radius: 8px;
+      flex-shrink: 0;
+      background: #e9ecef;
+    }
+    .card-photo-placeholder {
+      width: 80px;
+      height: 80px;
+      border-radius: 8px;
+      background: #e9ecef;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2rem;
+      flex-shrink: 0;
+    }
+    .card-body { flex: 1; min-width: 0; }
+    .card-name { font-weight: 700; font-size: 1rem; margin-bottom: 0.25rem; }
+    .card-meta { font-size: 0.85rem; color: #6c757d; margin-bottom: 0.4rem; }
+    .score-bar-wrap { margin: 0.3rem 0; }
+    .score-label { font-size: 0.8rem; font-weight: 600; margin-bottom: 0.2rem; }
+    .score-bar-bg { background: #e9ecef; border-radius: 4px; height: 8px; overflow: hidden; }
+    .score-bar-fill { height: 100%; border-radius: 4px; transition: width 0.4s; }
+    .score-green  { background: #198754; }
+    .score-yellow { background: #ffc107; }
+    .score-gray   { background: #adb5bd; }
+    .card-contact { margin-top: 0.4rem; }
+    .card-contact a { color: #0d6efd; font-size: 0.85rem; text-decoration: none; }
+    .card-contact a:hover { text-decoration: underline; }
+    footer {
+      text-align: center;
+      padding: 1.25rem;
+      font-size: 0.8rem;
+      color: #6c757d;
+      border-top: 1px solid #dee2e6;
+    }
+    .text-filter-wrap { margin-top: 1rem; display: none; }
+    .text-filter-wrap input {
+      width: 100%;
+      padding: 0.5rem 0.75rem;
+      border: 1px solid #ced4da;
+      border-radius: 8px;
+      font-size: 1rem;
+      margin-bottom: 0.75rem;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>Homeward</h1>
+  <p>Find your lost pet.</p>
+</header>
+
+<main>
+  <div id="error-banner"></div>
+
+  <div
+    class="upload-zone"
+    id="drop-zone"
+    role="button"
+    tabindex="0"
+    aria-label="Upload a photo of your pet"
+    onclick="document.getElementById('file-input').click()"
+    ondragover="handleDragOver(event)"
+    ondragleave="handleDragLeave(event)"
+    ondrop="handleDrop(event)"
+    onkeydown="if(event.key==='Enter'||event.key===' '){document.getElementById('file-input').click()}"
+  >
+    <img id="preview-img" alt="Preview of uploaded pet photo" />
+    <div class="icon" id="upload-icon">🐾</div>
+    <strong id="upload-label">Drop a photo here or click to browse</strong>
+    <p>JPEG or PNG — your photo is never stored</p>
+  </div>
+  <input type="file" id="file-input" accept="image/*" onchange="handleFileSelect(this)" />
+
+  <div class="actions">
+    <button class="btn btn-primary" id="search-btn" onclick="runSearch()" disabled>Search shelters</button>
+    <button class="btn btn-secondary" id="reset-btn" onclick="resetForm()" style="display:none">Search again</button>
+  </div>
+  <div id="status-msg"></div>
+
+  <div class="text-filter-wrap" id="text-filter-wrap">
+    <input type="text" id="text-filter" placeholder="Filter by species, breed, or city…" oninput="filterIntake()" />
+    <div id="intake-results"></div>
+  </div>
+
+  <div id="results-section">
+    <h2 id="results-heading">Shelter matches</h2>
+    <div id="results-list"></div>
+  </div>
+</main>
+
+<footer>
+  Data from public shelter records. Not a guarantee of match.
+</footer>
+
+<script>
+  let selectedFile = null;
+  let intakeRecords = [];
+
+  function handleDragOver(e) {
+    e.preventDefault();
+    document.getElementById('drop-zone').classList.add('drag-over');
+  }
+  function handleDragLeave(e) {
+    document.getElementById('drop-zone').classList.remove('drag-over');
+  }
+  function handleDrop(e) {
+    e.preventDefault();
+    document.getElementById('drop-zone').classList.remove('drag-over');
+    const file = e.dataTransfer.files[0];
+    if (file && file.type.startsWith('image/')) setFile(file);
+  }
+  function handleFileSelect(input) {
+    if (input.files && input.files[0]) setFile(input.files[0]);
+  }
+
+  function setFile(file) {
+    selectedFile = file;
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      const img = document.getElementById('preview-img');
+      img.src = e.target.result;
+      img.style.display = 'block';
+      document.getElementById('upload-icon').style.display = 'none';
+      document.getElementById('upload-label').textContent = file.name;
+    };
+    reader.readAsDataURL(file);
+    document.getElementById('search-btn').disabled = false;
+    document.getElementById('status-msg').textContent = '';
+  }
+
+  async function runSearch() {
+    if (!selectedFile) return;
+    setStatus('Searching shelters…');
+    document.getElementById('search-btn').disabled = true;
+    document.getElementById('results-section').style.display = 'none';
+    document.getElementById('text-filter-wrap').style.display = 'none';
+    setError('');
+
+    const form = new FormData();
+    form.append('photo', selectedFile);
+
+    let resp;
+    try {
+      resp = await fetch('/search', { method: 'POST', body: form });
+    } catch (err) {
+      setStatus('');
+      setError('Network error — please check your connection and try again.');
+      document.getElementById('search-btn').disabled = false;
+      return;
+    }
+
+    if (!resp.ok) {
+      setStatus('');
+      setError('Search failed (server error). Please try again.');
+      document.getElementById('search-btn').disabled = false;
+      return;
+    }
+
+    let data;
+    try { data = await resp.json(); } catch {
+      setStatus('');
+      setError('Unexpected response from server.');
+      document.getElementById('search-btn').disabled = false;
+      return;
+    }
+
+    document.getElementById('search-btn').style.display = 'none';
+    document.getElementById('reset-btn').style.display = 'inline-block';
+    setStatus('');
+
+    if (!data.embed_available) {
+      setError('Photo search temporarily unavailable — browse records below.', 'info');
+      await loadIntakeFallback();
+      return;
+    }
+
+    const candidates = data.candidates || [];
+    renderResults(candidates);
+  }
+
+  function renderResults(candidates) {
+    const section = document.getElementById('results-section');
+    const list = document.getElementById('results-list');
+    list.innerHTML = '';
+
+    if (candidates.length === 0) {
+      list.innerHTML = '<p style="color:#6c757d;text-align:center;padding:1rem 0">No close matches found. Try a clearer photo or contact local shelters directly.</p>';
+      section.style.display = 'block';
+      document.getElementById('results-heading').textContent = 'Shelter matches';
+      return;
+    }
+
+    // Sort descending by score
+    candidates.sort((a, b) => (b.score || 0) - (a.score || 0));
+
+    candidates.slice(0, 10).forEach(function(c) {
+      const record = c.record || {};
+      const score = typeof c.score === 'number' ? c.score : 0;
+      list.appendChild(buildCard(record, score));
+    });
+
+    section.style.display = 'block';
+    document.getElementById('results-heading').textContent = 'Shelter matches (' + Math.min(candidates.length, 10) + ')';
+  }
+
+  function buildCard(record, score) {
+    const card = document.createElement('div');
+    card.className = 'card';
+
+    // Photo
+    const photoUrls = record.photo_urls || [];
+    if (photoUrls.length > 0) {
+      const img = document.createElement('img');
+      img.className = 'card-photo';
+      img.src = photoUrls[0];
+      img.alt = record.breed || record.species || 'Pet photo';
+      img.onerror = function() { this.style.display='none'; };
+      card.appendChild(img);
+    } else {
+      const ph = document.createElement('div');
+      ph.className = 'card-photo-placeholder';
+      ph.textContent = record.species === 'dog' ? '🐕' : record.species === 'cat' ? '🐈' : '🐾';
+      card.appendChild(ph);
+    }
+
+    // Body
+    const body = document.createElement('div');
+    body.className = 'card-body';
+
+    // Name / species / breed
+    const nameEl = document.createElement('div');
+    nameEl.className = 'card-name';
+    nameEl.textContent = record.name || (record.breed ? record.breed : (capitalize(record.species) || 'Unknown'));
+    body.appendChild(nameEl);
+
+    const meta = document.createElement('div');
+    meta.className = 'card-meta';
+    const parts = [];
+    if (record.species) parts.push(capitalize(record.species));
+    if (record.breed) parts.push(record.breed);
+    if (record.shelter_city_county) parts.push(record.shelter_city_county + (record.shelter_state ? ', ' + record.shelter_state : ''));
+    if (record.first_seen) {
+      const d = new Date(record.first_seen);
+      if (!isNaN(d)) parts.push('Seen ' + d.toLocaleDateString());
+    }
+    meta.textContent = parts.join(' · ');
+    body.appendChild(meta);
+
+    // Score bar
+    const scoreWrap = document.createElement('div');
+    scoreWrap.className = 'score-bar-wrap';
+    const labelEl = document.createElement('div');
+    labelEl.className = 'score-label';
+    labelEl.textContent = 'Match score: ' + Math.round(score * 100) + '%';
+    scoreWrap.appendChild(labelEl);
+    const bg = document.createElement('div');
+    bg.className = 'score-bar-bg';
+    const fill = document.createElement('div');
+    fill.className = 'score-bar-fill ' + (score >= 0.8 ? 'score-green' : score >= 0.6 ? 'score-yellow' : 'score-gray');
+    fill.style.width = Math.round(score * 100) + '%';
+    bg.appendChild(fill);
+    scoreWrap.appendChild(bg);
+    body.appendChild(scoreWrap);
+
+    // Contact
+    if (record.shelter_url || record.shelter_phone) {
+      const contactEl = document.createElement('div');
+      contactEl.className = 'card-contact';
+      if (record.shelter_url) {
+        const a = document.createElement('a');
+        a.href = record.shelter_url;
+        a.target = '_blank';
+        a.rel = 'noopener noreferrer';
+        a.textContent = 'Contact shelter';
+        contactEl.appendChild(a);
+      } else if (record.shelter_phone) {
+        const a = document.createElement('a');
+        a.href = 'tel:' + record.shelter_phone.replace(/\D/g,'');
+        a.textContent = record.shelter_phone;
+        contactEl.appendChild(a);
+      }
+      body.appendChild(contactEl);
+    }
+
+    card.appendChild(body);
+    return card;
+  }
+
+  async function loadIntakeFallback() {
+    setStatus('Loading shelter records…');
+    try {
+      const resp = await fetch('/intake?limit=50');
+      if (!resp.ok) { setStatus(''); return; }
+      const data = await resp.json();
+      intakeRecords = data.records || [];
+      document.getElementById('text-filter-wrap').style.display = 'block';
+      filterIntake();
+      setStatus('');
+    } catch { setStatus(''); }
+  }
+
+  function filterIntake() {
+    const q = document.getElementById('text-filter').value.toLowerCase();
+    const filtered = q
+      ? intakeRecords.filter(r =>
+          (r.species||'').includes(q) ||
+          (r.breed||'').toLowerCase().includes(q) ||
+          (r.shelter_city_county||'').toLowerCase().includes(q))
+      : intakeRecords;
+
+    const container = document.getElementById('intake-results');
+    container.innerHTML = '';
+    filtered.slice(0, 20).forEach(r => container.appendChild(buildCard(r, 0)));
+
+    const section = document.getElementById('results-section');
+    const list = document.getElementById('results-list');
+    list.innerHTML = '';
+    filtered.slice(0, 20).forEach(r => list.appendChild(buildCard(r, 0)));
+    section.style.display = 'block';
+    document.getElementById('results-heading').textContent = 'Shelter records (' + Math.min(filtered.length, 20) + ')';
+  }
+
+  function resetForm() {
+    selectedFile = null;
+    document.getElementById('file-input').value = '';
+    document.getElementById('preview-img').style.display = 'none';
+    document.getElementById('upload-icon').style.display = '';
+    document.getElementById('upload-label').textContent = 'Drop a photo here or click to browse';
+    document.getElementById('search-btn').disabled = true;
+    document.getElementById('search-btn').style.display = 'inline-block';
+    document.getElementById('reset-btn').style.display = 'none';
+    document.getElementById('results-section').style.display = 'none';
+    document.getElementById('text-filter-wrap').style.display = 'none';
+    setStatus('');
+    setError('');
+    intakeRecords = [];
+  }
+
+  function setStatus(msg) {
+    document.getElementById('status-msg').textContent = msg;
+  }
+
+  function setError(msg, type) {
+    const el = document.getElementById('error-banner');
+    el.textContent = msg;
+    el.style.display = msg ? 'block' : 'none';
+    if (type === 'info') {
+      el.style.background = '#cff4fc';
+      el.style.borderColor = '#0dcaf0';
+    } else {
+      el.style.background = '#fff3cd';
+      el.style.borderColor = '#ffc107';
+    }
+  }
+
+  function capitalize(s) {
+    if (!s) return '';
+    return s.charAt(0).toUpperCase() + s.slice(1);
+  }
+</script>
+</body>
+</html>
