@@ -4,6 +4,8 @@
 //!
 //! | Method | Path | Description |
 //! |--------|------|-------------|
+//! | GET | `/` | Web UI (embedded `static/index.html`) |
+//! | GET | `/static/index.html` | Same as `/` (canonical URL) |
 //! | GET | `/health` | Liveness probe → `{"status":"ok"}` |
 //! | GET | `/coverage` | Per-source coverage report (JSON) |
 //! | GET | `/intake` | Shelter intake records (filterable) |
@@ -31,6 +33,11 @@ use tower_http::trace::TraceLayer;
 
 use crate::api::{ApiConfig, ShelterQuery, ShelterRecord, ShelterQueryResult, image_similarity_search};
 use crate::MatchCandidate;
+
+// ─── Embedded static assets ───────────────────────────────────────────────────
+
+/// The single-file web UI served at `GET /` and `GET /static/index.html`.
+const INDEX_HTML: &str = include_str!("../static/index.html");
 
 // ─── Shared application state ────────────────────────────────────────────────
 
@@ -80,9 +87,13 @@ struct IntakeResponse {
 }
 
 /// `POST /search` response.
+///
+/// Shape: `{ "candidates": [ { "score": 0.87, "record": { … } } ], "embed_available": true }`.
 #[derive(Debug, Serialize)]
 struct SearchResponse {
     candidates: Vec<SearchCandidate>,
+    /// Whether the embed sidecar was available for this request.
+    embed_available: bool,
     /// Optional note (e.g. "embed sidecar unavailable").
     #[serde(skip_serializing_if = "Option::is_none")]
     note: Option<String>,
@@ -91,22 +102,24 @@ struct SearchResponse {
 /// A single candidate in the `/search` response — candidate-framed, no PII.
 #[derive(Debug, Serialize)]
 pub struct SearchCandidate {
-    /// Canonical shelter record ID.
-    pub canonical_id: String,
     /// Similarity score 0–1.
     pub score: f32,
+    /// The matching shelter record (public fields only, no owner PII).
+    pub record: ShelterRecord,
     /// Candidate-framed explanation (never "confirmed match").
     pub explanation: String,
 }
 
 // ─── Router factory ───────────────────────────────────────────────────────────
 
-/// Build the axum [`Router`] with all four endpoints wired up.
+/// Build the axum [`Router`] with all endpoints wired up.
 ///
 /// The returned router is ready to be bound to a [`TcpListener`].
 #[must_use]
 pub fn build_router(state: AppState) -> Router {
     Router::new()
+        .route("/", get(serve_index))
+        .route("/static/index.html", get(serve_index))
         .route("/health", get(handle_health))
         .route("/coverage", get(handle_coverage))
         .route("/intake", get(handle_intake))
@@ -175,6 +188,15 @@ pub async fn serve(port: u16, bind: &str, no_embed: bool) -> Result<(), String> 
 }
 
 // ─── Handlers ─────────────────────────────────────────────────────────────────
+
+/// `GET /` and `GET /static/index.html` — embedded single-page web UI.
+async fn serve_index() -> impl IntoResponse {
+    (
+        StatusCode::OK,
+        [(axum::http::header::CONTENT_TYPE, "text/html; charset=utf-8")],
+        INDEX_HTML,
+    )
+}
 
 /// `GET /health` — liveness probe.
 async fn handle_health() -> Json<HealthResponse> {
@@ -303,6 +325,7 @@ async fn handle_search(
                 StatusCode::OK,
                 Json(SearchResponse {
                     candidates: vec![],
+                    embed_available: false,
                     note: Some("embed sidecar unavailable".to_owned()),
                 }),
             )
@@ -324,6 +347,7 @@ async fn handle_search(
                         StatusCode::OK,
                         Json(SearchResponse {
                             candidates: vec![],
+                            embed_available: false,
                             note: Some("embed sidecar unavailable".to_owned()),
                         }),
                     )
@@ -358,13 +382,13 @@ async fn handle_search(
     let candidates: Vec<SearchCandidate> = results
         .into_iter()
         .map(|c| SearchCandidate {
-            canonical_id: c.record.canonical_id,
             score: c.score,
+            record: c.record,
             explanation: c.explanation,
         })
         .collect();
 
-    (StatusCode::OK, Json(SearchResponse { candidates, note: None })).into_response()
+    (StatusCode::OK, Json(SearchResponse { candidates, embed_available: true, note: None })).into_response()
 }
 
 // ─── Tests ────────────────────────────────────────────────────────────────────
@@ -572,6 +596,67 @@ mod tests {
         );
     }
 
+    /// Handler unit test: `GET /` returns HTTP 200 with text/html content type.
+    #[tokio::test]
+    async fn index_route_returns_html() {
+        let app = build_router(make_state());
+        let req = Request::builder()
+            .method(Method::GET)
+            .uri("/")
+            .body(Body::empty())
+            .expect("build request");
+
+        let resp = app.oneshot(req).await.expect("call handler");
+        assert_eq!(resp.status(), StatusCode::OK);
+
+        let content_type = resp
+            .headers()
+            .get("content-type")
+            .and_then(|v| v.to_str().ok())
+            .unwrap_or("");
+        assert!(
+            content_type.contains("text/html"),
+            "GET / must return text/html, got: {content_type}"
+        );
+
+        let body = axum::body::to_bytes(resp.into_body(), usize::MAX)
+            .await
+            .expect("read body");
+        let body_str = String::from_utf8_lossy(&body);
+        assert!(
+            body_str.contains("Homeward"),
+            "index page must contain 'Homeward' text"
+        );
+        assert!(
+            body_str.contains("<form") || body_str.contains("upload-zone"),
+            "index page must contain a form or upload element"
+        );
+    }
+
+    /// Handler unit test: `GET /static/index.html` returns the same HTML as `GET /`.
+    #[tokio::test]
+    async fn static_index_html_route_returns_html() {
+        let app = build_router(make_state());
+        let req = Request::builder()
+            .method(Method::GET)
+            .uri("/static/index.html")
+            .body(Body::empty())
+            .expect("build request");
+
+        let resp = app.oneshot(req).await.expect("call handler");
+        assert_eq!(resp.status(), StatusCode::OK);
+
+        let content_type = resp
+            .headers()
+            .get("content-type")
+            .and_then(|v| v.to_str().ok())
+            .unwrap_or("");
+        assert!(
+            content_type.contains("text/html"),
+            "GET /static/index.html must return text/html"
+        );
+    }
+
     /// Handler unit test: `/search` with a valid photo field returns 200 with candidates array.
     #[tokio::test]
     async fn search_with_photo_returns_candidates() {
@@ -602,6 +687,57 @@ mod tests {
             .expect("read body");
         let json: serde_json::Value = serde_json::from_slice(&body).expect("parse JSON");
         assert!(json["candidates"].is_array(), "search response must have 'candidates' array");
+    }
+
+    /// AC acceptance test: `/search` response shape must be `{ candidates, embed_available }`.
+    ///
+    /// When the embed sidecar is absent, `embed_available` must be `false`
+    /// and `candidates` must be an array (empty ok).
+    #[tokio::test]
+    async fn test_search_response_shape() {
+        let state = make_state(); // embed_client: None
+        let app = build_router(state);
+
+        let boundary = "shapeboundary";
+        let photo_bytes = b"\xFF\xD8\xFF\xD9"; // minimal JPEG
+        let body_str = format!(
+            "--{boundary}\r\nContent-Disposition: form-data; name=\"photo\"; filename=\"dog.jpg\"\r\nContent-Type: image/jpeg\r\n\r\n{}\r\n--{boundary}--\r\n",
+            String::from_utf8_lossy(photo_bytes)
+        );
+
+        let req = Request::builder()
+            .method(Method::POST)
+            .uri("/search")
+            .header(
+                "content-type",
+                format!("multipart/form-data; boundary={boundary}"),
+            )
+            .body(Body::from(body_str))
+            .expect("build request");
+
+        let resp = app.oneshot(req).await.expect("call handler");
+        assert_eq!(resp.status(), StatusCode::OK);
+
+        let body = axum::body::to_bytes(resp.into_body(), usize::MAX)
+            .await
+            .expect("read body");
+        let json: serde_json::Value = serde_json::from_slice(&body).expect("parse JSON");
+
+        // Shape: must have `candidates` array
+        assert!(
+            json["candidates"].is_array(),
+            "search response must have 'candidates' array, got: {json}"
+        );
+        // Shape: must have `embed_available` bool
+        assert!(
+            json["embed_available"].is_boolean(),
+            "search response must have 'embed_available' boolean, got: {json}"
+        );
+        // When sidecar absent: embed_available=false
+        assert_eq!(
+            json["embed_available"], false,
+            "embed_available must be false when no embed client"
+        );
     }
 
     /// Privacy: no LostReport fields should appear anywhere in the HTTP response.

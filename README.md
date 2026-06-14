@@ -38,6 +38,7 @@ It ships no network code — it is the vocabulary the rest of the fleet speaks.
 
 ## Recent
 
+- **v0.10.0** — `homeward-report`: single-page web UI embedded in the binary (`GET /`, `GET /static/index.html`); drag-and-drop photo upload with score bars and shelter cards; updated `POST /search` response to `{ candidates: [{score, record}], embed_available }`.
 - **v0.9.0** — `homeward/embed/`: Python photo-embedding pipeline (YOLO body-crop → DINOv2 ViT-B/14 → HNSW index); localhost HTTP sidecar (`enroll`/`query`/`reembed_all`); Rust `embed_client` in `homeward-ingest`; honest eval harness with anti-tautology guard.
 
 ## Install
