@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.19.0 — 2026-06-14
+
+homeward-web-ui v0.19.0 — single-page web UI served by reportd; drag-and-drop pet photo search with ranked shelter cards; updated POST /search response schema with embed_available flag
+
 ## v0.18.1 — 2026-06-14
 
 build and install homeward-ingestd binary; homeward-ingest.service now starts cleanly
