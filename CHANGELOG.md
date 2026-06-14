@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.20.0 — 2026-06-14
+
+Wire reportd to ingest SQLite DB. IngestDbReader loads 174K+ shelter animals on startup; GET /intake returns live data; GET /coverage is DB-backed.
+
 ## v0.19.0 — 2026-06-14
 
 homeward-web-ui v0.19.0 — single-page web UI served by reportd; drag-and-drop pet photo search with ranked shelter cards; updated POST /search response schema with embed_available flag
