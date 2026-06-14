@@ -28,7 +28,6 @@ use homeward_report::{
     DeliveryLedger, DeliveryOutcome, Deliverer, DryRunDeliverer,
     ReportStore, SubmitRequest,
     alerts::{AlertConfig, AlertDedup, MatchCandidate, process_candidate},
-    api::ApiConfig,
     store::SubmitError,
 };
 use homeward_schema::{
@@ -188,21 +187,50 @@ fn cmd_status(args: &[String]) {
 
 fn cmd_serve(args: &[String]) {
     let mut port: u16 = 8080;
+    let mut bind = "0.0.0.0".to_owned();
     let mut i = 0usize;
     while i < args.len() {
         let Some(flag) = args.get(i) else { break };
-        if flag == "--port" {
-            i += 1;
-            port = args.get(i).and_then(|s| s.parse().ok()).unwrap_or(8080);
+        match flag.as_str() {
+            "--port" => {
+                i += 1;
+                port = args.get(i).and_then(|s| s.parse().ok()).unwrap_or(8080);
+            }
+            "--bind" => {
+                i += 1;
+                if let Some(b) = args.get(i) {
+                    bind = b.clone();
+                }
+            }
+            other => {
+                eprintln!("unknown serve argument: {other:?}");
+                process::exit(1);
+            }
         }
         i += 1;
     }
 
-    let _cfg = ApiConfig::default();
-    let _alert_cfg = AlertConfig::default();
+    // Initialise tracing subscriber (best-effort; ignore if already initialised).
+    let _ = tracing_subscriber::fmt()
+        .with_env_filter(
+            tracing_subscriber::EnvFilter::try_from_default_env()
+                .unwrap_or_else(|_| tracing_subscriber::EnvFilter::new("info")),
+        )
+        .try_init();
 
-    println!("homeward-reportd: open read API would listen on :{port}");
-    println!("(phase-1: HTTP server not wired; use the library API directly)");
+    let rt = tokio::runtime::Builder::new_multi_thread()
+        .enable_all()
+        .build()
+        .unwrap_or_else(|e| {
+            eprintln!("error: failed to build tokio runtime: {e}");
+            process::exit(1);
+        });
+
+    println!("homeward-reportd: listening on {bind}:{port}");
+    if let Err(e) = rt.block_on(homeward_report::server::serve(port, &bind)) {
+        eprintln!("error: {e}");
+        process::exit(1);
+    }
 }
 
 fn cmd_expire_stale() {

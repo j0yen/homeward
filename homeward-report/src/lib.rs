@@ -21,6 +21,7 @@ pub mod delivery_log;
 pub mod exif;
 pub mod export;
 pub mod flyer;
+pub mod server;
 pub mod store;
 pub mod syndicator;
 
