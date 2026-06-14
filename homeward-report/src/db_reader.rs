@@ -96,7 +96,7 @@ impl IngestDbReader {
         }
     }
 
-    /// Full load: SELECT all non-departed records.
+    /// Full load: SELECT all records (including departed — Socrata data is historical).
     fn load_all(&self) -> Result<(Vec<PetRecord>, Option<DateTime<Utc>>), String> {
         let conn = self.open_conn()?;
 
@@ -104,7 +104,6 @@ impl IngestDbReader {
             .prepare(
                 "SELECT canonical_id, species, record_json, availability, last_seen \
                  FROM canonical_records \
-                 WHERE availability != 'departed' \
                  ORDER BY last_seen ASC",
             )
             .map_err(|e| format!("prepare load_all: {e}"))?;
@@ -148,7 +147,7 @@ impl IngestDbReader {
             .prepare(
                 "SELECT canonical_id, species, record_json, availability, last_seen \
                  FROM canonical_records \
-                 WHERE availability != 'departed' AND last_seen > ?1 \
+                 WHERE last_seen > ?1 \
                  ORDER BY last_seen ASC",
             )
             .map_err(|e| format!("prepare load_delta: {e}"))?;
