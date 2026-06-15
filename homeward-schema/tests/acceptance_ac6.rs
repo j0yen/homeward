@@ -122,6 +122,7 @@ fn ac6_lost_report_json_roundtrip() {
         created: Utc::now(),
         expires: Utc::now(),
         status: LostStatus::Active,
+        notify_url: None,
     };
     let json = serde_json::to_string(&report).expect("serialize LostReport");
     let back: LostReport = serde_json::from_str(&json).expect("deserialize LostReport");

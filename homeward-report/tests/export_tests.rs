@@ -57,6 +57,7 @@ fn fixture_report() -> LostReport {
         created: now,
         expires: now + Duration::days(90),
         status: LostStatus::Active,
+        notify_url: None,
     }
 }
 
@@ -179,6 +180,7 @@ fn flyer_deterministic() {
         created: now,
         expires: now + Duration::days(90),
         status: LostStatus::Active,
+        notify_url: None,
     };
 
     let flyer1 = render_flyer(&report);

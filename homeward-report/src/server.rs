@@ -39,6 +39,7 @@ use crate::alert_log::AlertLog;
 use crate::api::{ApiConfig, ShelterQuery, ShelterRecord, ShelterQueryResult, image_similarity_search};
 use crate::match_watch::MatchWatcher;
 use crate::store::ReportStore;
+use crate::webhook::{WebhookSink, validate_notify_url};
 use crate::{submit, MatchCandidate, SubmitRequest};
 
 // ─── Embedded static assets ───────────────────────────────────────────────────
@@ -65,6 +66,8 @@ pub struct AppState {
     pub store: Arc<RwLock<ReportStore>>,
     /// In-memory log of match alerts, queryable via `GET /reports/:id/matches`.
     pub alert_log: Arc<AlertLog>,
+    /// Webhook sink for owner match-alert notifications (best-effort, fire-and-forget).
+    pub webhook: Arc<WebhookSink>,
 }
 
 // ─── Query params ─────────────────────────────────────────────────────────────
@@ -142,6 +145,13 @@ pub struct SubmitReportRequest {
     pub contact_email: String,
     /// Report TTL in days (default: 90).
     pub expires_days: Option<u32>,
+    /// Optional webhook URL for owner match-alert notifications (http/https only).
+    ///
+    /// When provided, `homeward-reportd` fires a best-effort POST to this URL
+    /// for each new [`crate::alerts::MatchAlert`] generated for this report.
+    /// Invalid or non-http/https URLs are rejected with HTTP 400.
+    #[serde(default)]
+    pub notify_url: Option<String>,
 }
 
 /// `POST /reports` success response.
@@ -248,11 +258,25 @@ pub async fn serve(port: u16, bind: &str, no_embed: bool) -> Result<(), String> 
     // Build shared lost-report store and spawn the background match watcher.
     let shared_store: Arc<RwLock<ReportStore>> = Arc::new(RwLock::new(ReportStore::new()));
     let alert_log = Arc::new(AlertLog::new());
+
+    // Build the webhook sink (best-effort owner notifications).
+    // WebhookSink::new() initialises a reqwest::Client with rustls-tls; it can
+    // theoretically fail if the TLS backend is missing, but in practice this
+    // will always succeed on supported platforms.
+    let webhook_sink = match WebhookSink::new() {
+        Ok(s) => Arc::new(s),
+        Err(e) => {
+            tracing::warn!("webhook sink failed to build: {e}; owner notifications disabled");
+            return Err(format!("webhook sink init failed: {e}"));
+        }
+    };
+
     let watcher = MatchWatcher::new(
         Arc::clone(&shared_store),
         Arc::clone(&shared_intake),
         embed_client.clone(),
         Arc::clone(&alert_log),
+        Arc::clone(&webhook_sink),
     );
     tokio::spawn(async move {
         watcher.run().await;
@@ -265,6 +289,7 @@ pub async fn serve(port: u16, bind: &str, no_embed: bool) -> Result<(), String> 
         embed_client,
         store: shared_store,
         alert_log,
+        webhook: webhook_sink,
     };
 
     let addr = format!("{bind}:{port}");
@@ -523,6 +548,23 @@ async fn handle_report_submit(
         }
     };
 
+    // AC1: validate notify_url if provided — must be http or https.
+    let notify_url = match req.notify_url {
+        None => None,
+        Some(ref raw) => {
+            match validate_notify_url(raw) {
+                Ok(canonical) => Some(canonical),
+                Err(msg) => {
+                    return (
+                        StatusCode::BAD_REQUEST,
+                        Json(serde_json::json!({"error": msg})),
+                    )
+                        .into_response();
+                }
+            }
+        }
+    };
+
     let ttl_secs = req
         .expires_days
         .map(|d| u64::from(d) * 24 * 3600);
@@ -543,6 +585,7 @@ async fn handle_report_submit(
         last_seen,
         raw_contact: req.contact_email,
         ttl_secs,
+        notify_url,
     };
 
     let mut store = state.store.write().await;
@@ -621,6 +664,9 @@ mod tests {
             embed_client: None,
             store: Arc::new(RwLock::new(crate::store::ReportStore::new())),
             alert_log: Arc::new(crate::alert_log::AlertLog::new()),
+            webhook: Arc::new(
+                crate::webhook::WebhookSink::new().expect("webhook sink ok in tests"),
+            ),
         }
     }
 
@@ -1204,6 +1250,129 @@ mod tests {
 
         let resp = app.oneshot(req).await.expect("call handler");
         assert_eq!(resp.status(), StatusCode::NOT_FOUND, "unknown report must return 404");
+    }
+
+    // ─── Webhook AC1: valid notify_url accepted; invalid rejected with 400 ──────
+
+    /// AC1: `POST /reports` with a valid http notify_url returns 201.
+    #[tokio::test]
+    async fn report_submit_with_valid_notify_url_returns_201() {
+        let app = build_router(make_state());
+        let body = serde_json::json!({
+            "species": "dog",
+            "description": "Friendly lab",
+            "last_seen_city": "Austin",
+            "last_seen_state": "TX",
+            "last_seen_zip": "78701",
+            "contact_email": "owner@example.com",
+            "notify_url": "https://owner.example.com/webhook"
+        });
+        let req = Request::builder()
+            .method(Method::POST)
+            .uri("/reports")
+            .header("content-type", "application/json")
+            .body(Body::from(serde_json::to_string(&body).expect("serialize")))
+            .expect("build request");
+
+        let resp = app.oneshot(req).await.expect("call handler");
+        assert_eq!(resp.status(), StatusCode::CREATED, "valid notify_url must return 201");
+    }
+
+    /// AC1: `POST /reports` with an invalid notify_url returns 400.
+    #[tokio::test]
+    async fn report_submit_with_invalid_notify_url_returns_400() {
+        let app = build_router(make_state());
+        let body = serde_json::json!({
+            "species": "dog",
+            "description": "Friendly lab",
+            "contact_email": "owner@example.com",
+            "notify_url": "not-a-url"
+        });
+        let req = Request::builder()
+            .method(Method::POST)
+            .uri("/reports")
+            .header("content-type", "application/json")
+            .body(Body::from(serde_json::to_string(&body).expect("serialize")))
+            .expect("build request");
+
+        let resp = app.oneshot(req).await.expect("call handler");
+        assert_eq!(resp.status(), StatusCode::BAD_REQUEST, "invalid notify_url must return 400");
+    }
+
+    /// AC1: `POST /reports` with a non-http scheme (ftp) returns 400.
+    #[tokio::test]
+    async fn report_submit_with_ftp_notify_url_returns_400() {
+        let app = build_router(make_state());
+        let body = serde_json::json!({
+            "species": "cat",
+            "contact_email": "owner@example.com",
+            "notify_url": "ftp://files.example.com/hook"
+        });
+        let req = Request::builder()
+            .method(Method::POST)
+            .uri("/reports")
+            .header("content-type", "application/json")
+            .body(Body::from(serde_json::to_string(&body).expect("serialize")))
+            .expect("build request");
+
+        let resp = app.oneshot(req).await.expect("call handler");
+        assert_eq!(resp.status(), StatusCode::BAD_REQUEST, "ftp notify_url must return 400");
+    }
+
+    /// AC1: `POST /reports` without notify_url still succeeds (field is optional).
+    #[tokio::test]
+    async fn report_submit_without_notify_url_returns_201() {
+        let app = build_router(make_state());
+        let body = serde_json::json!({
+            "species": "cat",
+            "contact_email": "owner@example.com"
+        });
+        let req = Request::builder()
+            .method(Method::POST)
+            .uri("/reports")
+            .header("content-type", "application/json")
+            .body(Body::from(serde_json::to_string(&body).expect("serialize")))
+            .expect("build request");
+
+        let resp = app.oneshot(req).await.expect("call handler");
+        assert_eq!(resp.status(), StatusCode::CREATED, "omitting notify_url must return 201");
+    }
+
+    /// AC1: submitted report with valid notify_url stores it on the LostReport.
+    #[tokio::test]
+    async fn report_submit_stores_notify_url() {
+        let state = make_state();
+        let app = build_router(state.clone());
+        let webhook_url = "https://owner.example.com/notify";
+        let body = serde_json::json!({
+            "species": "dog",
+            "contact_email": "owner@example.com",
+            "notify_url": webhook_url
+        });
+        let req = Request::builder()
+            .method(Method::POST)
+            .uri("/reports")
+            .header("content-type", "application/json")
+            .body(Body::from(serde_json::to_string(&body).expect("serialize")))
+            .expect("build request");
+
+        let resp = app.oneshot(req).await.expect("call handler");
+        assert_eq!(resp.status(), StatusCode::CREATED);
+
+        let bytes = axum::body::to_bytes(resp.into_body(), usize::MAX)
+            .await
+            .expect("read body");
+        let json: serde_json::Value = serde_json::from_slice(&bytes).expect("parse JSON");
+        let report_id = json["report_id"].as_str().expect("report_id string").to_owned();
+
+        // Verify the notify_url was stored on the LostReport.
+        let store = state.store.read().await;
+        let report = store.get(&report_id).expect("report must exist");
+        assert_eq!(
+            report.notify_url.as_deref(),
+            Some(webhook_url),
+            "notify_url must be stored on the LostReport"
+        );
     }
 
     // ─── AC4+AC5: GET /reports/:id/matches returns logged AlertEntry ──────────

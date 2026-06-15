@@ -27,6 +27,7 @@ pub mod match_watch;
 pub mod server;
 pub mod store;
 pub mod syndicator;
+pub mod webhook;
 
 #[cfg(test)]
 pub mod tests_common;
@@ -54,6 +55,7 @@ pub use store::{ReportStore, SubmitError};
 pub use syndicator::{
     GatedChannelSyndicator, LocalArtifactSyndicator, SyndicationOutcome, Syndicator,
 };
+pub use webhook::{WebhookSink, validate_notify_url};
 
 // ─── Report submission ───────────────────────────────────────────────────────
 
@@ -83,6 +85,8 @@ pub struct SubmitRequest {
     pub raw_contact: String,
     /// Report TTL in seconds (default: 90 days).
     pub ttl_secs: Option<u64>,
+    /// Optional webhook URL for owner notifications (must be http/https).
+    pub notify_url: Option<String>,
 }
 
 /// The default report TTL: 90 days.
@@ -155,6 +159,7 @@ pub fn submit(
         created: now,
         expires,
         status: LostStatus::Active,
+        notify_url: req.notify_url,
     };
 
     let cloned = report.clone();
@@ -307,6 +312,7 @@ mod integration_tests {
             },
             raw_contact: "owner@example.com".to_owned(),
             ttl_secs: None,
+            notify_url: None,
         };
 
         let report = submit(req, &mut store, now).expect("submit ok");
@@ -352,6 +358,7 @@ mod integration_tests {
             },
             raw_contact: "+15551234567".to_owned(),
             ttl_secs: None,
+            notify_url: None,
         };
         let report = submit(req, &mut store, now).expect("submit ok");
         let summary = ReportSummary::from(&report);

@@ -80,6 +80,7 @@ fn make_report(report_id: &str, species: Species) -> LostReport {
         created: now,
         expires: now + Duration::days(90),
         status: LostStatus::Active,
+        notify_url: None,
     }
 }
 
