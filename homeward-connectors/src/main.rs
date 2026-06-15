@@ -25,6 +25,7 @@ use homeward_connectors::{
     ConnectorRegistry, Cursor,
     catalog::load_catalog,
     connectors::arcgis::ArcGisConnector,
+    connectors::opendatasoft::OpenDataSoftConnector,
     connectors::petfbi::{PetFbiConfig, PetFbiConnector},
     connectors::socrata::{SocrataConfig, SocrataConnector},
     coverage::{CoverageArgs, RECENT_WINDOW_SECS, STALE_MULTIPLIER, run_coverage},
@@ -62,6 +63,25 @@ fn build_registry() -> ConnectorRegistry {
         match SocrataConnector::new(config) {
             Ok(c) => registry.register(name, Box::new(c)),
             Err(e) => eprintln!("warning: could not init {name} connector: {e}"),
+        }
+    }
+
+    // Register OpenDataSoft connectors from HOMEWARD_SOURCES catalog.
+    if let Ok(path_str) = std::env::var("HOMEWARD_SOURCES") {
+        let path = std::path::Path::new(&path_str);
+        match load_catalog(path) {
+            Ok(catalog) => {
+                for ods_config in catalog.opendatasoft {
+                    let name = ods_config.name.clone();
+                    match OpenDataSoftConnector::new(ods_config) {
+                        Ok(c) => registry.register(name, Box::new(c)),
+                        Err(e) => eprintln!("warning: could not init ODS connector {name}: {e}"),
+                    }
+                }
+            }
+            Err(e) => {
+                eprintln!("error: HOMEWARD_SOURCES={path_str} could not be loaded for ODS: {e}");
+            }
         }
     }
 
@@ -124,6 +144,7 @@ async fn main() {
         eprintln!("       homeward connectors list");
         eprintln!("       homeward connectors coverage [--store <path>] [--json]");
         eprintln!("       homeward probe <domain> <dataset_id> [--name <slug>] [--json]");
+        eprintln!("       homeward probe --family opendatasoft <base_url> <dataset_id> [--name <slug>] [--json]");
         eprintln!("       homeward discover [--families socrata,opendatasoft] [--metro <str>] [--limit N] [--json]");
         process::exit(1);
     }

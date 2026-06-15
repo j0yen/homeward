@@ -778,55 +778,266 @@ pub async fn run_arcgis_probe(
             dataset_id: String::new(),
         })
     }
+// ─── ODS probe ────────────────────────────────────────────────────────────────
+
+/// Run the probe against an OpenDataSoft dataset.
+///
+/// Fetches ODS field metadata and a one-record sample, then classifies columns
+/// using the same heuristics as the Socrata probe.
+///
+/// # Errors
+/// Returns `ProbeError` on HTTP, JSON, or 404 errors.
+pub async fn run_ods_probe(
+    client: &dyn ProbeClient,
+    base_url: &str,
+    dataset_id: &str,
+    source_name: &str,
+) -> Result<ProbeResult, ProbeError> {
+    use crate::connectors::opendatasoft::{fetch_ods_fields, fetch_ods_sample};
+
+    // 1. Fetch field names from ODS metadata endpoint.
+    let field_names = fetch_ods_fields(client, base_url, dataset_id).await?;
+
+    if field_names.is_empty() {
+        return Ok(ProbeResult {
+            verdict: Verdict::Red,
+            reason: format!(
+                "no fields returned from ODS metadata for dataset {dataset_id} at {base_url}; \
+                 dataset may not exist or may not be an ODS dataset"
+            ),
+            column_map: None,
+            source_name: source_name.to_owned(),
+            domain: base_url.to_owned(),
+            dataset_id: dataset_id.to_owned(),
+        });
+    }
+
+    // 2. Fetch a one-record sample.
+    let sample_fields = fetch_ods_sample(client, base_url, dataset_id).await;
+
+    // 3. Convert field names to a SodaColumn-like structure (field_name = name).
+    let columns: Vec<SodaColumn> = field_names
+        .iter()
+        .map(|f| SodaColumn {
+            field_name: f.clone(),
+            name: f.clone(),
+        })
+        .collect();
+
+    // 4. Classify columns using the same heuristics as the Socrata probe.
+    let mut draft = ColumnMapDraft::empty();
+    let slots: &[(&str, fn(&ColumnMapDraft) -> bool)] = &[
+        ("animal_id", |d| d.animal_id.is_some()),
+        ("animal_type", |d| d.animal_type.is_some()),
+        ("intake_type", |d| d.intake_type.is_some()),
+        ("intake_date", |d| d.intake_date.is_some()),
+        ("found_location", |d| d.found_location.is_some()),
+        ("chip_status", |d| d.chip_status.is_some()),
+        ("kennel_status", |d| d.kennel_status.is_some()),
+        ("breed", |d| d.breed.is_some()),
+        ("name", |d| d.name.is_some()),
+        ("color", |d| d.color.is_some()),
+        ("outcome_date", |d| d.outcome_date.is_some()),
+    ];
+    let mut claimed: std::collections::HashSet<String> = std::collections::HashSet::new();
+
+    for (slot, _) in slots {
+        if let Some(col) = best_match_for_slot(slot, &columns, &claimed) {
+            let confidence = determine_confidence(slot, col, &sample_fields);
+            let mc = MappedColumn {
+                source_col: col.field_name.clone(),
+                slot,
+                confidence,
+            };
+            claimed.insert(col.field_name.clone());
+            assign_to_draft(&mut draft, slot, mc);
+        }
+    }
+
+    // 5. Verdict logic — mirrors Socrata probe.
+    let stray_confirmed = draft
+        .intake_type
+        .as_ref()
+        .map_or(false, |c| c.confidence == Confidence::Confirmed);
+
+    if draft.animal_id.is_none() {
+        return Ok(ProbeResult {
+            verdict: Verdict::Red,
+            reason: format!(
+                "no animal_id-like column found in ODS dataset {dataset_id} at {base_url}"
+            ),
+            column_map: Some(draft),
+            source_name: source_name.to_owned(),
+            domain: base_url.to_owned(),
+            dataset_id: dataset_id.to_owned(),
+        });
+    }
+
+    if draft.animal_type.is_none() {
+        return Ok(ProbeResult {
+            verdict: Verdict::Red,
+            reason: format!(
+                "no animal_type/species column found in ODS dataset {dataset_id}"
+            ),
+            column_map: Some(draft),
+            source_name: source_name.to_owned(),
+            domain: base_url.to_owned(),
+            dataset_id: dataset_id.to_owned(),
+        });
+    }
+
+    if draft.intake_type.is_none() {
+        return Ok(ProbeResult {
+            verdict: Verdict::Red,
+            reason: format!(
+                "no intake_type column found in ODS dataset {dataset_id}; \
+                 appears to be an adoptable-only feed"
+            ),
+            column_map: Some(draft),
+            source_name: source_name.to_owned(),
+            domain: base_url.to_owned(),
+            dataset_id: dataset_id.to_owned(),
+        });
+    }
+
+    if !stray_confirmed {
+        return Ok(ProbeResult {
+            verdict: Verdict::Red,
+            reason: format!(
+                "intake_type column found in ODS dataset {dataset_id} but no STRAY/FOUND \
+                 value observed in sample; may be an adoptable-only feed. Column guessed: {}",
+                draft.intake_type.as_ref().map_or("?", |c| &c.source_col)
+            ),
+            column_map: Some(draft),
+            source_name: source_name.to_owned(),
+            domain: base_url.to_owned(),
+            dataset_id: dataset_id.to_owned(),
+        });
+    }
+
+    Ok(ProbeResult {
+        verdict: Verdict::Green,
+        reason: format!(
+            "ODS dataset {dataset_id} at {base_url} has required columns with confirmed STRAY values"
+        ),
+        column_map: Some(draft),
+        source_name: source_name.to_owned(),
+        domain: base_url.to_owned(),
+        dataset_id: dataset_id.to_owned(),
+    })
+}
+
+/// Format a GREEN ODS probe result as an `[[opendatasoft]]` TOML block.
+#[must_use]
+pub fn format_ods_green_toml(result: &ProbeResult) -> String {
+    let draft = match &result.column_map {
+        Some(d) => d,
+        None => return String::new(),
+    };
+
+    let mut out = String::new();
+    out.push_str("[[opendatasoft]]\n");
+    out.push_str(&format!("name = {:?}\n", result.source_name));
+    out.push_str(&format!("base_url = {:?}\n", result.domain));
+    out.push_str(&format!("dataset_id = {:?}\n", result.dataset_id));
+    out.push('\n');
+    out.push_str("[opendatasoft.column_map]\n");
+
+    fn fmt_col(mc: &Option<MappedColumn>) -> Option<(&str, &str)> {
+        mc.as_ref().map(|c| (c.source_col.as_str(), c.confidence.as_str()))
+    }
+
+    if let Some((col, conf)) = fmt_col(&draft.animal_id) {
+        out.push_str(&format!("animal_id = {:?}  # {conf}\n", col));
+    }
+    if let Some((col, conf)) = fmt_col(&draft.animal_type) {
+        out.push_str(&format!("animal_type = {:?}  # {conf}\n", col));
+    }
+    if let Some((col, conf)) = fmt_col(&draft.intake_type) {
+        out.push_str(&format!("intake_type = {:?}  # {conf}\n", col));
+    }
+    if let Some((col, conf)) = fmt_col(&draft.intake_date) {
+        out.push_str(&format!("intake_date = {:?}  # {conf}\n", col));
+    }
+    if let Some((col, conf)) = fmt_col(&draft.found_location) {
+        out.push_str(&format!("found_location = {:?}  # {conf}\n", col));
+    }
+    if let Some((col, conf)) = fmt_col(&draft.chip_status) {
+        out.push_str(&format!("chip_status = {:?}  # {conf}\n", col));
+    }
+    if let Some((col, conf)) = fmt_col(&draft.kennel_status) {
+        out.push_str(&format!("kennel_status = {:?}  # {conf}\n", col));
+    }
+    if let Some((col, conf)) = fmt_col(&draft.breed) {
+        out.push_str(&format!("breed = {:?}  # {conf}\n", col));
+    }
+    if let Some((col, conf)) = fmt_col(&draft.name) {
+        out.push_str(&format!("name = {:?}  # {conf}\n", col));
+    }
+    if let Some((col, conf)) = fmt_col(&draft.color) {
+        out.push_str(&format!("color = {:?}  # {conf}\n", col));
+    }
+    if let Some((col, conf)) = fmt_col(&draft.outcome_date) {
+        out.push_str(&format!("outcome_date = {:?}  # {conf}\n", col));
+    }
+
+    out
 }
 
 // ─── CLI entry point ──────────────────────────────────────────────────────────
 
 /// Run the `probe` subcommand from CLI args.
 ///
+/// Supports two families:
+///   - Socrata (default): `probe <domain> <dataset_id> [--name <slug>] [--json]`
+///   - OpenDataSoft: `probe --family opendatasoft <base_url> <dataset_id> [--name <slug>] [--json]`
+///
 /// Returns the exit code (0 = GREEN, 1 = RED, 2 = error).
 pub async fn run_probe_cmd(args: &[String]) -> i32 {
-    // Check for --family flag before positional args.
-    let mut family: Option<String> = None;
-    {
-        let mut i = 0;
-        while i < args.len() {
-            if args[i] == "--family" {
-                i += 1;
-                if i < args.len() {
-                    family = Some(args[i].clone());
-                }
-            }
+    // Check for --family flag (must come before positional args).
+    let mut family = "socrata";
+    let mut remaining: Vec<&str> = Vec::new();
+    let mut i = 0;
+    while i < args.len() {
+        if args[i] == "--family" {
             i += 1;
+            if i >= args.len() {
+                eprintln!("--family requires a value");
+                return 2;
+            }
+            family = args[i].as_str();
+        } else {
+            remaining.push(args[i].as_str());
         }
+        i += 1;
     }
 
-    if family.as_deref() == Some("arcgis") {
+    // ArcGIS has a different calling convention (1 positional arg); dispatch early.
+    if family == "arcgis" {
         return run_probe_cmd_arcgis(args).await;
     }
 
-    if args.len() < 2 {
-        eprintln!("Usage: homeward probe <domain> <dataset_id> [--name <slug>] [--json]");
-        eprintln!("       homeward probe --family arcgis <service_url> [--name <slug>] [--json]");
+    if remaining.len() < 2 {
+        eprintln!("Usage: homeward probe [--family <socrata|opendatasoft|arcgis>] <domain_or_base_url> <dataset_id> [--name <slug>] [--json]");
         return 2;
     }
 
-    let domain = &args[0];
-    let dataset_id = &args[1];
+    let first_arg = remaining[0];
+    let dataset_id = remaining[1];
 
     let mut source_name = dataset_id.replace('-', "_");
     let mut json_output = false;
-    let mut i = 2;
+    let mut j = 2;
 
-    while i < args.len() {
-        match args[i].as_str() {
+    while j < remaining.len() {
+        match remaining[j] {
             "--name" => {
-                i += 1;
-                if i >= args.len() {
+                j += 1;
+                if j >= remaining.len() {
                     eprintln!("--name requires a value");
                     return 2;
                 }
-                source_name = args[i].clone();
+                source_name = remaining[j].to_owned();
             }
             "--json" => {
                 json_output = true;
@@ -836,7 +1047,7 @@ pub async fn run_probe_cmd(args: &[String]) -> i32 {
                 return 2;
             }
         }
-        i += 1;
+        j += 1;
     }
 
     let client = match RealProbeClient::new() {
@@ -847,7 +1058,19 @@ pub async fn run_probe_cmd(args: &[String]) -> i32 {
         }
     };
 
-    let result = match run_probe(&client, domain, dataset_id, &source_name).await {
+    // Dispatch by family.
+    let (result, is_ods) = match family {
+        "opendatasoft" | "ods" => {
+            let r = run_ods_probe(&client, first_arg, dataset_id, &source_name).await;
+            (r, true)
+        }
+        "socrata" | _ => {
+            let r = run_probe(&client, first_arg, dataset_id, &source_name).await;
+            (r, false)
+        }
+    };
+
+    let result = match result {
         Ok(r) => r,
         Err(ProbeError::NotFound { url }) => {
             let msg = format!("dataset {dataset_id} not found: {url}");
@@ -886,7 +1109,11 @@ pub async fn run_probe_cmd(args: &[String]) -> i32 {
             Verdict::Green => {
                 println!("# GREEN: {}", result.reason);
                 println!();
-                println!("{}", format_green_toml(&result));
+                if is_ods {
+                    println!("{}", format_ods_green_toml(&result));
+                } else {
+                    println!("{}", format_green_toml(&result));
+                }
             }
             Verdict::Red => {
                 eprintln!("RED: {}", result.reason);
@@ -1339,5 +1566,185 @@ pub mod tests {
         assert!(is_stray_value("FOUND"));
         assert!(!is_stray_value("Owner Surrender"));
         assert!(!is_stray_value("Transfer"));
+    }
+
+    // ─── ODS probe tests ──────────────────────────────────────────────────────
+
+    fn ods_metadata_json() -> String {
+        // Simulated ODS dataset metadata response with a stray-bearing field set.
+        serde_json::json!({
+            "dataset_id": "animal-shelter-intakes",
+            "fields": [
+                {"name": "animal_id"},
+                {"name": "species"},
+                {"name": "intake_condition"},
+                {"name": "found_location"},
+                {"name": "intake_date"},
+                {"name": "breed"},
+                {"name": "name"},
+                {"name": "color"}
+            ]
+        })
+        .to_string()
+    }
+
+    fn ods_sample_records_json() -> String {
+        // Simulated ODS /records response with one STRAY record.
+        serde_json::json!({
+            "total_count": 1,
+            "results": [
+                {
+                    "record": {
+                        "id": "rec-001",
+                        "timestamp": "2024-01-15T10:00:00Z",
+                        "fields": {
+                            "animal_id": "ODS-001",
+                            "species": "Dog",
+                            "intake_condition": "STRAY",
+                            "found_location": "123 Main St",
+                            "intake_date": "2024-01-15T10:00:00Z",
+                            "breed": "Labrador Mix",
+                            "name": "Buddy",
+                            "color": "Black/White"
+                        }
+                    }
+                }
+            ]
+        })
+        .to_string()
+    }
+
+    fn ods_no_stray_sample_json() -> String {
+        // ODS /records response with no stray values.
+        serde_json::json!({
+            "total_count": 1,
+            "results": [
+                {
+                    "record": {
+                        "id": "rec-001",
+                        "timestamp": "2024-01-15T10:00:00Z",
+                        "fields": {
+                            "animal_id": "ODS-001",
+                            "species": "Dog",
+                            "intake_condition": "Owner Surrender",
+                            "intake_date": "2024-01-15T10:00:00Z"
+                        }
+                    }
+                }
+            ]
+        })
+        .to_string()
+    }
+
+    fn ods_no_intake_metadata_json() -> String {
+        // ODS metadata with no intake_type-like column.
+        serde_json::json!({
+            "dataset_id": "some-dataset",
+            "fields": [
+                {"name": "animal_id"},
+                {"name": "species"},
+                {"name": "description"}
+            ]
+        })
+        .to_string()
+    }
+
+    // AC5: probe --family opendatasoft against GREEN fixture emits valid [[opendatasoft]] TOML.
+    #[tokio::test]
+    async fn ac5_ods_probe_green_fixture_emits_toml() {
+        let mut client = FixtureClient::new();
+        // ODS metadata endpoint (no /records suffix)
+        client.add("catalog/datasets/animal-shelter-intakes\"", &ods_metadata_json());
+        client.add(
+            "catalog/datasets/animal-shelter-intakes/records",
+            &ods_sample_records_json(),
+        );
+
+        let result = super::run_ods_probe(
+            &client,
+            "https://data.example.org",
+            "animal-shelter-intakes",
+            "test_city",
+        )
+        .await
+        .expect("ods probe should succeed");
+
+        assert_eq!(result.verdict, Verdict::Green, "expected GREEN: {}", result.reason);
+
+        let toml = super::format_ods_green_toml(&result);
+        assert!(toml.contains("[[opendatasoft]]"), "TOML should start with [[opendatasoft]]");
+        assert!(toml.contains("base_url"), "TOML should contain base_url");
+        assert!(toml.contains("dataset_id"), "TOML should contain dataset_id");
+    }
+
+    // AC5: probe --family opendatasoft against dataset with no intake column emits RED.
+    #[tokio::test]
+    async fn ac5_ods_probe_no_intake_column_emits_red() {
+        let mut client = FixtureClient::new();
+        client.add("catalog/datasets/some-dataset", &ods_no_intake_metadata_json());
+        client.add("catalog/datasets/some-dataset/records", &ods_no_stray_sample_json());
+
+        let result = super::run_ods_probe(
+            &client,
+            "https://data.example.org",
+            "some-dataset",
+            "test_city",
+        )
+        .await
+        .expect("ods probe should return a result");
+
+        assert_eq!(result.verdict, Verdict::Red, "expected RED for missing intake_type");
+    }
+
+    // format_ods_green_toml produces parseable [[opendatasoft]] catalog.
+    #[tokio::test]
+    async fn ods_green_toml_parses_via_catalog() {
+        use crate::catalog::load_catalog;
+        use std::io::Write as _;
+
+        let mut client = FixtureClient::new();
+        client.add("catalog/datasets/animal-shelter-intakes", &ods_metadata_json());
+        client.add(
+            "catalog/datasets/animal-shelter-intakes/records",
+            &ods_sample_records_json(),
+        );
+
+        let result = super::run_ods_probe(
+            &client,
+            "https://data.example.org",
+            "animal-shelter-intakes",
+            "test_city",
+        )
+        .await
+        .expect("ods probe should succeed");
+
+        assert_eq!(result.verdict, Verdict::Green);
+
+        let toml_text = super::format_ods_green_toml(&result);
+        // Strip inline # comments for parsing.
+        let clean_toml: String = toml_text
+            .lines()
+            .map(|line| {
+                if let Some(idx) = line.find("  #") {
+                    let (left, _) = line.split_at(idx);
+                    left.to_owned()
+                } else {
+                    line.to_owned()
+                }
+            })
+            .collect::<Vec<_>>()
+            .join("\n");
+
+        let mut f = tempfile::NamedTempFile::new().expect("tempfile");
+        f.write_all(clean_toml.as_bytes()).expect("write");
+        let path = f.path().to_owned();
+
+        let catalog = load_catalog(&path).expect("load_catalog should parse ODS GREEN output");
+        assert_eq!(
+            catalog.opendatasoft.len(),
+            1,
+            "should produce exactly one [[opendatasoft]] config"
+        );
+        assert_eq!(catalog.opendatasoft[0].name, "test_city");
     }
 }
