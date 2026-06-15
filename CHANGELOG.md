@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.27.0 — 2026-06-15
+
+ArcGisConnector implementing Connector trait for ArcGIS REST Feature Service with paging, probe extension
+
 ## v0.26.0 — 2026-06-15
 
 multi-family catalog: SourceCatalog deserializes [[socrata]]/[[opendatasoft]]/[[arcgis]] entries; OpenDataSoftConfig+ArcGisConfig defined; load_catalog dispatches per family; ConnectorError::FamilyNotBuilt for unbuilt families
