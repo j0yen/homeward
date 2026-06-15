@@ -23,6 +23,7 @@ use crate::alerts::{AlertConfig, AlertDedup, MatchCandidate, process_candidate};
 use crate::delivery::{DeliveryOutcome, Deliverer, DryRunDeliverer};
 use crate::delivery_log::DeliveryLedger;
 use crate::store::ReportStore;
+use crate::webhook::WebhookSink;
 
 /// Default poll interval in seconds (override via `HOMEWARD_MATCH_INTERVAL`).
 pub const DEFAULT_MATCH_INTERVAL_SECS: u64 = 600;
@@ -93,6 +94,8 @@ pub struct MatchWatcher {
     pub ledger: Arc<std::sync::Mutex<DeliveryLedger>>,
     /// In-memory log of delivered alerts, queryable via HTTP.
     pub alert_log: Arc<AlertLog>,
+    /// Webhook sink for best-effort owner notifications (fire-and-forget POST).
+    pub webhook: Arc<WebhookSink>,
 }
 
 impl MatchWatcher {
@@ -104,6 +107,7 @@ impl MatchWatcher {
         intake: Arc<RwLock<Vec<PetRecord>>>,
         embed_client: Option<Arc<EmbedClient>>,
         alert_log: Arc<AlertLog>,
+        webhook: Arc<WebhookSink>,
     ) -> Self {
         Self {
             store,
@@ -113,6 +117,7 @@ impl MatchWatcher {
             deliverer: Arc::new(DryRunDeliverer::new()),
             ledger: Arc::new(std::sync::Mutex::new(DeliveryLedger::in_memory())),
             alert_log,
+            webhook,
         }
     }
 
@@ -126,6 +131,7 @@ impl MatchWatcher {
         deliverer: Arc<dyn Deliverer>,
         ledger: Arc<std::sync::Mutex<DeliveryLedger>>,
         alert_log: Arc<AlertLog>,
+        webhook: Arc<WebhookSink>,
     ) -> Self {
         Self {
             store,
@@ -135,6 +141,7 @@ impl MatchWatcher {
             deliverer,
             ledger,
             alert_log,
+            webhook,
         }
     }
 
@@ -240,6 +247,10 @@ impl MatchWatcher {
             let alerts = process_candidate(candidate, &report_refs, dedup, alert_cfg, now);
             for alert in alerts {
                 if self.deliver_alert(&alert, candidate.score) {
+                    // AC2: fire best-effort webhook if the report has notify_url.
+                    if let Some(ref url) = report.notify_url {
+                        self.webhook.fire(url, &alert);
+                    }
                     delivered += 1;
                 }
             }
@@ -352,6 +363,7 @@ mod tests {
             created: now,
             expires: now + Duration::days(90),
             status: LostStatus::Active,
+            notify_url: None,
         }
     }
 
@@ -530,10 +542,12 @@ mod tests {
 
     #[tokio::test]
     async fn no_embed_client_tick_completes_without_panic() {
+        use crate::webhook::WebhookSink;
         let store = Arc::new(RwLock::new(ReportStore::new()));
         let intake = Arc::new(RwLock::new(vec![]));
         let alert_log = Arc::new(AlertLog::new());
-        let watcher = MatchWatcher::new(store, intake, None, alert_log);
+        let webhook = Arc::new(WebhookSink::new().expect("webhook sink ok"));
+        let watcher = MatchWatcher::new(store, intake, None, alert_log, webhook);
 
         let count = watcher.tick().await;
         assert_eq!(count, 0, "no-embed tick must return 0 without panic");

@@ -138,4 +138,15 @@ pub struct LostReport {
 
     /// Current status of the report.
     pub status: LostStatus,
+
+    /// Optional webhook URL for owner notification on match alerts.
+    ///
+    /// When set, `homeward-reportd` fires a best-effort HTTP POST to this URL
+    /// for each new [`MatchAlert`] produced for this report. Delivery is
+    /// fire-and-forget: non-2xx responses and network errors are logged at WARN
+    /// and do not block the match-watch loop.
+    ///
+    /// Must be a valid `http://` or `https://` URL. `None` means no webhook.
+    #[serde(default)]
+    pub notify_url: Option<String>,
 }

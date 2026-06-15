@@ -36,6 +36,7 @@ pub fn make_report(report_id: &str) -> LostReport {
         created: now,
         expires: now + Duration::days(90),
         status: LostStatus::Active,
+        notify_url: None,
     }
 }
 

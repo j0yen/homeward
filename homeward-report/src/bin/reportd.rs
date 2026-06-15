@@ -156,6 +156,7 @@ fn cmd_submit(args: &[String]) {
         },
         raw_contact,
         ttl_secs: None,
+        notify_url: None,
     };
 
     match homeward_report::submit(req, &mut store, Utc::now()) {
@@ -555,6 +556,7 @@ fn build_synthetic_report_for_deliver(report_id: &str) -> LostReport {
         created: now,
         expires: now + Duration::days(90),
         status: LostStatus::Active,
+        notify_url: None,
     }
 }
 
