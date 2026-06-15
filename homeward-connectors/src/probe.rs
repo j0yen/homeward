@@ -645,14 +645,169 @@ pub fn format_json(result: &ProbeResult) -> String {
     serde_json::to_string_pretty(&output).unwrap_or_else(|_| "{}".to_owned())
 }
 
+// ─── ArcGIS probe ────────────────────────────────────────────────────────────
+
+/// Probe an ArcGIS Feature Service layer.
+///
+/// Fetches one GeoJSON page from `{service_url}/query?where=1=1&...` and
+/// checks whether the response looks like a STRAY-bearing intake feed.
+///
+/// # Errors
+/// Returns `ProbeError` on HTTP, JSON, or network errors.
+pub async fn run_arcgis_probe(
+    client: &dyn ProbeClient,
+    service_url: &str,
+    source_name: &str,
+) -> Result<ProbeResult, ProbeError> {
+    use crate::connectors::arcgis::STRAY_VALUES;
+
+    // Build the sample query URL.
+    let sample_url = format!(
+        "{service_url}/query?where=1%3D1&outFields=*&f=geojson&resultRecordCount=5&resultOffset=0"
+    );
+
+    let body_text = client.fetch_json(&sample_url).await.map_err(|e| match e {
+        ProbeError::NotFound { .. } => ProbeError::NotFound {
+            url: service_url.to_owned(),
+        },
+        other => other,
+    })?;
+
+    let body: serde_json::Value =
+        serde_json::from_str(&body_text).map_err(|e| ProbeError::Json(e.to_string()))?;
+
+    // Must be a GeoJSON FeatureCollection.
+    if body.get("type").and_then(|v| v.as_str()) != Some("FeatureCollection") {
+        return Ok(ProbeResult {
+            verdict: Verdict::Red,
+            reason: format!(
+                "{service_url} did not return a GeoJSON FeatureCollection; \
+                 check the service URL"
+            ),
+            column_map: None,
+            source_name: source_name.to_owned(),
+            domain: service_url.to_owned(),
+            dataset_id: String::new(),
+        });
+    }
+
+    let features = body
+        .get("features")
+        .and_then(|f| f.as_array())
+        .map_or(&[][..], Vec::as_slice);
+
+    if features.is_empty() {
+        return Ok(ProbeResult {
+            verdict: Verdict::Red,
+            reason: format!(
+                "{service_url} returned an empty FeatureCollection; \
+                 the layer may be empty or have access restrictions"
+            ),
+            column_map: None,
+            source_name: source_name.to_owned(),
+            domain: service_url.to_owned(),
+            dataset_id: String::new(),
+        });
+    }
+
+    // Check if any feature has a recognizable stray intake_type field.
+    let mut found_stray = false;
+    let mut intake_col: Option<String> = None;
+
+    // Look for intake_type-like columns in the first feature's properties.
+    if let Some(props) = features.first().and_then(|f| f.get("properties")).and_then(|p| p.as_object()) {
+        for (key, _val) in props {
+            let k_lower = key.to_lowercase();
+            if k_lower.contains("intake") || k_lower.contains("entry") || k_lower.contains("reason") {
+                intake_col = Some(key.clone());
+                break;
+            }
+        }
+        // Check all features for a stray value in any intake-like column.
+        for feature in features {
+            if let Some(fprops) = feature.get("properties").and_then(|p| p.as_object()) {
+                for (key, val) in fprops {
+                    let k_lower = key.to_lowercase();
+                    if (k_lower.contains("intake") || k_lower.contains("entry") || k_lower.contains("reason"))
+                        && val.as_str().map_or(false, |s| {
+                            STRAY_VALUES.iter().any(|sv| s.trim().to_uppercase().contains(sv))
+                        })
+                    {
+                        found_stray = true;
+                        intake_col = Some(key.clone());
+                        break;
+                    }
+                }
+                if found_stray {
+                    break;
+                }
+            }
+        }
+    }
+
+    if found_stray {
+        // Emit a GREEN TOML block suggestion.
+        let col_name = intake_col.as_deref().unwrap_or("intake_type");
+        let toml_block = format!(
+            "[[arcgis]]\nname = {source_name:?}\nservice_url = {service_url:?}\n\n\
+             [arcgis.column_map]\nanimal_id   = \"<fill-in>\"\nanimal_type = \"<fill-in>\"\n\
+             intake_type = {col_name:?}\n"
+        );
+        Ok(ProbeResult {
+            verdict: Verdict::Green,
+            reason: format!(
+                "ArcGIS layer at {service_url} appears to have STRAY-bearing records \
+                 (column: {col_name})"
+            ),
+            column_map: None, // column_map draft not applicable for ArcGIS probe
+            source_name: source_name.to_owned(),
+            domain: service_url.to_owned(),
+            dataset_id: toml_block,
+        })
+    } else {
+        Ok(ProbeResult {
+            verdict: Verdict::Red,
+            reason: format!(
+                "ArcGIS layer at {service_url} had no STRAY-bearing intake records \
+                 in the sample; intake column detected: {}",
+                intake_col.as_deref().unwrap_or("none")
+            ),
+            column_map: None,
+            source_name: source_name.to_owned(),
+            domain: service_url.to_owned(),
+            dataset_id: String::new(),
+        })
+    }
+}
+
 // ─── CLI entry point ──────────────────────────────────────────────────────────
 
 /// Run the `probe` subcommand from CLI args.
 ///
 /// Returns the exit code (0 = GREEN, 1 = RED, 2 = error).
 pub async fn run_probe_cmd(args: &[String]) -> i32 {
+    // Check for --family flag before positional args.
+    let mut family: Option<String> = None;
+    {
+        let mut i = 0;
+        while i < args.len() {
+            if args[i] == "--family" {
+                i += 1;
+                if i < args.len() {
+                    family = Some(args[i].clone());
+                }
+            }
+            i += 1;
+        }
+    }
+
+    if family.as_deref() == Some("arcgis") {
+        return run_probe_cmd_arcgis(args).await;
+    }
+
     if args.len() < 2 {
         eprintln!("Usage: homeward probe <domain> <dataset_id> [--name <slug>] [--json]");
+        eprintln!("       homeward probe --family arcgis <service_url> [--name <slug>] [--json]");
         return 2;
     }
 
@@ -732,6 +887,121 @@ pub async fn run_probe_cmd(args: &[String]) -> i32 {
                 println!("# GREEN: {}", result.reason);
                 println!();
                 println!("{}", format_green_toml(&result));
+            }
+            Verdict::Red => {
+                eprintln!("RED: {}", result.reason);
+            }
+        }
+    }
+
+    match result.verdict {
+        Verdict::Green => 0,
+        Verdict::Red => 1,
+    }
+}
+
+/// Dispatch `probe --family arcgis <service_url> [--name <slug>] [--json]`.
+async fn run_probe_cmd_arcgis(args: &[String]) -> i32 {
+    // args includes --family arcgis; find the positional service_url.
+    let mut service_url: Option<String> = None;
+    let mut source_name: Option<String> = None;
+    let mut json_output = false;
+    let mut i = 0;
+
+    while i < args.len() {
+        match args[i].as_str() {
+            "--family" => {
+                i += 1; // skip value already parsed
+            }
+            "--name" => {
+                i += 1;
+                if i < args.len() {
+                    source_name = Some(args[i].clone());
+                } else {
+                    eprintln!("--name requires a value");
+                    return 2;
+                }
+            }
+            "--json" => {
+                json_output = true;
+            }
+            s if !s.starts_with('-') && service_url.is_none() => {
+                // Skip the family value "arcgis".
+                if s != "arcgis" {
+                    service_url = Some(s.to_owned());
+                }
+            }
+            other => {
+                eprintln!("unknown argument: {other:?}");
+                return 2;
+            }
+        }
+        i += 1;
+    }
+
+    let url = match service_url {
+        Some(u) => u,
+        None => {
+            eprintln!("Usage: homeward probe --family arcgis <service_url> [--name <slug>] [--json]");
+            return 2;
+        }
+    };
+
+    let name = source_name.unwrap_or_else(|| {
+        url.trim_end_matches('/')
+            .rsplit('/')
+            .next()
+            .unwrap_or("arcgis-source")
+            .replace('-', "_")
+            .to_owned()
+    });
+
+    let client = match RealProbeClient::new() {
+        Ok(c) => c,
+        Err(e) => {
+            eprintln!("error: could not build HTTP client: {e}");
+            return 2;
+        }
+    };
+
+    let result = match run_arcgis_probe(&client, &url, &name).await {
+        Ok(r) => r,
+        Err(e) => {
+            let msg = format!("ArcGIS probe error: {e}");
+            if json_output {
+                let out = JsonOutput {
+                    verdict: "RED".to_owned(),
+                    reason: msg.clone(),
+                    draft: None,
+                };
+                println!("{}", serde_json::to_string_pretty(&out).unwrap_or_default());
+            } else {
+                eprintln!("RED: {msg}");
+            }
+            return 1;
+        }
+    };
+
+    if json_output {
+        let out = JsonOutput {
+            verdict: match result.verdict {
+                Verdict::Green => "GREEN".to_owned(),
+                Verdict::Red => "RED".to_owned(),
+            },
+            reason: result.reason.clone(),
+            draft: if result.verdict == Verdict::Green {
+                Some(serde_json::json!({ "toml": result.dataset_id }))
+            } else {
+                None
+            },
+        };
+        println!("{}", serde_json::to_string_pretty(&out).unwrap_or_default());
+    } else {
+        match result.verdict {
+            Verdict::Green => {
+                println!("# GREEN: {}", result.reason);
+                println!();
+                println!("{}", result.dataset_id); // TOML block stored in dataset_id
             }
             Verdict::Red => {
                 eprintln!("RED: {}", result.reason);

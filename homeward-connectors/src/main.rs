@@ -24,6 +24,7 @@ use chrono::DateTime;
 use homeward_connectors::{
     ConnectorRegistry, Cursor,
     catalog::load_catalog,
+    connectors::arcgis::ArcGisConnector,
     connectors::petfbi::{PetFbiConfig, PetFbiConnector},
     connectors::socrata::{SocrataConfig, SocrataConnector},
     coverage::{CoverageArgs, RECENT_WINDOW_SECS, STALE_MULTIPLIER, run_coverage},
@@ -68,6 +69,22 @@ fn build_registry() -> ConnectorRegistry {
         match PetFbiConnector::new(config) {
             Ok(c) => registry.register("petfbi", Box::new(c)),
             Err(e) => eprintln!("warning: could not init petfbi connector: {e}"),
+        }
+    }
+
+    // Register ArcGIS connectors from catalog (if HOMEWARD_SOURCES is set).
+    if let Ok(path_str) = std::env::var("HOMEWARD_SOURCES") {
+        let path = std::path::Path::new(&path_str);
+        let arcgis_configs = match load_catalog(path) {
+            Ok(catalog) => catalog.arcgis,
+            Err(_) => vec![],
+        };
+        for config in arcgis_configs {
+            let name = config.name.clone();
+            match ArcGisConnector::new(config) {
+                Ok(c) => registry.register(name, Box::new(c)),
+                Err(e) => eprintln!("warning: could not init {name} ArcGIS connector: {e}"),
+            }
         }
     }
 
