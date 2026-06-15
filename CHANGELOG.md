@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.28.0 — 2026-06-15
+
+discover subcommand crawls Socrata+ODS federated catalogs for animal-intake dataset candidates
+
 ## v0.27.0 — 2026-06-15
 
 ArcGisConnector implementing Connector trait for ArcGIS REST Feature Service with paging, probe extension
