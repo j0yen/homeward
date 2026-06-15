@@ -14,6 +14,7 @@
 
 #![deny(unsafe_code)]
 
+pub mod alert_log;
 pub mod alerts;
 pub mod api;
 pub mod db_reader;
@@ -38,6 +39,7 @@ use ulid::Ulid;
 
 // ─── Re-exports ──────────────────────────────────────────────────────────────
 
+pub use alert_log::{AlertEntry, AlertLog};
 pub use alerts::{MatchAlert, MatchCandidate};
 pub use api::{ApiConfig, ShelterQuery, ShelterQueryResult};
 pub use match_watch::MatchWatcher;

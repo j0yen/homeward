@@ -35,6 +35,7 @@ use tokio::sync::RwLock;
 use tower_http::cors::CorsLayer;
 use tower_http::trace::TraceLayer;
 
+use crate::alert_log::AlertLog;
 use crate::api::{ApiConfig, ShelterQuery, ShelterRecord, ShelterQueryResult, image_similarity_search};
 use crate::match_watch::MatchWatcher;
 use crate::store::ReportStore;
@@ -62,6 +63,8 @@ pub struct AppState {
     pub embed_client: Option<Arc<EmbedClient>>,
     /// Owner-side lost-pet report store.
     pub store: Arc<RwLock<ReportStore>>,
+    /// In-memory log of match alerts, queryable via `GET /reports/:id/matches`.
+    pub alert_log: Arc<AlertLog>,
 }
 
 // ─── Query params ─────────────────────────────────────────────────────────────
@@ -169,6 +172,7 @@ pub fn build_router(state: AppState) -> Router {
         .route("/search", post(handle_search))
         .route("/reports", post(handle_report_submit))
         .route("/reports/:id", get(handle_report_get))
+        .route("/reports/:id/matches", get(handle_report_matches))
         .layer(TraceLayer::new_for_http())
         .layer(CorsLayer::permissive())
         .with_state(state)
@@ -243,10 +247,12 @@ pub async fn serve(port: u16, bind: &str, no_embed: bool) -> Result<(), String> 
 
     // Build shared lost-report store and spawn the background match watcher.
     let shared_store: Arc<RwLock<ReportStore>> = Arc::new(RwLock::new(ReportStore::new()));
+    let alert_log = Arc::new(AlertLog::new());
     let watcher = MatchWatcher::new(
         Arc::clone(&shared_store),
         Arc::clone(&shared_intake),
         embed_client.clone(),
+        Arc::clone(&alert_log),
     );
     tokio::spawn(async move {
         watcher.run().await;
@@ -258,6 +264,7 @@ pub async fn serve(port: u16, bind: &str, no_embed: bool) -> Result<(), String> 
         registry: Arc::new(ConnectorRegistry::new()),
         embed_client,
         store: shared_store,
+        alert_log,
     };
 
     let addr = format!("{bind}:{port}");
@@ -579,6 +586,24 @@ async fn handle_report_get(
     }
 }
 
+/// `GET /reports/:id/matches` — query match alerts logged for a report.
+///
+/// Returns `200 OK` with `{"matches": [...]}` (may be empty) for a known report,
+/// or `404 Not Found` if no report with the given ID exists.
+async fn handle_report_matches(
+    State(state): State<AppState>,
+    axum::extract::Path(id): axum::extract::Path<String>,
+) -> impl IntoResponse {
+    // 404 if report doesn't exist
+    let store = state.store.read().await;
+    if store.get(&id).is_none() {
+        return (StatusCode::NOT_FOUND, Json(serde_json::json!({"error": "not found"}))).into_response();
+    }
+    drop(store);
+    let matches = state.alert_log.for_report(&id);
+    Json(serde_json::json!({"matches": matches})).into_response()
+}
+
 // ─── Tests ────────────────────────────────────────────────────────────────────
 
 #[cfg(test)]
@@ -595,6 +620,7 @@ mod tests {
             registry: Arc::new(ConnectorRegistry::new()),
             embed_client: None,
             store: Arc::new(RwLock::new(crate::store::ReportStore::new())),
+            alert_log: Arc::new(crate::alert_log::AlertLog::new()),
         }
     }
 
@@ -1049,7 +1075,6 @@ mod tests {
     /// directly insert a duplicate into the store before the second request.
     #[tokio::test]
     async fn report_submit_duplicate_via_store_returns_409() {
-        use crate::store::ReportStore;
         use crate::tests_common::make_report;
 
         let state = make_state();
@@ -1127,5 +1152,118 @@ mod tests {
 
         let resp = app.oneshot(req).await.expect("call handler");
         assert_eq!(resp.status(), StatusCode::NOT_FOUND, "unknown ID must return 404");
+    }
+
+    // ─── AC2: GET /reports/:id/matches returns empty list when no alerts ──────
+
+    /// AC2: `GET /reports/:id/matches` returns `{"matches": []}` for a report with no alerts.
+    #[tokio::test]
+    async fn matches_endpoint_empty_when_no_alerts() {
+        use crate::tests_common::make_report;
+
+        let state = make_state();
+        // Insert a report into the store directly.
+        {
+            let mut store = state.store.write().await;
+            store.insert(make_report("report-ac2")).expect("insert ok");
+        }
+
+        let app = build_router(state);
+        let req = Request::builder()
+            .method(Method::GET)
+            .uri("/reports/report-ac2/matches")
+            .body(Body::empty())
+            .expect("build request");
+
+        let resp = app.oneshot(req).await.expect("call handler");
+        assert_eq!(resp.status(), StatusCode::OK, "known report must return 200");
+
+        let body = axum::body::to_bytes(resp.into_body(), usize::MAX)
+            .await
+            .expect("read body");
+        let json: serde_json::Value = serde_json::from_slice(&body).expect("parse JSON");
+        assert!(json["matches"].is_array(), "response must have 'matches' array");
+        assert_eq!(
+            json["matches"].as_array().expect("array").len(),
+            0,
+            "matches must be empty when no alerts logged"
+        );
+    }
+
+    // ─── AC3: GET /reports/:id/matches returns 404 for unknown ID ────────────
+
+    /// AC3: `GET /reports/:id/matches` returns 404 for an unknown report ID.
+    #[tokio::test]
+    async fn matches_endpoint_404_for_unknown_report() {
+        let app = build_router(make_state());
+        let req = Request::builder()
+            .method(Method::GET)
+            .uri("/reports/no-such-report/matches")
+            .body(Body::empty())
+            .expect("build request");
+
+        let resp = app.oneshot(req).await.expect("call handler");
+        assert_eq!(resp.status(), StatusCode::NOT_FOUND, "unknown report must return 404");
+    }
+
+    // ─── AC4+AC5: GET /reports/:id/matches returns logged AlertEntry ──────────
+
+    /// AC4+AC5: After pushing an AlertEntry to the shared AlertLog,
+    /// `GET /reports/:id/matches` returns it without `contact_token`.
+    #[tokio::test]
+    async fn matches_endpoint_returns_pushed_alert_entry() {
+        use crate::alert_log::AlertEntry;
+        use crate::tests_common::make_report;
+
+        let state = make_state();
+        let report_id = "report-ac4-ac5";
+
+        // Insert a report.
+        {
+            let mut store = state.store.write().await;
+            store.insert(make_report(report_id)).expect("insert ok");
+        }
+
+        // Push an AlertEntry directly into the shared AlertLog.
+        let entry = AlertEntry {
+            candidate_id: "cand-001".to_owned(),
+            score: 0.91,
+            shelter_area: Some("Austin, TX".to_owned()),
+            source_url: Some("https://shelter.example.com/pets/42".to_owned()),
+            reclaimable_until: None,
+            alerted_at: chrono::Utc::now(),
+        };
+        state.alert_log.push(report_id, entry);
+
+        let app = build_router(state);
+        let req = Request::builder()
+            .method(Method::GET)
+            .uri(format!("/reports/{report_id}/matches"))
+            .body(Body::empty())
+            .expect("build request");
+
+        let resp = app.oneshot(req).await.expect("call handler");
+        assert_eq!(resp.status(), StatusCode::OK, "must return 200 with alert");
+
+        let body = axum::body::to_bytes(resp.into_body(), usize::MAX)
+            .await
+            .expect("read body");
+        let json: serde_json::Value = serde_json::from_slice(&body).expect("parse JSON");
+
+        let matches = json["matches"].as_array().expect("matches must be array");
+        assert_eq!(matches.len(), 1, "must return exactly one alert entry");
+
+        let entry = &matches[0];
+        assert_eq!(entry["candidate_id"], "cand-001");
+        assert!((entry["score"].as_f64().expect("score f64") - 0.91_f64).abs() < 0.01);
+        assert_eq!(entry["shelter_area"], "Austin, TX");
+        assert_eq!(entry["source_url"], "https://shelter.example.com/pets/42");
+
+        // AC5: contact_token must NOT appear in the response.
+        let serialized = serde_json::to_string(&json).expect("serialize");
+        assert!(
+            !serialized.contains("contact_token"),
+            "matches endpoint must not expose contact_token: {serialized}"
+        );
     }
 }

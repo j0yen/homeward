@@ -18,6 +18,7 @@ use tokio::sync::RwLock;
 use tokio::time::{Duration, interval};
 use tracing::{debug, info, warn};
 
+use crate::alert_log::{AlertEntry, AlertLog};
 use crate::alerts::{AlertConfig, AlertDedup, MatchCandidate, process_candidate};
 use crate::delivery::{DeliveryOutcome, Deliverer, DryRunDeliverer};
 use crate::delivery_log::DeliveryLedger;
@@ -90,6 +91,8 @@ pub struct MatchWatcher {
     pub deliverer: Arc<dyn Deliverer>,
     /// Delivery ledger for persistence + dedup.
     pub ledger: Arc<std::sync::Mutex<DeliveryLedger>>,
+    /// In-memory log of delivered alerts, queryable via HTTP.
+    pub alert_log: Arc<AlertLog>,
 }
 
 impl MatchWatcher {
@@ -100,6 +103,7 @@ impl MatchWatcher {
         store: Arc<RwLock<ReportStore>>,
         intake: Arc<RwLock<Vec<PetRecord>>>,
         embed_client: Option<Arc<EmbedClient>>,
+        alert_log: Arc<AlertLog>,
     ) -> Self {
         Self {
             store,
@@ -108,6 +112,7 @@ impl MatchWatcher {
             cfg: MatchWatchConfig::default(),
             deliverer: Arc::new(DryRunDeliverer::new()),
             ledger: Arc::new(std::sync::Mutex::new(DeliveryLedger::in_memory())),
+            alert_log,
         }
     }
 
@@ -120,6 +125,7 @@ impl MatchWatcher {
         cfg: MatchWatchConfig,
         deliverer: Arc<dyn Deliverer>,
         ledger: Arc<std::sync::Mutex<DeliveryLedger>>,
+        alert_log: Arc<AlertLog>,
     ) -> Self {
         Self {
             store,
@@ -128,6 +134,7 @@ impl MatchWatcher {
             cfg,
             deliverer,
             ledger,
+            alert_log,
         }
     }
 
@@ -232,7 +239,7 @@ impl MatchWatcher {
         for candidate in &candidates {
             let alerts = process_candidate(candidate, &report_refs, dedup, alert_cfg, now);
             for alert in alerts {
-                if self.deliver_alert(&alert) {
+                if self.deliver_alert(&alert, candidate.score) {
                     delivered += 1;
                 }
             }
@@ -254,7 +261,7 @@ impl MatchWatcher {
     /// Deliver one alert via the ledger+deliverer pair.
     ///
     /// Returns `true` if the alert was actually delivered (not suppressed/failed).
-    fn deliver_alert(&self, alert: &crate::alerts::MatchAlert) -> bool {
+    fn deliver_alert(&self, alert: &crate::alerts::MatchAlert, score: f32) -> bool {
         let outcome = {
             let mut ledger = match self.ledger.lock() {
                 Ok(g) => g,
@@ -269,6 +276,14 @@ impl MatchWatcher {
             DeliveryOutcome::DryRun { .. } | DeliveryOutcome::Sent { .. } => {
                 info!(report_id = %alert.report_id, candidate_id = %alert.candidate_id,
                     outcome = outcome.label(), "match_watch: alert delivered");
+                self.alert_log.push(&alert.report_id, AlertEntry {
+                    candidate_id: alert.candidate_id.clone(),
+                    score,
+                    shelter_area: alert.shelter_area.clone(),
+                    source_url: alert.source_url.clone(),
+                    reclaimable_until: alert.reclaimable_until,
+                    alerted_at: chrono::Utc::now(),
+                });
                 true
             }
             DeliveryOutcome::Suppressed { .. } => {
@@ -300,6 +315,7 @@ mod tests {
     use tokio::sync::RwLock;
     use ulid::Ulid;
 
+    use crate::alert_log::AlertLog;
     use crate::alerts::MatchAlert;
     use crate::delivery::{DeliveryOutcome, Deliverer};
     use crate::delivery_log::{DeliveryLedger, DeliveryRecord};
@@ -516,7 +532,8 @@ mod tests {
     async fn no_embed_client_tick_completes_without_panic() {
         let store = Arc::new(RwLock::new(ReportStore::new()));
         let intake = Arc::new(RwLock::new(vec![]));
-        let watcher = MatchWatcher::new(store, intake, None);
+        let alert_log = Arc::new(AlertLog::new());
+        let watcher = MatchWatcher::new(store, intake, None, alert_log);
 
         let count = watcher.tick().await;
         assert_eq!(count, 0, "no-embed tick must return 0 without panic");

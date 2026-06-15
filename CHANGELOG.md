@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.23.0 — 2026-06-14
+
+homeward-matches-endpoint: `GET /reports/:id/matches` HTTP endpoint — owners can query match alerts logged for their lost-pet report; returns list of {candidate_id, score, shelter_area, source_url, reclaimable_until, alerted_at}; 404 for unknown report; empty list when no alerts yet; AlertLog wired into AppState and MatchWatcher
+
 ## v0.22.0 — 2026-06-14
 
 homeward-report-submit: `POST /reports` and `GET /reports/:id` HTTP endpoints — owners can submit lost-pet reports (JSON body → ULID report_id, species parse, BrokeredContactToken mint, CoarseLocation) and retrieve them by ID; 409 on duplicate, 404 on missing; 4 new handler tests green
