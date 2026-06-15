@@ -1,5 +1,19 @@
 # Changelog
 
+## v0.24.0 — 2026-06-15
+
+Adds webhook-based owner notification to homeward-reportd (v0.23.0→v0.24.0).
+
+Changes:
+- `LostReport` gains `notify_url: Option<String>` in homeward-schema
+- `POST /reports` validates notify_url (http/https only), returns 400 on bad URL
+- New `WebhookSink` in `homeward-report/src/webhook.rs` uses reqwest with rustls-tls
+- `WebhookSink` wired into `AppState` and `MatchWatcher`
+- `MatchWatcher::process_report` calls `webhook.fire()` after each new `MatchAlert`
+  for reports with notify_url — best-effort fire-and-forget, no retry, non-2xx logged at WARN
+- 9 new tests: 5 webhook unit tests + AC1 server tests (valid/invalid/ftp/absent notify_url + stored)
+- All 78 homeward-report lib tests + full workspace tests pass
+
 ## v0.23.0 — 2026-06-14
 
 homeward-matches-endpoint: `GET /reports/:id/matches` HTTP endpoint — owners can query match alerts logged for their lost-pet report; returns list of {candidate_id, score, shelter_area, source_url, reclaimable_until, alerted_at}; 404 for unknown report; empty list when no alerts yet; AlertLog wired into AppState and MatchWatcher

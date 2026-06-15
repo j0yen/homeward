@@ -992,7 +992,7 @@ dependencies = [
 
 [[package]]
 name = "homeward"
-version = "0.21.0"
+version = "0.23.0"
 
 [[package]]
 name = "homeward-connectors"
@@ -1066,7 +1066,7 @@ dependencies = [
 
 [[package]]
 name = "homeward-report"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "axum",
  "base64 0.22.1",
@@ -1075,6 +1075,7 @@ dependencies = [
  "homeward-embed-client",
  "homeward-match",
  "homeward-schema",
+ "reqwest",
  "rusqlite",
  "serde",
  "serde_json",
@@ -1086,6 +1087,7 @@ dependencies = [
  "tracing",
  "tracing-subscriber",
  "ulid",
+ "url",
 ]
 
 [[package]]
