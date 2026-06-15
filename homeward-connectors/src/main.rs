@@ -28,6 +28,7 @@ use homeward_connectors::{
     connectors::petfbi::{PetFbiConfig, PetFbiConnector},
     connectors::socrata::{SocrataConfig, SocrataConnector},
     coverage::{CoverageArgs, RECENT_WINDOW_SECS, STALE_MULTIPLIER, run_coverage},
+    discover::run_discover_cmd,
     probe::run_probe_cmd,
 };
 
@@ -123,6 +124,7 @@ async fn main() {
         eprintln!("       homeward connectors list");
         eprintln!("       homeward connectors coverage [--store <path>] [--json]");
         eprintln!("       homeward probe <domain> <dataset_id> [--name <slug>] [--json]");
+        eprintln!("       homeward discover [--families socrata,opendatasoft] [--metro <str>] [--limit N] [--json]");
         process::exit(1);
     }
 
@@ -130,6 +132,10 @@ async fn main() {
         "connectors" => handle_connectors(&args[2..]).await,
         "probe" => {
             let code = run_probe_cmd(&args[2..]).await;
+            process::exit(code);
+        }
+        "discover" => {
+            let code = run_discover_cmd(&args[2..]).await;
             process::exit(code);
         }
         other => {
