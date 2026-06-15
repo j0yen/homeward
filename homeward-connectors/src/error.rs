@@ -62,4 +62,11 @@ pub enum ConnectorError {
     /// Configuration error.
     #[error("configuration error: {0}")]
     Config(String),
+
+    /// The source family named by this config entry has no built connector yet.
+    ///
+    /// The inner `String` is the source name (not the family name) to give the
+    /// operator a clear pointer to the offending catalog entry.
+    #[error("connector family not yet built for source {0:?}")]
+    FamilyNotBuilt(String),
 }

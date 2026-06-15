@@ -896,7 +896,7 @@ pub mod tests {
 
     #[tokio::test]
     async fn ac2_green_output_parses_via_source_catalog() {
-        use crate::connectors::socrata::SourceCatalog;
+        use crate::catalog::load_catalog;
         use std::io::Write;
 
         let mut client = FixtureClient::new();
@@ -930,10 +930,10 @@ pub mod tests {
         f.write_all(clean_toml.as_bytes()).expect("write");
         let path = f.path().to_owned();
 
-        let configs = SourceCatalog::from_path(&path).expect("SourceCatalog should parse GREEN output");
-        assert_eq!(configs.len(), 1, "should produce exactly one config");
-        assert_eq!(configs[0].name, "austin");
-        assert!(!configs[0].column_map.animal_id.is_empty());
+        let catalog = load_catalog(&path).expect("load_catalog should parse GREEN output");
+        assert_eq!(catalog.socrata.len(), 1, "should produce exactly one [[socrata]] config");
+        assert_eq!(catalog.socrata[0].name, "austin");
+        assert!(!catalog.socrata[0].column_map.animal_id.is_empty());
     }
 
     #[tokio::test]
