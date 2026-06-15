@@ -148,6 +148,7 @@ fn cmd_submit(args: &[String]) {
         breed_secondary: None,
         description,
         photo_bytes,
+        photo_url: None,
         last_seen: CoarseLocation {
             zip_code: Some(zip_code),
             city: None,

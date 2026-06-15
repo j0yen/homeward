@@ -12,6 +12,8 @@
 //! | POST | `/search` | Photo similarity search (multipart) |
 //! | POST | `/reports` | Submit a lost-pet report |
 //! | GET | `/reports/:id` | Retrieve a lost-pet report by ID |
+//! | POST | `/uploads` | Upload a pet photo (multipart/form-data) |
+//! | GET | `/uploads/:filename` | Serve an uploaded photo |
 //!
 //! # Privacy
 //! No `LostReport` contact fields are ever exposed through any unauthenticated
@@ -33,6 +35,7 @@ use serde::{Deserialize, Serialize};
 use tokio::net::TcpListener;
 use tokio::sync::RwLock;
 use tower_http::cors::CorsLayer;
+use tower_http::services::ServeDir;
 use tower_http::trace::TraceLayer;
 
 use crate::alert_log::AlertLog;
@@ -68,6 +71,10 @@ pub struct AppState {
     pub alert_log: Arc<AlertLog>,
     /// Webhook sink for owner match-alert notifications (best-effort, fire-and-forget).
     pub webhook: Arc<WebhookSink>,
+    /// Directory where uploaded photos are stored (`HW_UPLOAD_DIR`).
+    pub upload_dir: Arc<std::path::PathBuf>,
+    /// Maximum upload body size in bytes (`HW_UPLOAD_MAX_BYTES`, default 10 MiB).
+    pub upload_max_bytes: usize,
 }
 
 // ─── Query params ─────────────────────────────────────────────────────────────
@@ -173,6 +180,15 @@ struct GetReportResponse {
 /// The returned router is ready to be bound to a [`TcpListener`].
 #[must_use]
 pub fn build_router(state: AppState) -> Router {
+    let upload_dir = Arc::clone(&state.upload_dir);
+    // Serve static uploads under /uploads/<filename>.
+    // The POST /uploads handler is a named route; ServeDir handles GET /uploads/...
+    // We use a fallback on the uploads sub-router so that POST /uploads still
+    // routes to the handler and GET /uploads/* goes to ServeDir.
+    let uploads_router: Router<AppState> = Router::new()
+        .route("/", post(handle_upload))
+        .fallback_service(ServeDir::new(upload_dir.as_ref()));
+
     Router::new()
         .route("/", get(serve_index))
         .route("/static/index.html", get(serve_index))
@@ -183,6 +199,7 @@ pub fn build_router(state: AppState) -> Router {
         .route("/reports", post(handle_report_submit))
         .route("/reports/:id", get(handle_report_get))
         .route("/reports/:id/matches", get(handle_report_matches))
+        .nest("/uploads", uploads_router)
         .layer(TraceLayer::new_for_http())
         .layer(CorsLayer::permissive())
         .with_state(state)
@@ -232,6 +249,41 @@ async fn wait_for_initial_load(intake: &Arc<RwLock<Vec<PetRecord>>>, max_secs: u
     tracing::info!("ingest DB not yet loaded after {max_secs}s (will load in background)");
 }
 
+/// Create `dir` (and all parents) if it doesn't already exist.
+///
+/// # Errors
+/// Returns an error string if the directory cannot be created.
+fn resolve_upload_dir_from(dir: std::path::PathBuf) -> Result<std::path::PathBuf, String> {
+    std::fs::create_dir_all(&dir)
+        .map_err(|e| format!("cannot create upload dir {}: {e}", dir.display()))?;
+    Ok(dir)
+}
+
+/// Resolve the upload directory from `HW_UPLOAD_DIR` (default `~/.local/share/homeward/uploads/`).
+///
+/// Creates the directory if absent.
+///
+/// # Errors
+/// Returns an error if the directory cannot be created.
+fn resolve_upload_dir() -> Result<std::path::PathBuf, String> {
+    let dir = std::env::var("HW_UPLOAD_DIR")
+        .map(std::path::PathBuf::from)
+        .unwrap_or_else(|_| {
+            let home = std::env::var("HOME").unwrap_or_else(|_| "/root".to_owned());
+            std::path::PathBuf::from(home)
+                .join(".local/share/homeward/uploads")
+        });
+    resolve_upload_dir_from(dir)
+}
+
+/// Resolve the upload max bytes from `HW_UPLOAD_MAX_BYTES` (default 10 MiB).
+fn resolve_upload_max_bytes() -> usize {
+    std::env::var("HW_UPLOAD_MAX_BYTES")
+        .ok()
+        .and_then(|s| s.parse::<usize>().ok())
+        .unwrap_or(10 * 1024 * 1024)
+}
+
 /// Start the HTTP server, binding to `bind:port`.
 ///
 /// Pass `no_embed = true` to bypass embed client construction even if the
@@ -243,6 +295,8 @@ async fn wait_for_initial_load(intake: &Arc<RwLock<Vec<PetRecord>>>, max_secs: u
 /// Returns an error if the TCP listener cannot be bound or the server exits.
 pub async fn serve(port: u16, bind: &str, no_embed: bool) -> Result<(), String> {
     let embed_client = build_embed_client(no_embed);
+    let upload_dir = resolve_upload_dir()?;
+    let upload_max_bytes = resolve_upload_max_bytes();
 
     // Build shared intake and spawn DB reader background task.
     let shared_intake: Arc<RwLock<Vec<PetRecord>>> = Arc::new(RwLock::new(vec![]));
@@ -290,6 +344,8 @@ pub async fn serve(port: u16, bind: &str, no_embed: bool) -> Result<(), String> 
         store: shared_store,
         alert_log,
         webhook: webhook_sink,
+        upload_dir: Arc::new(upload_dir),
+        upload_max_bytes,
     };
 
     let addr = format!("{bind}:{port}");
@@ -582,6 +638,7 @@ async fn handle_report_submit(
         breed_secondary: None,
         description: req.description,
         photo_bytes: None,
+        photo_url: req.photo_url,
         last_seen,
         raw_contact: req.contact_email,
         ttl_secs,
@@ -629,6 +686,143 @@ async fn handle_report_get(
     }
 }
 
+// ─── Upload types ─────────────────────────────────────────────────────────────
+
+/// `POST /uploads` success response.
+#[derive(Debug, Serialize)]
+struct UploadResponse {
+    url: String,
+}
+
+// ─── Upload handler ───────────────────────────────────────────────────────────
+
+/// Allowed image content-type prefixes for uploads.
+const ALLOWED_IMAGE_TYPES: &[&str] = &["image/jpeg", "image/png", "image/webp"];
+
+/// `POST /uploads` — accept a photo upload and return its URL.
+///
+/// Accepts `multipart/form-data` with an `image` or `photo` field.
+/// - Validates content-type (jpeg/png/webp only → 415 otherwise).
+/// - Enforces upload size limit → 413 if exceeded.
+/// - Strips EXIF using the existing `exif` module (marker-level stripping).
+/// - Saves as `<ULID>.jpg` under `HW_UPLOAD_DIR`.
+/// - Returns `{ "url": "/uploads/<filename>" }`.
+async fn handle_upload(
+    State(state): State<AppState>,
+    mut multipart: Multipart,
+) -> impl IntoResponse {
+    let mut image_bytes: Option<Vec<u8>> = None;
+    let mut content_type_ok = true;
+
+    loop {
+        match multipart.next_field().await {
+            Ok(Some(field)) => {
+                let name = field.name().unwrap_or("").to_owned();
+                if name == "image" || name == "photo" || name == "file" {
+                    // Validate content-type of this part.
+                    let ct = field
+                        .content_type()
+                        .map(std::borrow::ToOwned::to_owned)
+                        .unwrap_or_default();
+                    let allowed = ALLOWED_IMAGE_TYPES
+                        .iter()
+                        .any(|&ok| ct.starts_with(ok));
+                    if !allowed {
+                        content_type_ok = false;
+                        // drain so multipart stays consistent
+                        break;
+                    }
+                    match field.bytes().await {
+                        Ok(bytes) => {
+                            image_bytes = Some(bytes.to_vec());
+                        }
+                        Err(e) => {
+                            return (
+                                StatusCode::BAD_REQUEST,
+                                Json(serde_json::json!({"error": format!("failed to read image field: {e}")})),
+                            )
+                                .into_response();
+                        }
+                    }
+                }
+                // Skip unrecognised fields.
+            }
+            Ok(None) => break,
+            Err(e) => {
+                // axum maps body-too-large multipart errors to a specific variant;
+                // check the Display string for "413" hint or just treat all
+                // multipart errors generically — the client will retry with a smaller file.
+                let msg = e.to_string();
+                if msg.contains("413") || msg.contains("too large") || msg.contains("bytes limit") {
+                    return (
+                        StatusCode::PAYLOAD_TOO_LARGE,
+                        Json(serde_json::json!({"error": "upload exceeds size limit"})),
+                    )
+                        .into_response();
+                }
+                return (
+                    StatusCode::BAD_REQUEST,
+                    Json(serde_json::json!({"error": format!("multipart error: {e}")})),
+                )
+                    .into_response();
+            }
+        }
+    }
+
+    if !content_type_ok {
+        return (
+            StatusCode::UNSUPPORTED_MEDIA_TYPE,
+            Json(serde_json::json!({"error": "unsupported image type; use image/jpeg, image/png, or image/webp"})),
+        )
+            .into_response();
+    }
+
+    let raw_bytes = match image_bytes {
+        Some(b) => b,
+        None => {
+            return (
+                StatusCode::BAD_REQUEST,
+                Json(serde_json::json!({"error": "missing image field in multipart body"})),
+            )
+                .into_response();
+        }
+    };
+
+    // AC3: enforce size limit.
+    if raw_bytes.len() > state.upload_max_bytes {
+        return (
+            StatusCode::PAYLOAD_TOO_LARGE,
+            Json(serde_json::json!({"error": "upload exceeds size limit"})),
+        )
+            .into_response();
+    }
+
+    // AC2: strip EXIF using the existing JPEG marker-level stripper.
+    let stripped = crate::exif::strip_exif(&raw_bytes);
+
+    // Generate a unique filename with ULID.
+    let filename = format!("{}.jpg", ulid::Ulid::new());
+    let dest = state.upload_dir.join(&filename);
+
+    if let Err(e) = std::fs::write(&dest, &stripped) {
+        tracing::error!("failed to write upload to {}: {e}", dest.display());
+        return (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(serde_json::json!({"error": "failed to save upload"})),
+        )
+            .into_response();
+    }
+
+    tracing::info!("upload saved: {} ({} bytes)", filename, stripped.len());
+    (
+        StatusCode::OK,
+        Json(UploadResponse {
+            url: format!("/uploads/{filename}"),
+        }),
+    )
+        .into_response()
+}
+
 /// `GET /reports/:id/matches` — query match alerts logged for a report.
 ///
 /// Returns `200 OK` with `{"matches": [...]}` (may be empty) for a known report,
@@ -657,6 +851,11 @@ mod tests {
     use tower::ServiceExt as _;
 
     fn make_state() -> AppState {
+        make_state_with_upload_dir(std::env::temp_dir().join("hw_test_uploads"))
+    }
+
+    fn make_state_with_upload_dir(dir: std::path::PathBuf) -> AppState {
+        std::fs::create_dir_all(&dir).expect("create test upload dir");
         AppState {
             cfg: Arc::new(ApiConfig::default()),
             intake: Arc::new(RwLock::new(vec![])),
@@ -667,6 +866,8 @@ mod tests {
             webhook: Arc::new(
                 crate::webhook::WebhookSink::new().expect("webhook sink ok in tests"),
             ),
+            upload_dir: Arc::new(dir),
+            upload_max_bytes: 10 * 1024 * 1024,
         }
     }
 
@@ -1434,5 +1635,281 @@ mod tests {
             !serialized.contains("contact_token"),
             "matches endpoint must not expose contact_token: {serialized}"
         );
+    }
+
+    // ─── Upload endpoint AC tests ─────────────────────────────────────────────
+
+    /// Build a minimal valid JPEG (SOI + EOI) with an APP1 EXIF marker
+    /// containing a fake GPS tag.
+    fn jpeg_with_fake_gps_exif() -> Vec<u8> {
+        let mut buf = vec![0xFF_u8, 0xD8]; // SOI
+        // APP1 marker with fake payload
+        let payload = b"ExifGPSCoord";
+        let seg_len: u16 = 2 + payload.len() as u16;
+        buf.push(0xFF);
+        buf.push(0xE1); // APP1
+        buf.extend_from_slice(&seg_len.to_be_bytes());
+        buf.extend_from_slice(payload);
+        // EOI
+        buf.push(0xFF);
+        buf.push(0xD9);
+        buf
+    }
+
+    /// Build a multipart body for `POST /uploads`.
+    fn upload_multipart(boundary: &str, content_type: &str, data: Vec<u8>) -> Vec<u8> {
+        let mut body = Vec::new();
+        body.extend_from_slice(
+            format!("--{boundary}\r\nContent-Disposition: form-data; name=\"image\"; filename=\"pet.jpg\"\r\nContent-Type: {content_type}\r\n\r\n").as_bytes()
+        );
+        body.extend_from_slice(&data);
+        body.extend_from_slice(format!("\r\n--{boundary}--\r\n").as_bytes());
+        body
+    }
+
+    /// AC1: `POST /uploads` with JPEG → 200, `{ "url": "/uploads/<filename>" }`.
+    /// Then `GET` that URL → 200 with image/jpeg content-type.
+    #[tokio::test]
+    async fn upload_jpeg_returns_200_and_url_is_serveable() {
+        let tmp = tempfile::tempdir().expect("tmpdir");
+        let state = make_state_with_upload_dir(tmp.path().to_path_buf());
+        let app = build_router(state);
+
+        let boundary = "uploadboundary";
+        let jpeg = jpeg_with_fake_gps_exif();
+        let body = upload_multipart(boundary, "image/jpeg", jpeg);
+
+        let req = Request::builder()
+            .method(Method::POST)
+            .uri("/uploads")
+            .header(
+                "content-type",
+                format!("multipart/form-data; boundary={boundary}"),
+            )
+            .body(Body::from(body))
+            .expect("build request");
+
+        let resp = app.clone().oneshot(req).await.expect("call handler");
+        assert_eq!(resp.status(), StatusCode::OK, "POST /uploads must return 200");
+
+        let bytes = axum::body::to_bytes(resp.into_body(), usize::MAX)
+            .await
+            .expect("read body");
+        let json: serde_json::Value = serde_json::from_slice(&bytes).expect("parse JSON");
+        let url = json["url"].as_str().expect("url string");
+        assert!(
+            url.starts_with("/uploads/"),
+            "url must start with /uploads/, got: {url}"
+        );
+        assert!(
+            url.ends_with(".jpg"),
+            "url must end with .jpg, got: {url}"
+        );
+
+        // Now GET the URL — note: ServeDir serves from the upload_dir, and
+        // the URL is relative so strip the /uploads/ prefix is the filename.
+        let filename = url.trim_start_matches("/uploads/");
+        let get_req = Request::builder()
+            .method(Method::GET)
+            .uri(format!("/uploads/{filename}"))
+            .body(Body::empty())
+            .expect("build get request");
+
+        // We need a fresh app tied to the same tmp dir to serve the file.
+        let state2 = make_state_with_upload_dir(tmp.path().to_path_buf());
+        let app2 = build_router(state2);
+        let get_resp = app2.oneshot(get_req).await.expect("get handler");
+        assert_eq!(get_resp.status(), StatusCode::OK, "GET /uploads/<file> must return 200");
+    }
+
+    /// AC2: stored file must not contain the APP1 (EXIF/GPS) marker.
+    #[tokio::test]
+    async fn upload_strips_exif_from_stored_file() {
+        let tmp = tempfile::tempdir().expect("tmpdir");
+        let state = make_state_with_upload_dir(tmp.path().to_path_buf());
+        let app = build_router(state);
+
+        let boundary = "exifboundary";
+        let jpeg = jpeg_with_fake_gps_exif();
+        // Verify the source has APP1
+        assert!(jpeg.windows(2).any(|w| w[0] == 0xFF && w[1] == 0xE1), "source must have APP1");
+
+        let body = upload_multipart(boundary, "image/jpeg", jpeg);
+        let req = Request::builder()
+            .method(Method::POST)
+            .uri("/uploads")
+            .header(
+                "content-type",
+                format!("multipart/form-data; boundary={boundary}"),
+            )
+            .body(Body::from(body))
+            .expect("build request");
+
+        let resp = app.oneshot(req).await.expect("call handler");
+        assert_eq!(resp.status(), StatusCode::OK);
+
+        let bytes = axum::body::to_bytes(resp.into_body(), usize::MAX)
+            .await
+            .expect("read body");
+        let json: serde_json::Value = serde_json::from_slice(&bytes).expect("parse JSON");
+        let url = json["url"].as_str().expect("url string");
+        let filename = url.trim_start_matches("/uploads/");
+
+        // Read the stored file and check for absence of APP1 marker.
+        let stored = std::fs::read(tmp.path().join(filename)).expect("read stored file");
+        let has_app1 = stored.windows(2).any(|w| w[0] == 0xFF && w[1] == 0xE1);
+        assert!(!has_app1, "stored file must not contain APP1/EXIF GPS marker");
+    }
+
+    /// AC3: `POST /uploads` with body > 10 MiB → 413.
+    #[tokio::test]
+    async fn upload_over_size_limit_returns_413() {
+        let tmp = tempfile::tempdir().expect("tmpdir");
+        let mut state = make_state_with_upload_dir(tmp.path().to_path_buf());
+        // Set a tiny limit so the test is fast.
+        state.upload_max_bytes = 10;
+        let app = build_router(state);
+
+        let boundary = "bigboundary";
+        // 20 bytes of JPEG-ish data, well over the 10-byte limit.
+        let mut jpeg = vec![0xFF_u8, 0xD8];
+        jpeg.extend(vec![0xAA; 20]);
+        jpeg.extend([0xFF, 0xD9]);
+        let body = upload_multipart(boundary, "image/jpeg", jpeg);
+
+        let req = Request::builder()
+            .method(Method::POST)
+            .uri("/uploads")
+            .header(
+                "content-type",
+                format!("multipart/form-data; boundary={boundary}"),
+            )
+            .body(Body::from(body))
+            .expect("build request");
+
+        let resp = app.oneshot(req).await.expect("call handler");
+        assert_eq!(resp.status(), StatusCode::PAYLOAD_TOO_LARGE, "oversized upload must return 413");
+    }
+
+    /// AC4: `POST /uploads` with non-image content-type → 415.
+    #[tokio::test]
+    async fn upload_non_image_content_type_returns_415() {
+        let tmp = tempfile::tempdir().expect("tmpdir");
+        let state = make_state_with_upload_dir(tmp.path().to_path_buf());
+        let app = build_router(state);
+
+        let boundary = "textboundary";
+        let body = upload_multipart(boundary, "text/plain", b"hello world".to_vec());
+
+        let req = Request::builder()
+            .method(Method::POST)
+            .uri("/uploads")
+            .header(
+                "content-type",
+                format!("multipart/form-data; boundary={boundary}"),
+            )
+            .body(Body::from(body))
+            .expect("build request");
+
+        let resp = app.oneshot(req).await.expect("call handler");
+        assert_eq!(resp.status(), StatusCode::UNSUPPORTED_MEDIA_TYPE, "non-image upload must return 415");
+    }
+
+    /// AC5: `POST /reports` with `photo_url` from a prior upload → 201;
+    /// `GET /reports/:id` shows `photo_url` set.
+    #[tokio::test]
+    async fn report_submit_with_upload_photo_url_stores_it() {
+        let tmp = tempfile::tempdir().expect("tmpdir");
+        let state = make_state_with_upload_dir(tmp.path().to_path_buf());
+
+        // First upload a photo.
+        let app = build_router(state.clone());
+        let boundary = "uploadforphoto";
+        let jpeg = jpeg_with_fake_gps_exif();
+        let body = upload_multipart(boundary, "image/jpeg", jpeg);
+        let upload_req = Request::builder()
+            .method(Method::POST)
+            .uri("/uploads")
+            .header(
+                "content-type",
+                format!("multipart/form-data; boundary={boundary}"),
+            )
+            .body(Body::from(body))
+            .expect("build request");
+
+        let upload_resp = app.oneshot(upload_req).await.expect("upload handler");
+        assert_eq!(upload_resp.status(), StatusCode::OK);
+        let upload_bytes = axum::body::to_bytes(upload_resp.into_body(), usize::MAX)
+            .await
+            .expect("read upload body");
+        let upload_json: serde_json::Value = serde_json::from_slice(&upload_bytes).expect("parse JSON");
+        let photo_url = upload_json["url"].as_str().expect("url string").to_owned();
+
+        // Now submit a report using that photo_url.
+        let app2 = build_router(state.clone());
+        let report_body = serde_json::json!({
+            "species": "dog",
+            "description": "Brown spaniel",
+            "last_seen_city": "Seattle",
+            "last_seen_state": "WA",
+            "contact_email": "owner@example.com",
+            "photo_url": photo_url
+        });
+        let report_req = Request::builder()
+            .method(Method::POST)
+            .uri("/reports")
+            .header("content-type", "application/json")
+            .body(Body::from(serde_json::to_string(&report_body).expect("serialize")))
+            .expect("build request");
+
+        let report_resp = app2.oneshot(report_req).await.expect("report handler");
+        assert_eq!(report_resp.status(), StatusCode::CREATED, "POST /reports with upload photo_url must return 201");
+
+        let report_bytes = axum::body::to_bytes(report_resp.into_body(), usize::MAX)
+            .await
+            .expect("read report body");
+        let report_json: serde_json::Value = serde_json::from_slice(&report_bytes).expect("parse JSON");
+        let report_id = report_json["report_id"].as_str().expect("report_id").to_owned();
+
+        // GET the report and check photo_url is stored.
+        let app3 = build_router(state);
+        let get_req = Request::builder()
+            .method(Method::GET)
+            .uri(format!("/reports/{report_id}"))
+            .body(Body::empty())
+            .expect("build request");
+        let get_resp = app3.oneshot(get_req).await.expect("get handler");
+        assert_eq!(get_resp.status(), StatusCode::OK);
+        let get_bytes = axum::body::to_bytes(get_resp.into_body(), usize::MAX)
+            .await
+            .expect("read get body");
+        let get_json: serde_json::Value = serde_json::from_slice(&get_bytes).expect("parse JSON");
+        // LostReport stores photos as photos[0].url (Vec<PhotoRef>).
+        let stored_url = get_json["report"]["photos"]
+            .as_array()
+            .and_then(|arr| arr.first())
+            .and_then(|p| p["url"].as_str())
+            .unwrap_or("");
+        assert_eq!(
+            stored_url, photo_url,
+            "GET /reports/:id must show photo_url in photos[0].url"
+        );
+    }
+
+        /// AC6: `HW_UPLOAD_DIR` env var sets the upload directory; created on startup.
+    ///
+    /// We test the inner `resolve_upload_dir_from` helper which accepts a path
+    /// directly, so no unsafe env mutation is needed.
+    #[test]
+    fn resolve_upload_dir_creates_dir_when_absent() {
+        let tmp = tempfile::tempdir().expect("tmpdir");
+        let custom_dir = tmp.path().join("custom_uploads");
+        // Must not exist yet.
+        assert!(!custom_dir.exists(), "custom_dir must not exist before resolve");
+
+        // Call the internal helper directly.
+        resolve_upload_dir_from(custom_dir.clone()).expect("resolve must succeed");
+
+        assert!(custom_dir.exists(), "HW_UPLOAD_DIR must be created if absent");
     }
 }

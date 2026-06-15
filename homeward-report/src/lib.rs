@@ -79,6 +79,10 @@ pub struct SubmitRequest {
     pub description: Option<String>,
     /// Raw photo bytes — EXIF will be stripped.
     pub photo_bytes: Option<Vec<u8>>,
+    /// Hotlink URL of an already-hosted photo (used when photo was uploaded separately).
+    ///
+    /// If both `photo_bytes` and `photo_url` are provided, `photo_bytes` takes precedence.
+    pub photo_url: Option<String>,
     /// Coarse last-seen location (ZIP or radius).
     pub last_seen: CoarseLocation,
     /// Raw contact info (phone or email) — replaced by a brokered token.
@@ -133,15 +137,23 @@ pub fn submit(
 
     let report_id = Ulid::new().to_string();
 
-    // Build photo list (store cleaned bytes as a data-URI stub for testing;
-    // production would upload to object storage and store a hotlink).
-    let photos = clean_photo.map_or_else(Vec::new, |bytes| {
+    // Build photo list.
+    // Priority: raw photo_bytes (stripped) > photo_url hotlink.
+    let photos = if let Some(bytes) = clean_photo {
         vec![homeward_schema::PhotoRef {
             url: format!("data:image/jpeg;base64,{}", base64_encode(&bytes)),
             attribution: None,
             is_primary: true,
         }]
-    });
+    } else if let Some(url) = req.photo_url {
+        vec![homeward_schema::PhotoRef {
+            url,
+            attribution: None,
+            is_primary: true,
+        }]
+    } else {
+        vec![]
+    };
 
     let report = LostReport {
         report_id,
@@ -304,6 +316,7 @@ mod integration_tests {
             breed_secondary: None,
             description: None,
             photo_bytes: Some(jpeg),
+            photo_url: None,
             last_seen: CoarseLocation {
                 zip_code: Some("78701".to_owned()),
                 city: None,
@@ -350,6 +363,7 @@ mod integration_tests {
             breed_secondary: None,
             description: None,
             photo_bytes: None,
+            photo_url: None,
             last_seen: CoarseLocation {
                 zip_code: Some("90210".to_owned()),
                 city: None,

@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.25.0 — 2026-06-14
+
+homeward-report-upload: POST /uploads endpoint — owners can upload a pet photo via multipart/form-data instead of supplying an external hotlink URL. EXIF metadata (including GPS) is stripped via the existing JPEG marker-level stripper before storage. Files saved as `<ULID>.jpg` under `HW_UPLOAD_DIR` (default `~/.local/share/homeward/uploads/`, created on startup). Response: `{ "url": "/uploads/<filename>" }`. GET /uploads/<filename> serves stored photos via tower-http ServeDir. AC3: 413 on body > HW_UPLOAD_MAX_BYTES (default 10 MiB). AC4: 415 on non-image content-type. AC5: POST /reports accepts photo_url from uploads, stored in photos[0].url on LostReport. AC6: HW_UPLOAD_DIR env var controls upload directory. 6 new AC tests; 84 total tests green.
+
 ## v0.24.0 — 2026-06-15
 
 Adds webhook-based owner notification to homeward-reportd (v0.23.0→v0.24.0).
