@@ -20,7 +20,7 @@ use homeward_schema::{
     Availability, ChipStatus, IntakeType, PetRecord, Provenance, Species, TosClass,
     provenance::SourceId,
 };
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use tracing::{debug, warn};
 use ulid::Ulid;
 use url::Url;
@@ -38,7 +38,7 @@ const PAGE_SIZE: u64 = 1000;
 ///
 /// All fields are owned `String` values to support both compile-time built-ins
 /// and runtime-loaded configurations from `sources.toml`.
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct SocrataColumnMap {
     /// Column for animal ID.
     pub animal_id: String,
@@ -76,7 +76,7 @@ pub struct SocrataColumnMap {
 ///
 /// Fields are owned `String` values so configs can be constructed from either
 /// compile-time built-in helpers or a runtime-loaded `sources.toml` file.
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct SocrataConfig {
     /// SODA API domain (e.g. `data.austintexas.gov`).
     pub domain: String,

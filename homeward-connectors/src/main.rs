@@ -23,8 +23,9 @@ use std::process;
 use chrono::DateTime;
 use homeward_connectors::{
     ConnectorRegistry, Cursor,
+    catalog::load_catalog,
     connectors::petfbi::{PetFbiConfig, PetFbiConnector},
-    connectors::socrata::{SocrataConfig, SocrataConnector, SourceCatalog},
+    connectors::socrata::{SocrataConfig, SocrataConnector},
     coverage::{CoverageArgs, RECENT_WINDOW_SECS, STALE_MULTIPLIER, run_coverage},
     probe::run_probe_cmd,
 };
@@ -37,8 +38,8 @@ fn build_registry() -> ConnectorRegistry {
     // If unset, fall back to the four built-in configs.
     let socrata_configs: Vec<SocrataConfig> = if let Ok(path_str) = std::env::var("HOMEWARD_SOURCES") {
         let path = std::path::Path::new(&path_str);
-        match SourceCatalog::from_path(path) {
-            Ok(configs) => configs,
+        match load_catalog(path) {
+            Ok(catalog) => catalog.socrata,
             Err(e) => {
                 eprintln!("error: HOMEWARD_SOURCES={path_str} could not be loaded: {e}");
                 vec![]

@@ -1,20 +1,35 @@
-# Homeward source catalog — Socrata / SODA open-data feeds.
+# Homeward source catalog — multi-family open-data feeds.
 #
-# Each [[socrata]] entry is one municipal shelter dataset.  The four built-in
-# cities (austin, dallas, sonoma, long_beach) are mirrored here so operators
-# can extend or override them without touching compiled code.
+# Supported source families:
+#
+#   [[socrata]]       — Socrata / SODA portals (data.austintexas.gov, etc.)
+#   [[opendatasoft]]  — OpenDataSoft portals (data.example.org, etc.)
+#   [[arcgis]]        — Esri ArcGIS Hub Feature Services
+#
+# Each section is optional; any absent section defaults to an empty list.
+# The four built-in Socrata cities (austin, dallas, sonoma, long_beach) are
+# mirrored here so operators can extend or override them without touching
+# compiled code.
 #
 # Re-validation command:
 #   cargo run --bin homeward -- connectors probe <name>
 #
-# Or, once homeward-source-probe ships:
-#   homeward-source-probe --catalog deploy/sources.toml --all
+# Format notes — column_map fields (apply to all three families):
+#   REQUIRED: animal_id, animal_type, intake_type
+#   OPTIONAL: outcome_date, kennel_status, found_location, chip_status,
+#             intake_date, breed, name, color
+#   (Omit optional fields rather than leaving them empty.)
 #
-# Format notes:
-#   • column_map.animal_id / animal_type / intake_type are REQUIRED.
-#   • All other column_map fields are optional (omit rather than leaving empty).
+# Socrata-only:
 #   • app_token_env names the environment variable holding a SODA app token.
 #     Leave unset if no token is needed (throttling still works, just slower).
+#
+# OpenDataSoft-only:
+#   • base_url   — root URL of the ODS portal (no trailing slash)
+#   • dataset_id — ODS dataset identifier string
+#
+# ArcGIS-only:
+#   • service_url — full URL of the Feature Service layer (/.../FeatureServer/N)
 
 # ─── Built-in cities ─────────────────────────────────────────────────────────
 
@@ -132,3 +147,34 @@ intake_date  = "intake_date"
 breed        = "breed"
 name         = "animal_name"
 color        = "color"
+
+# ─── OpenDataSoft example (connector ships in homeward-ods-connector PRD) ────
+#
+# Uncomment and fill in to add an OpenDataSoft portal.
+# [[opendatasoft]]
+# name       = "example-ods"
+# base_url   = "https://data.example.org"          # ODS portal root (no trailing slash)
+# dataset_id = "animal-shelter-intakes"             # dataset identifier
+# [opendatasoft.column_map]
+# animal_id   = "animal_id"
+# animal_type = "species"
+# intake_type = "intake_condition"
+# # Optional fields:
+# # intake_date    = "intake_date"
+# # breed          = "breed"
+# # name           = "animal_name"
+
+# ─── ArcGIS example (connector ships in homeward-arcgis-connector PRD) ───────
+#
+# Uncomment and fill in to add an ArcGIS Feature Service layer.
+# [[arcgis]]
+# name        = "example-arcgis"
+# service_url = "https://services.arcgis.com/XXXX/arcgis/rest/services/Intakes/FeatureServer/0"
+# [arcgis.column_map]
+# animal_id   = "AnimalID"
+# animal_type = "Species"
+# intake_type = "IntakeType"
+# # Optional fields:
+# # intake_date    = "IntakeDate"
+# # breed          = "PrimaryBreed"
+# # name           = "AnimalName"

@@ -8,6 +8,7 @@
 //!   Dallas, Sonoma, and Long Beach municipal shelter datasets
 //! - [`ConnectorRegistry`] for looking up connectors by name
 
+pub mod catalog;
 pub mod connector;
 pub mod connectors;
 pub mod coverage;
@@ -16,9 +17,10 @@ pub mod http;
 pub mod probe;
 pub mod registry;
 
+pub use catalog::{ArcGisConfig, OpenDataSoftConfig, SourceCatalog, SourceFamily, load_catalog};
 pub use connector::{Connector, Cursor};
 pub use connectors::petfbi::{PetFbiConfig, PetFbiConnector};
 pub use connectors::rescuegroups::RescueGroupsConnector;
-pub use connectors::socrata::{SocrataColumnMap, SocrataConfig, SocrataConnector, SourceCatalog};
+pub use connectors::socrata::{SocrataColumnMap, SocrataConfig, SocrataConnector};
 pub use error::ConnectorError;
 pub use registry::ConnectorRegistry;

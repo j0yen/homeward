@@ -1,11 +1,12 @@
 //! Catalog load tests — Phase 3 acceptance criteria for homeward-source-catalog.
 //!
-//! AC1: `deploy/sources.toml` parses without error via `SourceCatalog::from_path`.
+//! AC1: `deploy/sources.toml` parses without error via `load_catalog`.
 //! AC2: Every parsed entry has required column_map fields (non-empty animal_id,
 //!      animal_type, intake_type).
 //! AC3: The 4 built-in cities are present and match their const-fn equivalents.
 
-use homeward_connectors::connectors::socrata::{SocrataConfig, SourceCatalog};
+use homeward_connectors::catalog::load_catalog;
+use homeward_connectors::connectors::socrata::SocrataConfig;
 
 /// Path to the deploy catalog, relative to the crate manifest directory.
 fn catalog_path() -> std::path::PathBuf {
@@ -24,16 +25,16 @@ fn ac1_catalog_parses_without_error() {
         path.exists(),
         "deploy/sources.toml must exist at {path:?}"
     );
-    let result = SourceCatalog::from_path(&path);
+    let result = load_catalog(&path);
     assert!(
         result.is_ok(),
         "deploy/sources.toml failed to parse: {:?}",
         result.unwrap_err()
     );
-    let sources = result.unwrap();
+    let catalog = result.unwrap();
     assert!(
-        !sources.is_empty(),
-        "deploy/sources.toml must define at least one source"
+        !catalog.socrata.is_empty(),
+        "deploy/sources.toml must define at least one [[socrata]] source"
     );
 }
 
@@ -41,9 +42,9 @@ fn ac1_catalog_parses_without_error() {
 #[test]
 fn ac2_all_entries_have_required_column_map_fields() {
     let path = catalog_path();
-    let sources = SourceCatalog::from_path(&path).expect("catalog loads");
+    let catalog = load_catalog(&path).expect("catalog loads");
 
-    for cfg in &sources {
+    for cfg in &catalog.socrata {
         let label = &cfg.name;
         assert!(
             !cfg.name.is_empty(),
@@ -77,7 +78,8 @@ fn ac2_all_entries_have_required_column_map_fields() {
 #[test]
 fn ac3_four_builtin_cities_present_and_match_const_fns() {
     let path = catalog_path();
-    let sources = SourceCatalog::from_path(&path).expect("catalog loads");
+    let catalog = load_catalog(&path).expect("catalog loads");
+    let sources = catalog.socrata;
 
     let find = |name: &str| -> SocrataConfig {
         sources
@@ -130,10 +132,10 @@ fn ac3_four_builtin_cities_present_and_match_const_fns() {
 #[test]
 fn ac3b_catalog_has_at_least_six_sources() {
     let path = catalog_path();
-    let sources = SourceCatalog::from_path(&path).expect("catalog loads");
+    let catalog = load_catalog(&path).expect("catalog loads");
     assert!(
-        sources.len() >= 6,
-        "expected at least 6 sources (4 built-ins + 2 additional), got {}",
-        sources.len()
+        catalog.socrata.len() >= 6,
+        "expected at least 6 [[socrata]] sources (4 built-ins + 2 additional), got {}",
+        catalog.socrata.len()
     );
 }
