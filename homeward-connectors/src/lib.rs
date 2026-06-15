@@ -12,6 +12,7 @@ pub mod catalog;
 pub mod connector;
 pub mod connectors;
 pub mod coverage;
+pub mod discover;
 pub mod error;
 pub mod http;
 pub mod probe;
