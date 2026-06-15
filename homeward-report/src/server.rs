@@ -32,6 +32,8 @@ use tower_http::cors::CorsLayer;
 use tower_http::trace::TraceLayer;
 
 use crate::api::{ApiConfig, ShelterQuery, ShelterRecord, ShelterQueryResult, image_similarity_search};
+use crate::match_watch::MatchWatcher;
+use crate::store::ReportStore;
 use crate::MatchCandidate;
 
 // ─── Embedded static assets ───────────────────────────────────────────────────
@@ -54,6 +56,8 @@ pub struct AppState {
     pub registry: Arc<ConnectorRegistry>,
     /// Optional embed sidecar client (None when `--no-embed` or env absent).
     pub embed_client: Option<Arc<EmbedClient>>,
+    /// Owner-side lost-pet report store.
+    pub store: Arc<RwLock<ReportStore>>,
 }
 
 // ─── Query params ─────────────────────────────────────────────────────────────
@@ -196,11 +200,23 @@ pub async fn serve(port: u16, bind: &str, no_embed: bool) -> Result<(), String> 
     // Wait up to 10 seconds for initial DB load (log progress every 2s).
     wait_for_initial_load(&shared_intake, 10).await;
 
+    // Build shared lost-report store and spawn the background match watcher.
+    let shared_store: Arc<RwLock<ReportStore>> = Arc::new(RwLock::new(ReportStore::new()));
+    let watcher = MatchWatcher::new(
+        Arc::clone(&shared_store),
+        Arc::clone(&shared_intake),
+        embed_client.clone(),
+    );
+    tokio::spawn(async move {
+        watcher.run().await;
+    });
+
     let state = AppState {
         cfg: Arc::new(ApiConfig::default()),
         intake: shared_intake,
         registry: Arc::new(ConnectorRegistry::new()),
         embed_client,
+        store: shared_store,
     };
 
     let addr = format!("{bind}:{port}");
@@ -453,6 +469,7 @@ mod tests {
             intake: Arc::new(RwLock::new(vec![])),
             registry: Arc::new(ConnectorRegistry::new()),
             embed_client: None,
+            store: Arc::new(RwLock::new(crate::store::ReportStore::new())),
         }
     }
 

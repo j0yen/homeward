@@ -22,6 +22,7 @@ pub mod delivery_log;
 pub mod exif;
 pub mod export;
 pub mod flyer;
+pub mod match_watch;
 pub mod server;
 pub mod store;
 pub mod syndicator;
@@ -39,6 +40,7 @@ use ulid::Ulid;
 
 pub use alerts::{MatchAlert, MatchCandidate};
 pub use api::{ApiConfig, ShelterQuery, ShelterQueryResult};
+pub use match_watch::MatchWatcher;
 pub use delivery::{
     DeliveryOutcome, Deliverer, DryRunDeliverer, RelayEmailDeliverer, render_alert_message,
 };

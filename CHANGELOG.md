@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.21.0 — 2026-06-14
+
+homeward-match-watch: background match-watch task — polls active lost reports every HOMEWARD_MATCH_INTERVAL seconds, delivers MatchAlerts for new intake matches via DeliveryLedger with dedup
+
 ## v0.20.0 — 2026-06-14
 
 Wire reportd to ingest SQLite DB. IngestDbReader loads 174K+ shelter animals on startup; GET /intake returns live data; GET /coverage is DB-backed.
