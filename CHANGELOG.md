@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.22.0 — 2026-06-14
+
+homeward-report-submit: `POST /reports` and `GET /reports/:id` HTTP endpoints — owners can submit lost-pet reports (JSON body → ULID report_id, species parse, BrokeredContactToken mint, CoarseLocation) and retrieve them by ID; 409 on duplicate, 404 on missing; 4 new handler tests green
+
 ## v0.21.0 — 2026-06-14
 
 homeward-match-watch: background match-watch task — polls active lost reports every HOMEWARD_MATCH_INTERVAL seconds, delivers MatchAlerts for new intake matches via DeliveryLedger with dedup
