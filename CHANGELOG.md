@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.36.0 — 2026-06-18
+
+Wire owner photo → /query → visual score fusion → real ranked shortlist in homeward-reportd.
+
+Removes fabricated 0.9 visual score from deliver path; cmd_match already uses real embed+match flow. All AC3/AC4/AC5 tests pass.
+
 ## v0.33.0 — 2026-06-18
 
 Adds `homeward-geocode`: offline found-location geocoder. Resolves
