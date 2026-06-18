@@ -778,6 +778,8 @@ pub async fn run_arcgis_probe(
             dataset_id: String::new(),
         })
     }
+}
+
 // ─── ODS probe ────────────────────────────────────────────────────────────────
 
 /// Run the probe against an OpenDataSoft dataset.

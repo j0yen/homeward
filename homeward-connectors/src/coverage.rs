@@ -102,6 +102,10 @@ pub struct CatalogGap {
 }
 
 /// Structured JSON output of `coverage --json`.
+///
+/// The `cells`, `geo_holes`, and `ungeocoded` fields are purely additive
+/// under new keys; the `sources`, `holes`, and `generated_at` fields are
+/// byte-stable for unchanged input (AC6).
 #[derive(Debug, Serialize, Deserialize)]
 pub struct CoverageReport {
     /// Per-source coverage rows.
@@ -110,6 +114,18 @@ pub struct CoverageReport {
     pub holes: Vec<CatalogGap>,
     /// ISO-8601 UTC timestamp when this report was generated.
     pub generated_at: String,
+    /// Per-cell geographic statistics derived from `PetRecord.location`.
+    /// `None` when no store was provided or the store has no geocoded records.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cells: Option<Vec<crate::geo_coverage::CellStats>>,
+    /// Detected coverage holes ranked by estimated missed population.
+    /// `None` when no store was provided.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub geo_holes: Option<Vec<crate::geo_coverage::GeoHole>>,
+    /// Count of records with `location == None` (ungeocoded).
+    /// `None` when no store was provided.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub ungeocoded: Option<u64>,
 }
 
 // ── Store reader (minimal, no dependency on homeward-ingest) ──────────────────
@@ -265,6 +281,11 @@ pub struct CoverageArgs<'a> {
     pub store_path: Option<&'a Path>,
     /// Whether to emit JSON output instead of human-readable table.
     pub json: bool,
+    /// Whether to compute and include geographic cell coverage (AC7).
+    pub geo: bool,
+    /// Minimum record count for a cell to appear in the geo output.
+    /// Default 0 (all cells).
+    pub geo_min_count: u64,
     /// The loaded connector registry.
     pub registry: &'a ConnectorRegistry,
     /// Cadence hint in seconds per source, keyed by source name.
@@ -363,10 +384,31 @@ pub fn build_report(args: &CoverageArgs<'_>) -> Result<CoverageReport, String> {
         sources.iter().map(|r| r.metro.clone()).collect();
     let holes = catalog_documented_gaps(&registered_metros);
 
+    // Build geo extension if requested and a store is available.
+    let (cells, geo_holes, ungeocoded) = if args.geo {
+        if let Some(path) = args.store_path {
+            match crate::geo_coverage::build_geo_extension(path, args.geo_min_count) {
+                Ok(ext) => (Some(ext.cells), Some(ext.geo_holes), Some(ext.ungeocoded)),
+                Err(e) => {
+                    // Log but don't fail the whole report — geo is additive.
+                    eprintln!("warning: geo coverage failed: {e}");
+                    (None, None, None)
+                }
+            }
+        } else {
+            (None, None, None)
+        }
+    } else {
+        (None, None, None)
+    };
+
     Ok(CoverageReport {
         sources,
         holes,
         generated_at: Utc::now().to_rfc3339(),
+        cells,
+        geo_holes,
+        ungeocoded,
     })
 }
 
@@ -572,6 +614,8 @@ mod tests {
         let args = CoverageArgs {
             store_path: Some(&db_path),
             json: false,
+            geo: false,
+            geo_min_count: 0,
             registry: &registry,
             cadence_hints: std::collections::HashMap::new(),
         };
@@ -625,6 +669,8 @@ mod tests {
         let args = CoverageArgs {
             store_path: Some(&db_path),
             json: true,
+            geo: false,
+            geo_min_count: 0,
             registry: &registry,
             cadence_hints: std::collections::HashMap::new(),
         };
@@ -658,6 +704,8 @@ mod tests {
         let args = CoverageArgs {
             store_path: None,
             json: false,
+            geo: false,
+            geo_min_count: 0,
             registry: &registry,
             cadence_hints: std::collections::HashMap::new(),
         };
@@ -711,5 +759,38 @@ mod tests {
         let cadence = 4 * 3600u64;
         let status = derive_status(&stats, cadence);
         assert_eq!(status, SourceStatus::Live, "1h old with 4h RECENT_WINDOW must be LIVE");
+    }
+
+    /// AC6: existing JSON fields are byte-stable when geo is not requested
+    /// (no regression to name/metro coverage; geo data is purely additive).
+    #[test]
+    fn geo_fields_absent_when_geo_false() {
+        let registry = make_registry_with_names(&["austin"]);
+        let args = CoverageArgs {
+            store_path: None,
+            json: false,
+            geo: false,
+            geo_min_count: 0,
+            registry: &registry,
+            cadence_hints: std::collections::HashMap::new(),
+        };
+
+        let report = build_report(&args).expect("build_report");
+        // Geo fields must be None when geo=false, ensuring backward compatibility.
+        assert!(
+            report.cells.is_none(),
+            "cells must be None when geo=false"
+        );
+        assert!(
+            report.geo_holes.is_none(),
+            "geo_holes must be None when geo=false"
+        );
+        assert!(
+            report.ungeocoded.is_none(),
+            "ungeocoded must be None when geo=false"
+        );
+        // The existing fields must still be present.
+        assert_eq!(report.sources.len(), 1, "sources must be present");
+        assert!(!report.generated_at.is_empty(), "generated_at must be present");
     }
 }

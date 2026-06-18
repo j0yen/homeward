@@ -16,6 +16,7 @@ pub mod connectors;
 pub mod coverage;
 pub mod discover;
 pub mod error;
+pub mod geo_coverage;
 pub mod http;
 pub mod probe;
 pub mod registry;
