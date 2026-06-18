@@ -28,5 +28,6 @@ pub use connectors::opendatasoft::OpenDataSoftConnector;
 pub use connectors::petfbi::{PetFbiConfig, PetFbiConnector};
 pub use connectors::rescuegroups::RescueGroupsConnector;
 pub use connectors::socrata::{SocrataColumnMap, SocrataConfig, SocrataConnector};
+pub use discover::{CoverageHole, HoleCandidateRow, load_holes_from_file, load_holes_from_str};
 pub use error::ConnectorError;
 pub use registry::ConnectorRegistry;
