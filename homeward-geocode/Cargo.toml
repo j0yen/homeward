@@ -1,0 +1,20 @@
+[package]
+name = "homeward-geocode"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.86"
+license = "MIT OR Apache-2.0"
+description = "Offline geocoder for homeward found_location_text → coarse ShelterLocation."
+publish = false
+
+[lints]
+workspace = true
+
+[dependencies]
+homeward-schema = { path = "../homeward-schema" }
+serde = { version = "1", features = ["derive"] }
+thiserror = "1"
+
+[dev-dependencies]
+ulid = { version = "1", features = ["serde"] }
+chrono = { version = "0.4", features = ["serde"] }
