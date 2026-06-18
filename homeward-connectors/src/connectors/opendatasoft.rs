@@ -184,7 +184,7 @@ impl Connector for OpenDataSoftConnector {
                 break;
             }
 
-            let ods: OdsResponse = resp.json().await.map_err(ConnectorError::Json)?;
+            let ods: OdsResponse = resp.json().await.map_err(ConnectorError::Http)?;
             let batch_len = u64::try_from(ods.results.len()).unwrap_or(u64::MAX);
 
             for result in ods.results {
