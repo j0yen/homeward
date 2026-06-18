@@ -1275,10 +1275,16 @@ pub mod tests {
     #[async_trait::async_trait]
     impl ProbeClient for FixtureClient {
         async fn fetch_json(&self, url: &str) -> Result<String, ProbeError> {
-            for (key, body) in &self.responses {
-                if url.contains(key.as_str()) {
-                    return Ok(body.clone());
-                }
+            // Match by longest key first — more specific fixtures win over shorter ones.
+            let mut matches: Vec<(&str, &str)> = self
+                .responses
+                .iter()
+                .filter(|(key, _)| url.contains(key.as_str()))
+                .map(|(k, v)| (k.as_str(), v.as_str()))
+                .collect();
+            matches.sort_by(|a, b| b.0.len().cmp(&a.0.len()));
+            if let Some((_, body)) = matches.first() {
+                return Ok((*body).to_owned());
             }
             Err(ProbeError::NotFound { url: url.to_owned() })
         }
