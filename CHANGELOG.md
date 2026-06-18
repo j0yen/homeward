@@ -1,5 +1,18 @@
 # Changelog
 
+## v0.31.0 — 2026-06-18
+
+Stray-aware AIMD cadence in homeward-ingest orchestrator.
+
+Changed adapt() from flat count to PollOutcome{total,stray}; added is_stray_class()
+classifying Stray+FoundReport as lost-pet-relevant. New rules: stray burst triggers
+hot window (fast polling at stray_floor); adoptable-only churn no longer pins cadence
+at floor. Hot window decays over configurable tick count. CadenceConfig with env
+overrides (HW_STRAY_FLOOR_THRESHOLD/SECS/HOT_WINDOW_TICKS), hard 10s lower bound on
+stray_floor. SourceStatus surface exposes stray_seen + hot_ticks_remaining per source.
+All 9 AC tests pass. Also fixed two pre-existing baseline bugs (probe.rs missing brace,
+opendatasoft.rs Json→Http error mapping).
+
 ## v0.30.0 — 2026-06-18
 
 Adds geo coverage rollup to homeward-connectors: bins PetRecord.location
