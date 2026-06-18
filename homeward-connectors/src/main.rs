@@ -276,7 +276,7 @@ async fn handle_poll(args: &[String]) {
 
 /// Parse and run the `coverage` subcommand.
 ///
-/// Usage: homeward connectors coverage [--store <path>] [--json]
+/// Usage: homeward connectors coverage [--store <path>] [--json] [--geo] [--min-count N]
 ///
 /// Thresholds:
 ///   STALE_MULTIPLIER={STALE_MULTIPLIER}  — source is STALE when last success > cadence×{STALE_MULTIPLIER}
@@ -287,6 +287,8 @@ fn handle_coverage(args: &[String]) {
     // args[0] == "coverage"; flags start at args[1]
     let mut store_path: Option<PathBuf> = None;
     let mut json_output = false;
+    let mut geo = false;
+    let mut geo_min_count: u64 = 0;
     let mut i = 1;
 
     // These are referenced in the doc-comment; suppress unused-variable lint.
@@ -307,6 +309,23 @@ fn handle_coverage(args: &[String]) {
             "--json" => {
                 json_output = true;
             }
+            "--geo" => {
+                geo = true;
+            }
+            "--min-count" => {
+                i += 1;
+                if i >= args.len() {
+                    eprintln!("--min-count requires an integer argument");
+                    process::exit(1);
+                }
+                match args[i].parse::<u64>() {
+                    Ok(n) => geo_min_count = n,
+                    Err(e) => {
+                        eprintln!("invalid --min-count value: {e}");
+                        process::exit(1);
+                    }
+                }
+            }
             "--help" | "-h" => {
                 print_coverage_help();
                 return;
@@ -326,6 +345,8 @@ fn handle_coverage(args: &[String]) {
     let coverage_args = CoverageArgs {
         store_path: store_path.as_deref(),
         json: json_output,
+        geo,
+        geo_min_count,
         registry: &registry,
         cadence_hints,
     };
@@ -340,13 +361,17 @@ fn print_coverage_help() {
     println!("homeward connectors coverage — catchment report");
     println!();
     println!("USAGE:");
-    println!("  homeward connectors coverage [--store <path>] [--json]");
+    println!("  homeward connectors coverage [--store <path>] [--json] [--geo] [--min-count N]");
     println!();
     println!("OPTIONS:");
     println!("  --store <path>   Path to the homeward ingest SQLite store.");
     println!("                   When omitted, only registry metadata is shown;");
     println!("                   record counts and last_success are marked 'unknown'.");
     println!("  --json           Emit structured JSON ({{sources: [...], holes: [...]}}).");
+    println!("  --geo            Compute geographic cell coverage from PetRecord.location");
+    println!("                   and append cells/geo_holes/ungeocoded to the JSON output.");
+    println!("                   Reads store read-only; no writes.");
+    println!("  --min-count N    (With --geo) Only include cells with >= N records.");
     println!("  --help           Show this help message.");
     println!();
     println!("STATUS VALUES:");
