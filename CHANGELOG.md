@@ -1,5 +1,14 @@
 # Changelog
 
+## v0.32.0 — 2026-06-18
+
+Adds `discover --from-holes` mode: reads a JSON list of CoverageHole objects
+(from homeward-catchment-geo or a fixture), maps each hole to catalog query
+terms via its label, reuses the existing Socrata/ODS catalog crawl, and emits
+HoleCandidateRow results ranked by estimated_missed_population then score.
+Strictly propose-only — never writes sources.toml. Also fixes 3 pre-existing
+probe.rs/opendatasoft.rs compilation and test bugs found during build.
+
 ## v0.31.0 — 2026-06-18
 
 Stray-aware AIMD cadence in homeward-ingest orchestrator.
