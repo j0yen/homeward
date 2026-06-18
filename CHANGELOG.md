@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.33.0 — 2026-06-18
+
+Adds `homeward-geocode`: offline found-location geocoder. Resolves
+`PetRecord.found_location_text` (ZIP, "City, ST", "City ST", prefix forms) to a
+coarse `ShelterLocation` using a bundled public-domain US Census Gazetteer — no
+network access. Enrichment fills `location` only when absent, is provenance-tagged
+as `LocationSource::FoundText`, and is idempotent. All 10 acceptance criteria pass.
+
 ## v0.32.0 — 2026-06-18
 
 Adds `discover --from-holes` mode: reads a JSON list of CoverageHole objects
