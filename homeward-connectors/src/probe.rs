@@ -1747,4 +1747,5 @@ pub mod tests {
         );
         assert_eq!(catalog.opendatasoft[0].name, "test_city");
     }
-}
+} // end last test fn
+} // end mod tests
