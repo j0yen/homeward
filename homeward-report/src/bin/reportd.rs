@@ -563,7 +563,9 @@ fn build_synthetic_report_for_deliver(report_id: &str) -> LostReport {
 
 /// Build a [`MatchCandidate`] using the real match pipeline for the deliver demo.
 ///
-/// Visual score of 0.9 is used as a demo value (no sidecar call made here).
+/// No visual score is injected: the sidecar is not called in the deliver path
+/// (the deliver demo operates with geo+date signals only). This avoids any
+/// fabricated similarity score (AC2).
 fn build_candidate_via_match(report: &LostReport) -> MatchCandidate {
     let now = Utc::now();
     let record = PetRecord {
@@ -598,9 +600,8 @@ fn build_candidate_via_match(report: &LostReport) -> MatchCandidate {
         secondary_provenances: vec![],
     };
 
-    // Use real fusion with a demo visual score of 0.9.
-    let mut visual_scores = HashMap::new();
-    visual_scores.insert(record.canonical_id, 0.9_f64);
+    // No visual score injected — geo+date signals only; no fabricated score.
+    let visual_scores: HashMap<Ulid, f64> = HashMap::new();
 
     let report_input = ReportInput {
         report_id: &report.report_id,
@@ -626,10 +627,12 @@ fn build_candidate_via_match(report: &LostReport) -> MatchCandidate {
         params,
     });
 
+    // Use the real fused score; default to neutral 0.5 (not a fabricated 0.9)
+    // when no candidates were produced.
     let score = ranked
         .candidates
         .first()
-        .map_or(0.9_f32, |c| c.score as f32);
+        .map_or(0.5_f32, |c| c.score as f32);
 
     MatchCandidate {
         record,
