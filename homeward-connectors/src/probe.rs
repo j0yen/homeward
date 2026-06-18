@@ -778,6 +778,8 @@ pub async fn run_arcgis_probe(
             dataset_id: String::new(),
         })
     }
+}
+
 // ─── ODS probe ────────────────────────────────────────────────────────────────
 
 /// Run the probe against an OpenDataSoft dataset.
@@ -1747,5 +1749,4 @@ pub mod tests {
         );
         assert_eq!(catalog.opendatasoft[0].name, "test_city");
     }
-} // end last test fn
-} // end mod tests
+}
