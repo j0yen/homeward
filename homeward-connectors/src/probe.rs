@@ -1656,7 +1656,7 @@ pub mod tests {
     async fn ac5_ods_probe_green_fixture_emits_toml() {
         let mut client = FixtureClient::new();
         // ODS metadata endpoint (no /records suffix)
-        client.add("catalog/datasets/animal-shelter-intakes\"", &ods_metadata_json());
+        client.add("catalog/datasets/animal-shelter-intakes", &ods_metadata_json());
         client.add(
             "catalog/datasets/animal-shelter-intakes/records",
             &ods_sample_records_json(),
