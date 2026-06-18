@@ -1,5 +1,16 @@
 # Changelog
 
+## v0.30.0 — 2026-06-18
+
+Adds geo coverage rollup to homeward-connectors: bins PetRecord.location
+into 0.5° equal-angle grid cells, computes per-cell record/stray/source counts,
+and detects coverage holes (populated regions with no feed) ranked by estimated
+missed population. Seeded from documented-gaps list. Purely additive to
+CoverageReport (cells/geo_holes/ungeocoded fields, skip_serializing_if=None when
+--geo not requested). CLI: `homeward connectors coverage --geo [--min-count N]`.
+Also fixes 2 pre-existing compile errors: probe.rs missing closing brace for
+run_arcgis_probe, opendatasoft.rs wrong error type in map_err.
+
 ## v0.29.0 — 2026-06-15
 
 OpenDataSoft Explore API v2.1 connector: `OpenDataSoftConnector` implementing
