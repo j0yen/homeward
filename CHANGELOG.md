@@ -1,5 +1,18 @@
 # Changelog
 
+## homeward-report v0.5.0 — 2026-06-19
+
+Wire `RelayEmailDeliverer::deliver` to a real blocking HTTP POST.
+
+Previously, the configured relay branch fabricated a `relay-stub:<id>@<endpoint>` message-id
+and recorded `Sent` without any network I/O — meaning owners were logged as notified when
+no email/SMS ever left the box. This PR replaces the stub with a real `reqwest::blocking` POST
+to `HOMEWARD_RELAY_ENDPOINT`, validates the endpoint (https-only policy via `validate_notify_url`),
+extracts the relay-assigned `message_id` from the response body or `X-Message-Id` header,
+and maps 2xx → `Sent` / non-2xx / transport error / timeout → `Failed`. Added `with_endpoint()`
+constructor for parallel-safe testing, `HOMEWARD_RELAY_TIMEOUT_SECS` env (default 10s),
+and 7 wiremock integration tests covering all PRD ACs (200/500/timeout/dry-run/policy/suppressed).
+
 ## v0.36.0 — 2026-06-18
 
 Wire owner photo → /query → visual score fusion → real ranked shortlist in homeward-reportd.
