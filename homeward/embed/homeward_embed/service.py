@@ -130,6 +130,7 @@ async def _startup() -> None:
     except ImportError:
         logger.warning("ultralytics not available — detector disabled, using whole-image fallback")
         _detector = None
+    _index = EmbedIndex(index_dir=_INDEX_DIR, embed_dim=_embedder.embed_dim)
 
 
 # ---------------------------------------------------------------------------
