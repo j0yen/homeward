@@ -1,52 +1,63 @@
 # homeward
 
-A dozen heterogeneous sources describe the same thing — a dog or cat in a shelter
+Aggregates shelter and lost-pet listings from many incompatible sources into one canonical record, then matches an owner's lost pet against current intakes by structure and by photo.
 
-## Overview
+## The problem
 
-A dozen heterogeneous sources describe the same thing — a dog or cat in a shelter
-— in a dozen incompatible shapes (RescueGroups JSON:API, municipal Socrata
-columns, vendor feeds). Before anything can aggregate, dedup, embed, or match,
-there must be **one canonical record** they all normalize into, plus an
-owner-side **lost report** type and an honest **provenance** model. This PRD is
-that foundation crate: the types, their validation, and their (de)serialization.
-It ships no network code — it is the vocabulary the rest of the fleet speaks.
+A dozen sources describe the same dog or cat in a dozen shapes — RescueGroups JSON:API, municipal Socrata columns, ArcGIS feeds, vendor APIs — and none of them agree on a schema, a freshness model, or what "available" means. An owner whose pet is missing can't watch them all. By the time a listing surfaces in the one place they happened to check, the hold window may have closed.
 
+homeward closes that gap. It normalizes every source into one record type, keeps that view fresh as shelters intake and adopt out, and lets an owner file a single lost report that is matched continuously against everything coming in — by breed, age, color, and location, and by visual similarity of the photos themselves.
 
-## Acceptance
+## How it works
 
+A record flows through the workspace's crates in order:
 
-1. The `homeward` cargo workspace exists with `homeward-schema` as a library
-   crate that builds clean (`cargo build`) and passes `cargo test`.
-2. `Species` covers `Dog` and `Cat`; constructing a `PetRecord` with an
-   unrecognized species string fails with a typed error (no silent default).
-3. `PetRecord` keeps `IntakeType` and `Availability` as distinct fields, and a
-   validator flags the contradiction "Availability::Adoptable + IntakeType::Stray
-   within hold" (the stray-hold guardrail, Phase 1 §3a).
-4. `PhotoRef` stores a source URL + optional attribution and **cannot** hold raw
-   image bytes (type-level: there is no bytes field) — encoding the hotlink/no-
-   bulk-copy copyright posture.
-5. `LostReport.contact` is a `BrokeredContactToken` opaque type with no public
-   accessor that returns a raw phone/email string; `last_seen` is a coarse
-   location type with no street-address field (privacy posture).
-6. Every public type round-trips through JSON serde without loss, and
-   deserializing a record that is missing any optional field succeeds via serde
-   defaults (forward compatibility) — proven by tests.
-7. Geo coarsening rounds any provided lat/lon to the configured precision on
-   construction; a test asserts a precise coordinate is stored only at coarse
-   resolution.
+| Crate | Role |
+| --- | --- |
+| `homeward-schema` | The canonical types every source normalizes into — `PetRecord`, `LostReport`, `Provenance` — plus their validation and serde. The vocabulary the rest of the fleet speaks. |
+| `homeward-connectors` | Source connectors (RescueGroups, Socrata, OpenDataSoft, ArcGIS) and the `homeward` CLI that polls them, reports coverage, and discovers new feeds. |
+| `homeward-geocode` | Resolves a record's free-text found-location to a coarse location offline, against a bundled US Census gazetteer. No network. |
+| `homeward-ingest` | The freshness engine: orchestrates the connectors on an adaptive cadence, deduplicates records, and detects departures via a sqlite-backed store. |
+| `homeward-match` | Fusion matching: a structured prefilter, then score fusion across structured fields and photo-embedding similarity, with stray-hold flagging. |
+| `homeward-embed-client` | Async HTTP client for the photo-embedding sidecar (`/enroll`, `/query`, `/health`). |
+| `homeward-report` | Owner-side lost reports, continuous matching, owner alerts, and the open read API plus a single-page web UI. |
+| `homeward/embed` | The embedding sidecar (Python): YOLO body-crop → DINOv2 ViT-B/14 → HNSW index, served over localhost HTTP. |
 
-## Recent
+The design encodes a deliberate privacy and copyright posture in the types themselves: photos are stored as source URLs with attribution and *cannot* hold raw image bytes; an owner's contact is an opaque brokered token with no raw-string accessor; locations are coarsened on construction with no street-address field. The constraints live at the type level, so a careless caller can't bypass them.
 
-- **v0.10.0** — `homeward-report`: single-page web UI embedded in the binary (`GET /`, `GET /static/index.html`); drag-and-drop photo upload with score bars and shelter cards; updated `POST /search` response to `{ candidates: [{score, record}], embed_available }`.
-- **v0.9.0** — `homeward/embed/`: Python photo-embedding pipeline (YOLO body-crop → DINOv2 ViT-B/14 → HNSW index); localhost HTTP sidecar (`enroll`/`query`/`reembed_all`); Rust `embed_client` in `homeward-ingest`; honest eval harness with anti-tautology guard.
-
-## Install
+## Build
 
 ```sh
-cargo install --path .
+cargo build --release
 ```
+
+The workspace is Rust 2024, MSRV 1.86. The embedding sidecar is a separate Python service under `homeward/embed` (run with `uv`); see its README for model weights and licensing.
+
+## Run it locally
+
+The CLI polls a source and prints normalized records:
+
+```sh
+homeward connectors list
+homeward connectors poll --since 2026-06-01T00:00:00Z --limit 20
+homeward connectors coverage --geo
+```
+
+Run the whole fleet as three systemd user services — the embedding sidecar, the ingest freshness engine, and the report API:
+
+```sh
+bash deploy/install.sh    # link units, install binaries (idempotent)
+homeward up               # start homeward.target
+homeward status           # per-unit state + embed /health
+homeward down             # stop the fleet
+```
+
+Configuration lives in `~/.config/homeward/homeward.env` (see `deploy/homeward.env.sample`) and `sources.toml`.
+
+## Status
+
+Working multi-crate system, actively developed (v0.36.0). The matching path runs real photo-embedding fusion end to end. Accuracy is recorded honestly in `EVAL.md`: the bundled `eval-smoke` fixture proves the harness arithmetic, not a real-world accuracy number — measured accuracy against held-out datasets is reported separately there. The model weights it depends on (DINOv2, YOLO COCO) are documented in `homeward/embed/README.md`; non-commercial and research-gated weights are deliberately not bundled.
 
 ## License
 
-MIT © Joe Yen
+MIT OR Apache-2.0 © Joe Yen
