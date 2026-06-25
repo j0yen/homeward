@@ -112,11 +112,11 @@ async fn cmd_run(args: &[String]) {
     let mut orchestrator = Orchestrator::new(Arc::clone(&store), enroll_sink, config);
 
     // Register Socrata connectors (no API key required).
+    // long_beach disabled: data.longbeach.gov returning 403 since 2026-06-21.
     for cfg in [
         SocrataConfig::austin(),
         SocrataConfig::dallas(),
         SocrataConfig::sonoma(),
-        SocrataConfig::long_beach(),
     ] {
         let name = cfg.name.to_owned();
         match SocrataConnector::new(cfg) {
