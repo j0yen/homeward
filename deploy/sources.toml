@@ -88,23 +88,25 @@ breed        = "primary_breed"
 name         = "name"
 color        = "primary_color"
 
+# DISABLED 2026-06-24: data.longbeach.gov returning 403 Forbidden for all requests.
+# Re-enable once the endpoint recovers or a replacement dataset ID is found.
 # validated: 2026-06-13  via: probe-green  metro: "Long Beach CA"
-[[socrata]]
-name        = "long_beach"
-domain      = "data.longbeach.gov"
-dataset_id  = "d9np-nk5h"
-app_token_env = "SOCRATA_APP_TOKEN"
-
-[socrata.column_map]
-animal_id    = "animal_id"
-animal_type  = "animal_type"
-intake_type  = "intake_type"
-outcome_date = "outcome_date"
-found_location = "found_location"
-intake_date  = "intake_date"
-breed        = "primary_breed"
-name         = "animal_name"
-color        = "primary_color"
+# [[socrata]]
+# name        = "long_beach"
+# domain      = "data.longbeach.gov"
+# dataset_id  = "d9np-nk5h"
+# app_token_env = "SOCRATA_APP_TOKEN"
+#
+# [socrata.column_map]
+# animal_id    = "animal_id"
+# animal_type  = "animal_type"
+# intake_type  = "intake_type"
+# outcome_date = "outcome_date"
+# found_location = "found_location"
+# intake_date  = "intake_date"
+# breed        = "primary_breed"
+# name         = "animal_name"
+# color        = "primary_color"
 
 # ─── Additional municipalities ────────────────────────────────────────────────
 

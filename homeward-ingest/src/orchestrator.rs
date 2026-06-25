@@ -326,12 +326,18 @@ impl<S: EventSink> Orchestrator<S> {
             let source_name = state.name.clone();
             debug!(source = %source_name, "polling");
 
-            // Load persisted cursor.
-            let cursor: Option<Cursor> = {
+            // Load persisted cursor.  Track whether this is a full-sync (no
+            // prior cursor) so we only run absence-based departure detection
+            // on bootstrap polls, not on delta ticks.  Delta polls return only
+            // records updated since the watermark, so any animal absent from
+            // the result set is simply unchanged — not departed.
+            let (cursor, is_full_sync): (Option<Cursor>, bool) = {
                 let store = self.store.lock().await;
-                store.load_cursor(&source_name)?.and_then(|sc| {
+                let c = store.load_cursor(&source_name)?.and_then(|sc| {
                     serde_json::from_str::<Cursor>(&sc.cursor_json).ok()
-                })
+                });
+                let full = c.is_none();
+                (c, full)
             };
 
             // Poll the connector exactly once (AC8).
@@ -380,19 +386,27 @@ impl<S: EventSink> Orchestrator<S> {
                     self.sink.publish(IngestEvent::new(kind, resolved));
                 }
 
-                // Departure detection for this source's full sync.
-                let departed_ids = run_departure_detection(
-                    &mut store,
-                    &source_name,
-                    &seen_ids,
-                    &self.departure_config,
-                )
-                .map_err(OrchestratorError::Store)?;
+                // Absence-based departure detection only on full-sync polls.
+                // Delta polls (cursor was Some) return only recently-updated
+                // records; animals absent from the delta are simply unchanged,
+                // not departed.  Running absence detection on a delta tick
+                // would mark every stable record as departed after two quiet
+                // ticks.  Explicit departure (outcome_date / Availability::Departed)
+                // is handled per-record above and is unaffected by this guard.
+                if is_full_sync {
+                    let departed_ids = run_departure_detection(
+                        &mut store,
+                        &source_name,
+                        &seen_ids,
+                        &self.departure_config,
+                    )
+                    .map_err(OrchestratorError::Store)?;
 
-                for id in departed_ids {
-                    if let Ok(record) = store.get(id) {
-                        self.sink
-                            .publish(IngestEvent::new(EventKind::Departed, record));
+                    for id in departed_ids {
+                        if let Ok(record) = store.get(id) {
+                            self.sink
+                                .publish(IngestEvent::new(EventKind::Departed, record));
+                        }
                     }
                 }
             }
