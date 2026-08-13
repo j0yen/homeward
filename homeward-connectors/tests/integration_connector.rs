@@ -47,6 +47,30 @@ fn polite_client_for(server_uri: &str) -> (PoliteClient, String) {
     (pc, server_uri.to_owned())
 }
 
+/// Mount one POST mock per species under `/v5/public/animals/search/available/{species}`,
+/// each returning its own single-species fixture. Mirrors the real endpoint,
+/// which only accepts one species per request (comma-joined lists 404).
+async fn mount_rescuegroups_mocks(mock_server: &MockServer) {
+    let dogs_fixture = load_fixture("rescuegroups_dogs.json");
+    let cats_fixture = load_fixture("rescuegroups_cats.json");
+
+    Mock::given(method("POST"))
+        .and(path("/v5/public/animals/search/available/dogs"))
+        .and(header_exists("Authorization"))
+        .and(header("content-type", "application/vnd.api+json"))
+        .respond_with(ResponseTemplate::new(200).set_body_string(dogs_fixture))
+        .mount(mock_server)
+        .await;
+
+    Mock::given(method("POST"))
+        .and(path("/v5/public/animals/search/available/cats"))
+        .and(header_exists("Authorization"))
+        .and(header("content-type", "application/vnd.api+json"))
+        .respond_with(ResponseTemplate::new(200).set_body_string(cats_fixture))
+        .mount(mock_server)
+        .await;
+}
+
 // ─── AC1: 304 Not Modified returns empty ──────────────────────────────────────
 
 #[tokio::test]
@@ -132,14 +156,7 @@ async fn ac1_polite_client_304_is_ok_not_error() {
 #[tokio::test]
 async fn ac2_rescuegroups_normalizes_fixture() {
     let mock_server = MockServer::start().await;
-    let fixture = load_fixture("rescuegroups_page1.json");
-
-    Mock::given(method("GET"))
-        .and(path("/v5/animals/search/available/dogs,cats"))
-        .and(header_exists("Authorization"))
-        .respond_with(ResponseTemplate::new(200).set_body_string(fixture))
-        .mount(&mock_server)
-        .await;
+    mount_rescuegroups_mocks(&mock_server).await;
 
     let config = RescueGroupsConfig {
         api_key: "test-key".to_owned(),
@@ -178,6 +195,59 @@ async fn ac2_rescuegroups_normalizes_fixture() {
 
     let prov = connector.provenance();
     assert_eq!(prov.source.tos_class, TosClass::Api);
+}
+
+/// Regression test for the RescueGroups 404: verifies the connector issues
+/// one POST per species under `/public/animals/search/available/{species}`
+/// (never a comma-joined `dogs,cats` path), and that results from both calls
+/// are merged into a single record set.
+#[tokio::test]
+async fn ac2_rescuegroups_issues_one_post_per_species_under_public_path() {
+    let mock_server = MockServer::start().await;
+    mount_rescuegroups_mocks(&mock_server).await;
+
+    let config = RescueGroupsConfig {
+        api_key: "test-key".to_owned(),
+        base_url: format!("{}/v5", mock_server.uri()),
+    };
+    let (pc, _) = polite_client_for(&mock_server.uri());
+    let connector = RescueGroupsConnector::with_client(config, pc);
+
+    let records = connector.poll(None).await.expect("poll");
+    assert_eq!(records.len(), 2, "expected exactly 1 dog + 1 cat, merged");
+
+    let received = mock_server.received_requests().await.expect("requests");
+    let animal_requests: Vec<_> = received
+        .iter()
+        .filter(|r| r.url.path().starts_with("/v5/public/animals/search/available/"))
+        .collect();
+
+    assert_eq!(
+        animal_requests.len(),
+        2,
+        "expected exactly one request per species, got: {:?}",
+        animal_requests.iter().map(|r| r.url.path()).collect::<Vec<_>>()
+    );
+    assert!(
+        animal_requests.iter().all(|r| r.method.to_string() == "POST"),
+        "every RescueGroups search request must be POST"
+    );
+    assert!(
+        animal_requests
+            .iter()
+            .any(|r| r.url.path() == "/v5/public/animals/search/available/dogs"),
+        "must issue a dogs-only request"
+    );
+    assert!(
+        animal_requests
+            .iter()
+            .any(|r| r.url.path() == "/v5/public/animals/search/available/cats"),
+        "must issue a cats-only request"
+    );
+    assert!(
+        animal_requests.iter().all(|r| !r.url.path().contains(',')),
+        "no request path may comma-join species"
+    );
 }
 
 // ─── AC3: Socrata normalizes Austin fixture ──────────────────────────────────
@@ -277,12 +347,7 @@ async fn ac3_socrata_connector_stray_maps_intake_type() {
 #[tokio::test]
 async fn ac4_mixed_species_both_yielded_rescuegroups() {
     let mock_server = MockServer::start().await;
-    let fixture = load_fixture("rescuegroups_page1.json");
-
-    Mock::given(method("GET"))
-        .respond_with(ResponseTemplate::new(200).set_body_string(fixture))
-        .mount(&mock_server)
-        .await;
+    mount_rescuegroups_mocks(&mock_server).await;
 
     let config = RescueGroupsConfig {
         api_key: "test-key".to_owned(),
@@ -460,12 +525,7 @@ async fn ac5_per_host_min_interval_delays_second_request() {
 #[tokio::test]
 async fn ac6_photo_ref_has_no_bytes_field() {
     let mock_server = MockServer::start().await;
-    let fixture = load_fixture("rescuegroups_page1.json");
-
-    Mock::given(method("GET"))
-        .respond_with(ResponseTemplate::new(200).set_body_string(fixture))
-        .mount(&mock_server)
-        .await;
+    mount_rescuegroups_mocks(&mock_server).await;
 
     let config = RescueGroupsConfig {
         api_key: "test".to_owned(),
@@ -530,12 +590,7 @@ fn ac7_known_connector_is_registered() {
 async fn ac7_poll_mock_returns_valid_json_records() {
     // Simulate the CLI "connectors poll" flow end-to-end against a mock.
     let mock_server = MockServer::start().await;
-    let fixture = load_fixture("rescuegroups_page1.json");
-
-    Mock::given(method("GET"))
-        .respond_with(ResponseTemplate::new(200).set_body_string(fixture))
-        .mount(&mock_server)
-        .await;
+    mount_rescuegroups_mocks(&mock_server).await;
 
     let config = RescueGroupsConfig {
         api_key: "cli-test".to_owned(),

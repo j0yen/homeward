@@ -36,6 +36,10 @@ const BASE_URL: &str = "https://api.rescuegroups.org/v5";
 /// Default page size for paging through results.
 const PAGE_SIZE: u64 = 250;
 
+/// Species queried one at a time — the `search/available` endpoint only
+/// accepts a single species segment per request (a comma-joined list 404s).
+const SPECIES: [&str; 2] = ["dogs", "cats"];
+
 /// Configuration for the `RescueGroups` connector.
 #[derive(Debug, Clone)]
 pub struct RescueGroupsConfig {
@@ -61,6 +65,14 @@ impl RescueGroupsConfig {
     }
 }
 
+/// Build the search URL for one page of one `species` (`"dogs"` or `"cats"`).
+///
+/// The endpoint lives under `/public` and takes exactly one species segment —
+/// a comma-joined list like `dogs,cats` 404s on the real API.
+fn build_search_url(base_url: &str, species: &str, offset: u64) -> String {
+    format!("{base_url}/public/animals/search/available/{species}?limit={PAGE_SIZE}&offset={offset}")
+}
+
 /// Connector for RescueGroups.org JSON:API v5.
 pub struct RescueGroupsConnector {
     config: RescueGroupsConfig,
@@ -83,31 +95,46 @@ impl RescueGroupsConnector {
         Self { config, client }
     }
 
-    /// Fetch one page of animals from the `RescueGroups` API.
+    /// Fetch one page of animals of a single `species` (`"dogs"` or `"cats"`)
+    /// from the `RescueGroups` API.
+    ///
+    /// The `search/available/{species}` endpoint lives under `/public` and
+    /// only accepts one species segment per request — a comma-joined list
+    /// (e.g. `dogs,cats`) 404s. It is a JSON:API "search" action, so filters
+    /// travel in a POST body rather than the query string; `limit`/`offset`
+    /// stay as query params.
     async fn fetch_page(
         &self,
+        species: &str,
         offset: u64,
         since: Option<&DateTime<Utc>>,
     ) -> Result<RgPage, ConnectorError> {
-        let mut url_str = format!(
-            "{}/animals/search/available/dogs,cats?limit={}&offset={}",
-            self.config.base_url, PAGE_SIZE, offset
-        );
+        let url_str = build_search_url(&self.config.base_url, species, offset);
+        let url = Url::parse(&url_str)?;
+
+        let mut filters = Vec::new();
         if let Some(ts) = since {
             let ts_str = ts.format("%Y-%m-%dT%H:%M:%S").to_string();
-            url_str.push_str(&format!("&filters[0][fieldName]=updatedDate&filters[0][operation]=greaterthanorequal&filters[0][criteria]={ts_str}"));
+            filters.push(serde_json::json!({
+                "fieldName": "updatedDate",
+                "operation": "greaterthanorequal",
+                "criteria": ts_str,
+            }));
         }
+        let body = serde_json::json!({ "data": { "filters": filters } });
+        let body_bytes = serde_json::to_vec(&body)?;
 
-        let url = Url::parse(&url_str)?;
-        debug!(%url, offset, "fetching RescueGroups page");
+        debug!(%url, offset, species, "fetching RescueGroups page");
 
         let resp = self
             .client
             .inner()
-            .get(url.as_str())
+            .post(url.as_str())
             .header("Authorization", &self.config.api_key)
             .header("User-Agent", HOMEWARD_USER_AGENT)
             .header("Accept", "application/vnd.api+json")
+            .header("Content-Type", "application/vnd.api+json")
+            .body(body_bytes)
             .send()
             .await?;
 
@@ -141,25 +168,34 @@ impl Connector for RescueGroupsConnector {
         };
 
         let mut records = Vec::new();
-        let mut offset = 0u64;
+        let mut seen_ids = std::collections::HashSet::new();
 
-        loop {
-            let page = self.fetch_page(offset, since_ts.as_ref()).await?;
-            let total = page.meta.total;
-            let batch_len = u64::try_from(page.data.len()).unwrap_or(u64::MAX);
+        for species in SPECIES {
+            let mut offset = 0u64;
 
-            for item in page.data {
-                match normalize_rg_record(item, &self.config) {
-                    Ok(rec) => records.push(rec),
-                    Err(e) => {
-                        warn!("skipping RescueGroups record: {e}");
+            loop {
+                let page = self.fetch_page(species, offset, since_ts.as_ref()).await?;
+                let total = page.meta.total;
+                let batch_len = u64::try_from(page.data.len()).unwrap_or(u64::MAX);
+
+                for item in page.data {
+                    if !seen_ids.insert(item.id.clone()) {
+                        // Dedup: guard against the same animal ID showing up
+                        // in more than one species page.
+                        continue;
+                    }
+                    match normalize_rg_record(item, &self.config) {
+                        Ok(rec) => records.push(rec),
+                        Err(e) => {
+                            warn!("skipping RescueGroups record: {e}");
+                        }
                     }
                 }
-            }
 
-            offset += PAGE_SIZE;
-            if batch_len < PAGE_SIZE || offset >= total {
-                break;
+                offset += PAGE_SIZE;
+                if batch_len < PAGE_SIZE || offset >= total {
+                    break;
+                }
             }
         }
 
@@ -526,5 +562,42 @@ mod tests {
         };
         // If a `data` or `bytes` field existed, this wouldn't compile.
         assert!(!photo.url.is_empty());
+    }
+
+    // ─── URL construction (regression for the /public 404) ───────────────────
+
+    #[test]
+    fn build_search_url_uses_public_prefix() {
+        let url = build_search_url("https://api.rescuegroups.org/v5", "dogs", 0);
+        assert_eq!(
+            url,
+            "https://api.rescuegroups.org/v5/public/animals/search/available/dogs?limit=250&offset=0"
+        );
+    }
+
+    #[test]
+    fn build_search_url_never_comma_joins_species() {
+        for species in SPECIES {
+            let url = build_search_url("https://api.rescuegroups.org/v5", species, 0);
+            assert!(
+                !url.contains(','),
+                "url must not comma-join species: {url}"
+            );
+            assert!(url.contains(&format!("available/{species}?")));
+        }
+    }
+
+    #[test]
+    fn build_search_url_carries_offset_and_page_size() {
+        let url = build_search_url("https://api.rescuegroups.org/v5", "cats", 500);
+        assert_eq!(
+            url,
+            "https://api.rescuegroups.org/v5/public/animals/search/available/cats?limit=250&offset=500"
+        );
+    }
+
+    #[test]
+    fn species_list_is_dogs_and_cats_one_at_a_time() {
+        assert_eq!(SPECIES, ["dogs", "cats"]);
     }
 }

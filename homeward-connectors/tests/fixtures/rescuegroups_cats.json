@@ -1,41 +1,6 @@
 {
   "data": [
     {
-      "id": "rg-dog-1",
-      "type": "animals",
-      "attributes": {
-        "species": "Dog",
-        "sex": "male",
-        "ageString": "adult",
-        "sizeDescription": "large",
-        "name": "Buddy",
-        "breedString": "Labrador Retriever",
-        "primaryBreed": "Labrador Retriever",
-        "secondaryBreed": null,
-        "colors": ["black", "white"],
-        "description": "A friendly lab",
-        "updatedDate": "2024-01-15T10:00:00Z",
-        "pubDate": "2024-01-10T08:00:00Z",
-        "statusCode": "available",
-        "foundLocation": null,
-        "chipStatus": null
-      },
-      "relationships": {
-        "pictures": {
-          "data": [
-            {
-              "id": "pic-1",
-              "type": "pictures",
-              "attributes": {
-                "urlFull": "https://example.com/photos/buddy.jpg",
-                "isPrimary": true
-              }
-            }
-          ]
-        }
-      }
-    },
-    {
       "id": "rg-cat-1",
       "type": "animals",
       "attributes": {
@@ -72,6 +37,6 @@
     }
   ],
   "meta": {
-    "totalRecords": 2
+    "totalRecords": 1
   }
 }

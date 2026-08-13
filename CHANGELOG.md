@@ -1,5 +1,18 @@
 # Changelog
 
+## homeward-connectors v0.2.1 — 2026-08-12
+
+Fixes the RescueGroups connector's 404 against the live v5 API.
+
+The `search/available` endpoint lives under `/public` and only accepts one
+species per request — the old `/animals/search/available/dogs,cats` GET
+404'd. `fetch_page` now issues one POST per species to
+`/public/animals/search/available/{species}` with filters carried in a
+JSON:API request body (`Content-Type: application/vnd.api+json`) rather
+than query-string brackets, matching the endpoint's real contract. `poll`
+merges both species' pages and dedups by animal ID. Verified live against
+the real API.
+
 ## homeward-report v0.5.0 — 2026-06-19
 
 Wire `RelayEmailDeliverer::deliver` to a real blocking HTTP POST.

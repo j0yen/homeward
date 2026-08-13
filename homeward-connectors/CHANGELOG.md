@@ -1,5 +1,18 @@
 # Changelog
 
+## v0.2.1 — 2026-08-12
+
+Fixes the RescueGroups connector's 404 against the live v5 API. The
+`search/available` endpoint lives under `/public` and only accepts one
+species segment per request — the old `dogs,cats` comma-joined GET 404'd.
+`fetch_page` now issues one POST per species (`dogs`, then `cats`) to
+`/public/animals/search/available/{species}`, with filters in a JSON:API
+body (`Content-Type: application/vnd.api+json`) instead of query-string
+brackets, matching the endpoint's actual contract. `poll` merges both
+species' pages and dedups by animal ID. Added `build_search_url` unit
+tests plus an integration test asserting exactly one POST per species with
+no comma-joined path.
+
 ## v0.2.0 — 2026-06-05
 
 Integration tests covering all 7 ACs using wiremock mock HTTP server:
