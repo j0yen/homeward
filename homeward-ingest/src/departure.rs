@@ -4,6 +4,12 @@
 //! 2. **Two-strikes absence** — missing from two consecutive full syncs.
 //! 3. **404 on canonical URL** (delegated to connector; connector sets `Departed`).
 //! 4. **TTL backstop** — not re-confirmed within `N × source_cadence`.
+//!
+//! `run_departure_detection` is always called for a single `source_name`, and
+//! every strategy it drives (two-strikes absence via `increment_absent`, TTL
+//! via `expire_stale`) must only ever touch records belonging to that
+//! source — see `Store::expire_stale`'s doc comment for the 2026-08-13
+//! incident where an unscoped TTL query departed ~147k unrelated records.
 
 use chrono::{Duration, Utc};
 use homeward_schema::Availability;
@@ -61,9 +67,11 @@ pub fn run_departure_detection(
         departed.push(*id);
     }
 
-    // TTL backstop.
+    // TTL backstop — scoped to `source_name` (see `Store::expire_stale` doc
+    // comment: an unscoped version of this call was the 2026-08-13 mass
+    // departure incident).
     let cutoff = now - config.ttl;
-    let expired = store.expire_stale(cutoff)?;
+    let expired = store.expire_stale(source_name, cutoff)?;
     for id in expired {
         if !departed.contains(&id) {
             departed.push(id);
@@ -227,6 +235,119 @@ mod tests {
             departed.contains(&id),
             "TTL backstop must expire record not confirmed in >7 days"
         );
+    }
+
+    /// Regression for the 2026-08-13 mass-departure incident: a *different*
+    /// source's genuine first full poll must never depart another source's
+    /// records, no matter how stale they are. Production shape: "austin" had
+    /// ~147k records with `last_confirmed` well past the TTL (their delta
+    /// polls never re-run departure detection — see
+    /// `orchestrator::tick`'s `is_full_sync` gate); "rescuegroups" ran its
+    /// first-ever successful (full-sync) poll and its departure-detection
+    /// call's TTL backstop was NOT scoped to "rescuegroups", so it swept up
+    /// every stale "austin" record too.
+    #[test]
+    fn full_sync_of_one_source_never_departs_another_sources_stale_records() {
+        use homeward_schema::{ChipStatus, intake::{Availability, IntakeType}, provenance::{SourceId, TosClass}};
+
+        let mut store = Store::open_in_memory().expect("store");
+
+        // Source A ("austin"): old records, stale well past any reasonable TTL.
+        let old_time = Utc::now() - chrono::Duration::days(100);
+        let mut austin_ids = Vec::new();
+        for i in 0..5 {
+            let id = Ulid::new();
+            let record = homeward_schema::PetRecord {
+                canonical_id: id,
+                source: SourceId::new("austin", TosClass::OpenData),
+                source_animal_id: Some(format!("austin-{i}")),
+                species: Species::Dog,
+                breed_primary: None,
+                breed_secondary: None,
+                sex: None,
+                age_bucket: None,
+                size: None,
+                colors: vec![],
+                markings_text: None,
+                intake_type: IntakeType::Stray,
+                availability: Availability::InCustody,
+                chip_status: ChipStatus::NotScanned,
+                location: None,
+                found_location_text: None,
+                photos: vec![],
+                first_seen: old_time,
+                last_seen: old_time,
+                last_confirmed: Some(old_time),
+                intake_date: None,
+                outcome_date: None,
+                secondary_provenances: vec![],
+            };
+            store.upsert(&record).expect("upsert austin");
+            austin_ids.push(id);
+        }
+
+        // Source B ("rescuegroups"): brand-new records from its first-ever
+        // (genuine full-sync) successful poll.
+        let now = Utc::now();
+        let mut rg_ids = Vec::new();
+        for i in 0..3 {
+            let id = Ulid::new();
+            let record = homeward_schema::PetRecord {
+                canonical_id: id,
+                source: SourceId::new("rescuegroups", TosClass::Api),
+                source_animal_id: Some(format!("rg-{i}")),
+                species: Species::Dog,
+                breed_primary: None,
+                breed_secondary: None,
+                sex: None,
+                age_bucket: None,
+                size: None,
+                colors: vec![],
+                markings_text: None,
+                intake_type: IntakeType::Adoptable,
+                availability: Availability::Adoptable,
+                chip_status: ChipStatus::NotScanned,
+                location: None,
+                found_location_text: None,
+                photos: vec![],
+                first_seen: now,
+                last_seen: now,
+                last_confirmed: Some(now),
+                intake_date: None,
+                outcome_date: None,
+                secondary_provenances: vec![],
+            };
+            store.upsert(&record).expect("upsert rescuegroups");
+            rg_ids.push(id);
+        }
+
+        // A short TTL so austin's 100-day-old records WOULD be TTL-eligible
+        // if the sweep were (still, buggily) unscoped.
+        let config = DepartureConfig {
+            absent_strikes: 2,
+            ttl: chrono::Duration::days(7),
+        };
+
+        // Genuine full poll of "rescuegroups" only — seen_ids is exactly its
+        // own brand-new records, matching what the orchestrator passes on a
+        // real bootstrap tick.
+        let departed = run_departure_detection(&mut store, "rescuegroups", &rg_ids, &config)
+            .expect("run departure detection for rescuegroups");
+
+        assert!(
+            departed.is_empty(),
+            "rescuegroups' own first full poll must not depart anything of its own \
+             (all its records were just seen) or anyone else's"
+        );
+
+        for id in &austin_ids {
+            let record = store.get(*id).expect("austin record must still exist");
+            assert_ne!(
+                record.availability,
+                Availability::Departed,
+                "austin record must NOT be departed as a side effect of rescuegroups' full sync"
+            );
+        }
     }
 
     #[test]

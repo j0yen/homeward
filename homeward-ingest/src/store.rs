@@ -355,23 +355,42 @@ impl Store {
 
     // ── TTL expiry ────────────────────────────────────────────────────────
 
-    /// Expire all records whose `last_confirmed` is older than `cutoff`.
+    /// Expire records **belonging to `source_name`** whose `last_confirmed`
+    /// is older than `cutoff`.
+    ///
+    /// Scoped by `source_name` via `source_links` — this must never scan the
+    /// whole `canonical_records` table. An unscoped version of this query
+    /// was the root cause of the 2026-08-13 incident: rescuegroups' very
+    /// first successful (full-sync) poll ran departure detection, and the
+    /// unscoped TTL sweep departed ~147k austin/dallas/sonoma records whose
+    /// `last_confirmed` had drifted past the TTL while those sources' own
+    /// delta-poll ticks never re-ran expiry (see `orchestrator::tick`'s
+    /// `is_full_sync` gate — delta ticks skip departure detection entirely,
+    /// so a source's TTL backstop only ever fires again on that source's
+    /// *own* next full sync, not as a side effect of some unrelated source's
+    /// first sync).
     ///
     /// Returns the list of expired canonical ids.
     ///
     /// # Errors
     /// Propagates [`StoreError`] on sqlite or JSON errors.
-    pub fn expire_stale(&mut self, cutoff: DateTime<Utc>) -> Result<Vec<Ulid>, StoreError> {
+    pub fn expire_stale(
+        &mut self,
+        source_name: &str,
+        cutoff: DateTime<Utc>,
+    ) -> Result<Vec<Ulid>, StoreError> {
         let cutoff_str = cutoff.to_rfc3339();
         // Collect ids first so the borrow on self.conn ends before mark_departed.
         let ids: Vec<Ulid> = {
             let mut stmt = self.conn.prepare(
-                "SELECT canonical_id FROM canonical_records
-                 WHERE availability != 'departed'
-                   AND last_confirmed IS NOT NULL
-                   AND last_confirmed < ?1",
+                "SELECT cr.canonical_id FROM canonical_records cr
+                 JOIN source_links sl ON sl.canonical_id = cr.canonical_id
+                 WHERE sl.source_name = ?1
+                   AND cr.availability != 'departed'
+                   AND cr.last_confirmed IS NOT NULL
+                   AND cr.last_confirmed < ?2",
             )?;
-            stmt.query_map(params![cutoff_str], |row| row.get::<_, String>(0))?
+            stmt.query_map(params![source_name, cutoff_str], |row| row.get::<_, String>(0))?
                 .filter_map(|r| r.ok().and_then(|s| s.parse::<Ulid>().ok()))
                 .collect()
         };

@@ -1,5 +1,27 @@
 # Changelog
 
+## homeward-ingest v0.1.1 — 2026-08-13
+
+Fixes the 2026-08-13 mass-departure incident: rescuegroups' first-ever
+successful poll (a genuine full sync, since it had never had a persisted
+cursor) correctly triggered `run_departure_detection` for source
+"rescuegroups", but that call's TTL backstop (`Store::expire_stale`) queried
+`canonical_records` with no source scoping at all — a store-wide sweep, not
+one limited to the polling source. Because austin/dallas/sonoma are
+delta-polled and their own tick never re-runs departure detection once
+bootstrapped (see the 2026-06-25 `is_full_sync` guard), their
+`last_confirmed` timestamps had quietly drifted past the 7-day TTL for
+months with nothing enforcing it — until rescuegroups' tick fired the
+unscoped sweep and departed ~147k of them in one shot (departed count
+27,431 -> 174,901 in a single tick). `Store::expire_stale` now takes
+`source_name` and joins `source_links`, so a poll can only ever depart
+records belonging to its own source. Added a regression test encoding the
+production scenario: source A with long-stale records, a genuine full poll
+of source B bringing in new records, asserting zero source-A records get
+departed. See `scratchpad/homeward-repair-departed.py` (not committed —
+ops script, run by hand) for the data-repair recipe for records already
+damaged before this fix shipped.
+
 ## homeward-connectors v0.2.3 — 2026-08-13
 
 Fixes a production HTTP 400 on every delta rescuegroups poll: bare
