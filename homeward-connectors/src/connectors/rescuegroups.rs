@@ -89,13 +89,20 @@ fn build_search_url(base_url: &str, species: &str, offset: u64) -> String {
 
 /// Build the JSON:API `filters` array for a delta poll's "since" watermark
 /// (an empty array for a full poll, i.e. `since.is_none()`).
+///
+/// `criteria` must be RFC3339 — verified live: a space-separated, non-RFC3339
+/// timestamp (e.g. `"2026-08-13 02:44:31"`) 500s (`{"errors":[{"status":500,
+/// "title":"System error","detail":"We encountered a system error and
+/// couldn't continue."}]}`), while `"2026-08-13T02:44:31Z"` and
+/// `"2026-08-13T02:44:31.658043006Z"` both return 200. `to_rfc3339_opts`
+/// with `use_z = true` matches the verified-good whole-seconds form exactly.
 fn build_filters(since: Option<&DateTime<Utc>>) -> Vec<serde_json::Value> {
     since
         .map(|ts| {
             vec![serde_json::json!({
                 "fieldName": UPDATED_DATE_FILTER_FIELD,
                 "operation": "greaterthanorequal",
-                "criteria": ts.format("%Y-%m-%dT%H:%M:%S").to_string(),
+                "criteria": ts.to_rfc3339_opts(chrono::SecondsFormat::Secs, true),
             })]
         })
         .unwrap_or_default()
@@ -709,7 +716,7 @@ mod tests {
              fields under the resource type"
         );
         assert_eq!(filters[0]["operation"], "greaterthanorequal");
-        assert_eq!(filters[0]["criteria"], "2024-01-15T10:00:00");
+        assert_eq!(filters[0]["criteria"], "2024-01-15T10:00:00Z");
     }
 
     #[test]
@@ -720,6 +727,22 @@ mod tests {
             filters[0]["fieldName"], "updatedDate",
             "bare updatedDate is rejected with HTTP 400 by the real API"
         );
+    }
+
+    #[test]
+    fn build_filters_criteria_is_rfc3339_not_space_separated() {
+        // Regression for the HTTP 500 "System error": a space-separated,
+        // non-RFC3339 criteria (e.g. "2026-08-13 02:44:31") 500s live; RFC3339
+        // with a trailing Z (with or without fractional seconds) returns 200.
+        let ts = Utc::now();
+        let filters = build_filters(Some(&ts));
+        let criteria = filters[0]["criteria"].as_str().expect("criteria must be a string");
+
+        assert!(!criteria.contains(' '), "criteria must not be space-separated: {criteria}");
+        assert!(criteria.contains('T'), "criteria must use the RFC3339 'T' separator: {criteria}");
+        assert!(criteria.ends_with('Z'), "criteria must end with 'Z': {criteria}");
+        DateTime::parse_from_rfc3339(criteria)
+            .unwrap_or_else(|e| panic!("criteria must parse as RFC3339: {criteria}: {e}"));
     }
 
     #[test]

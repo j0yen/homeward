@@ -1,5 +1,20 @@
 # Changelog
 
+## v0.2.4 — 2026-08-13
+
+Fixes a production HTTP 500 (`{"errors":[{"status":500,"title":"System
+error","detail":"We encountered a system error and couldn't continue."}]}`)
+on delta polls, the last link in the rescuegroups fix chain. Verified live:
+a space-separated, non-RFC3339 criteria timestamp (e.g.
+`"2026-08-13 02:44:31"`) 500s; RFC3339 with a trailing `Z` (with or without
+fractional seconds) returns 200. `build_filters` now formats the cursor
+timestamp with `to_rfc3339_opts(SecondsFormat::Secs, true)` instead of a
+bespoke `%Y-%m-%dT%H:%M:%S` strftime pattern, producing e.g.
+`"2026-08-13T02:44:31Z"` — matching the verified-good form exactly. Added a
+dedicated unit test asserting the criteria is never space-separated, always
+contains 'T', ends with 'Z', and parses as RFC3339; extended the delta-poll
+integration test to assert the same against the actual POST body sent.
+
 ## v0.2.3 — 2026-08-13
 
 Fixes a production HTTP 400 on every delta (second-and-later) rescuegroups

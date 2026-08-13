@@ -315,13 +315,13 @@ async fn ac2_rescuegroups_deserializes_real_v5_public_payload_shape() {
     assert!(!stowaway.colors.is_empty(), "Stowaway must have a color resolved via `included`");
 }
 
-/// Regression test for the production HTTP 400 on delta (second+) polls:
-/// `{"errors":[{"source":{"pointer":"/data/filters/0/fieldName/updatedDate"},
-/// "title":"Invalid field","detail":"updatedDate is not a valid filter
-/// field"}]}`. The real API namespaces filterable fields under the resource
-/// type — verified live: `animals.updatedDate` returns 200, bare
-/// `updatedDate` 400s. Asserts the actual POST body sent on a delta poll
-/// uses the namespaced field name.
+/// Regression test for two chained production errors on delta (second+)
+/// polls: an HTTP 400 (`"updatedDate is not a valid filter field"` — fixed by
+/// namespacing the fieldName as `animals.updatedDate`) and, once that was
+/// fixed, an HTTP 500 `"System error"` caused by a non-RFC3339
+/// (space-separated) criteria timestamp. Asserts the actual POST body sent
+/// on a delta poll uses both the namespaced field name and an RFC3339
+/// criteria value.
 #[tokio::test]
 async fn ac2_rescuegroups_delta_poll_sends_animals_namespaced_filter_field() {
     let mock_server = MockServer::start().await;
@@ -360,6 +360,18 @@ async fn ac2_rescuegroups_delta_poll_sends_animals_namespaced_filter_field() {
             "bare `updatedDate` 400s live; the API requires the `animals.` \
              namespace prefix on filter fieldNames"
         );
+
+        // Regression for the HTTP 500 "System error": criteria must be
+        // RFC3339 (verified live: space-separated, non-RFC3339 criteria
+        // 500s; "...T...Z" and "...T....Z" with fractional seconds both 200).
+        let criteria = filters[0]["criteria"]
+            .as_str()
+            .expect("criteria must be a string");
+        assert!(!criteria.contains(' '), "criteria must not be space-separated: {criteria}");
+        assert!(criteria.contains('T'), "criteria must use the RFC3339 'T' separator: {criteria}");
+        assert!(criteria.ends_with('Z'), "criteria must end with 'Z': {criteria}");
+        chrono::DateTime::parse_from_rfc3339(criteria)
+            .unwrap_or_else(|e| panic!("criteria must parse as RFC3339: {criteria}: {e}"));
     }
 }
 

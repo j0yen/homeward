@@ -1,5 +1,14 @@
 # Changelog
 
+## homeward-connectors v0.2.4 — 2026-08-13
+
+Fixes a production HTTP 500 on delta polls — the last link in the
+rescuegroups fix chain (404 → 400 → 500, each exposed only once the prior
+one was fixed). Verified live: a space-separated, non-RFC3339 criteria
+timestamp 500s; RFC3339 with a trailing `Z` returns 200. The cursor
+timestamp is now formatted via `to_rfc3339_opts(SecondsFormat::Secs, true)`
+instead of a bespoke strftime pattern that omitted the timezone designator.
+
 ## homeward-ingest v0.1.1 — 2026-08-13
 
 Fixes the 2026-08-13 mass-departure incident: rescuegroups' first-ever

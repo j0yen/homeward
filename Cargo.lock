@@ -996,7 +996,7 @@ version = "0.36.0"
 
 [[package]]
 name = "homeward-connectors"
-version = "0.2.3"
+version = "0.2.4"
 dependencies = [
  "async-trait",
  "bytes",
