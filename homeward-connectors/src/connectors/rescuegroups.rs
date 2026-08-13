@@ -43,6 +43,17 @@ const PAGE_SIZE: u64 = 250;
 /// accepts a single species segment per request (a comma-joined list 404s).
 const SPECIES: [&str; 2] = ["dogs", "cats"];
 
+/// JSON:API filter field name for the delta-poll "since" watermark.
+///
+/// Verified live: a bare `updatedDate` fieldName 400s — `{"errors":[{"source":
+/// {"pointer":"/data/filters/0/fieldName/updatedDate"},"title":"Invalid field",
+/// "detail":"updatedDate is not a valid filter field"}]}`. Filterable animal
+/// fields are namespaced under the resource type; `animals.updatedDate`
+/// returns 200. This is currently the only filter fieldName the connector
+/// sends — if a second filter is ever added, it needs the same `animals.`
+/// prefix.
+const UPDATED_DATE_FILTER_FIELD: &str = "animals.updatedDate";
+
 /// Configuration for the `RescueGroups` connector.
 #[derive(Debug, Clone)]
 pub struct RescueGroupsConfig {
@@ -74,6 +85,20 @@ impl RescueGroupsConfig {
 /// a comma-joined list like `dogs,cats` 404s on the real API.
 fn build_search_url(base_url: &str, species: &str, offset: u64) -> String {
     format!("{base_url}/public/animals/search/available/{species}?limit={PAGE_SIZE}&offset={offset}")
+}
+
+/// Build the JSON:API `filters` array for a delta poll's "since" watermark
+/// (an empty array for a full poll, i.e. `since.is_none()`).
+fn build_filters(since: Option<&DateTime<Utc>>) -> Vec<serde_json::Value> {
+    since
+        .map(|ts| {
+            vec![serde_json::json!({
+                "fieldName": UPDATED_DATE_FILTER_FIELD,
+                "operation": "greaterthanorequal",
+                "criteria": ts.format("%Y-%m-%dT%H:%M:%S").to_string(),
+            })]
+        })
+        .unwrap_or_default()
 }
 
 /// Connector for RescueGroups.org JSON:API v5.
@@ -115,15 +140,7 @@ impl RescueGroupsConnector {
         let url_str = build_search_url(&self.config.base_url, species, offset);
         let url = Url::parse(&url_str)?;
 
-        let mut filters = Vec::new();
-        if let Some(ts) = since {
-            let ts_str = ts.format("%Y-%m-%dT%H:%M:%S").to_string();
-            filters.push(serde_json::json!({
-                "fieldName": "updatedDate",
-                "operation": "greaterthanorequal",
-                "criteria": ts_str,
-            }));
-        }
+        let filters = build_filters(since);
         let body = serde_json::json!({ "data": { "filters": filters } });
         let body_bytes = serde_json::to_vec(&body)?;
 
@@ -669,6 +686,39 @@ mod tests {
         assert_eq!(
             url,
             "https://api.rescuegroups.org/v5/public/animals/search/available/cats?limit=250&offset=500"
+        );
+    }
+
+    // ─── Filter construction (regression for the 400 "not a valid filter field") ─
+
+    #[test]
+    fn build_filters_full_poll_is_empty() {
+        assert_eq!(build_filters(None), Vec::<serde_json::Value>::new());
+    }
+
+    #[test]
+    fn build_filters_delta_poll_uses_animals_namespaced_field() {
+        let ts = DateTime::parse_from_rfc3339("2024-01-15T10:00:00Z")
+            .expect("ts")
+            .with_timezone(&Utc);
+        let filters = build_filters(Some(&ts));
+        assert_eq!(filters.len(), 1);
+        assert_eq!(
+            filters[0]["fieldName"], "animals.updatedDate",
+            "bare `updatedDate` 400s live — the API namespaces filterable \
+             fields under the resource type"
+        );
+        assert_eq!(filters[0]["operation"], "greaterthanorequal");
+        assert_eq!(filters[0]["criteria"], "2024-01-15T10:00:00");
+    }
+
+    #[test]
+    fn build_filters_never_sends_bare_updated_date_field_name() {
+        let ts = Utc::now();
+        let filters = build_filters(Some(&ts));
+        assert_ne!(
+            filters[0]["fieldName"], "updatedDate",
+            "bare updatedDate is rejected with HTTP 400 by the real API"
         );
     }
 

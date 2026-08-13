@@ -13,7 +13,7 @@ use std::time::Duration;
 
 use homeward_connectors::{
     ConnectorRegistry,
-    connector::Connector,
+    connector::{Connector, Cursor},
     connectors::{
         rescuegroups::{RescueGroupsConfig, RescueGroupsConnector},
         socrata::{SocrataColumnMap, SocrataConfig, SocrataConnector},
@@ -313,6 +313,54 @@ async fn ac2_rescuegroups_deserializes_real_v5_public_payload_shape() {
         .expect("Stowaway (10013509) must be present");
     assert_eq!(stowaway.breed_primary.as_deref(), Some("Domestic Short Hair"));
     assert!(!stowaway.colors.is_empty(), "Stowaway must have a color resolved via `included`");
+}
+
+/// Regression test for the production HTTP 400 on delta (second+) polls:
+/// `{"errors":[{"source":{"pointer":"/data/filters/0/fieldName/updatedDate"},
+/// "title":"Invalid field","detail":"updatedDate is not a valid filter
+/// field"}]}`. The real API namespaces filterable fields under the resource
+/// type — verified live: `animals.updatedDate` returns 200, bare
+/// `updatedDate` 400s. Asserts the actual POST body sent on a delta poll
+/// uses the namespaced field name.
+#[tokio::test]
+async fn ac2_rescuegroups_delta_poll_sends_animals_namespaced_filter_field() {
+    let mock_server = MockServer::start().await;
+    mount_rescuegroups_mocks(&mock_server).await;
+
+    let config = RescueGroupsConfig {
+        api_key: "test-key".to_owned(),
+        base_url: format!("{}/v5", mock_server.uri()),
+    };
+    let (pc, _) = polite_client_for(&mock_server.uri());
+    let connector = RescueGroupsConnector::with_client(config, pc);
+
+    let since = Cursor::Timestamp(
+        chrono::DateTime::parse_from_rfc3339("2026-08-01T00:00:00Z")
+            .expect("ts")
+            .with_timezone(&chrono::Utc),
+    );
+    connector.poll(Some(since)).await.expect("delta poll");
+
+    let received = mock_server.received_requests().await.expect("requests");
+    let animal_requests: Vec<_> = received
+        .iter()
+        .filter(|r| r.url.path().starts_with("/v5/public/animals/search/available/"))
+        .collect();
+    assert!(!animal_requests.is_empty(), "expected at least one delta-poll request");
+
+    for req in &animal_requests {
+        let body: serde_json::Value =
+            serde_json::from_slice(&req.body).expect("request body must be JSON");
+        let filters = body["data"]["filters"]
+            .as_array()
+            .expect("filters must be an array");
+        assert_eq!(filters.len(), 1, "delta poll must send exactly one filter");
+        assert_eq!(
+            filters[0]["fieldName"], "animals.updatedDate",
+            "bare `updatedDate` 400s live; the API requires the `animals.` \
+             namespace prefix on filter fieldNames"
+        );
+    }
 }
 
 // ─── AC3: Socrata normalizes Austin fixture ──────────────────────────────────

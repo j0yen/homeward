@@ -1,5 +1,19 @@
 # Changelog
 
+## v0.2.3 — 2026-08-13
+
+Fixes a production HTTP 400 on every delta (second-and-later) rescuegroups
+poll: `{"errors":[{"source":{"pointer":"/data/filters/0/fieldName/updatedDate"},
+"title":"Invalid field","detail":"updatedDate is not a valid filter
+field"}]}`. Verified live: the real API namespaces filterable animal fields
+under the resource type — `animals.updatedDate` returns 200, bare
+`updatedDate` 400s. `fetch_page`'s filter construction is now factored into
+`build_filters`, which sends `animals.updatedDate`. This is currently the
+only filter fieldName the connector sends, so it's the only one that needed
+the prefix. Added unit tests for `build_filters` (full-poll = empty,
+delta-poll = namespaced field) and an integration test asserting the actual
+POST body sent on a delta poll.
+
 ## v0.2.2 — 2026-08-12
 
 Fixes the RescueGroups connector's "error decoding response body" that

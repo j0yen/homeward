@@ -1,5 +1,13 @@
 # Changelog
 
+## homeward-connectors v0.2.3 — 2026-08-13
+
+Fixes a production HTTP 400 on every delta rescuegroups poll: bare
+`updatedDate` is not a valid filter fieldName — verified live, the real API
+namespaces filterable fields under the resource type. `animals.updatedDate`
+returns 200. Filter construction is now in `build_filters`, unit- and
+integration-tested against the actual POST body sent.
+
 ## homeward-connectors v0.2.2 — 2026-08-12
 
 Fixes the RescueGroups connector's "error decoding response body", the
