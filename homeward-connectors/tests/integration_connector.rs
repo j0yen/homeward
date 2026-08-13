@@ -250,6 +250,71 @@ async fn ac2_rescuegroups_issues_one_post_per_species_under_public_path() {
     );
 }
 
+/// Regression test for the production "error decoding response body" bug:
+/// the deserialization structs must parse the *real* v5 `/public` JSON:API
+/// payload shape (captured live, 3 records per species), not the synthetic
+/// shape the old fixtures assumed. Runs the real payloads end-to-end through
+/// `poll()` — the exact path that was 500ing in production.
+#[tokio::test]
+async fn ac2_rescuegroups_deserializes_real_v5_public_payload_shape() {
+    let mock_server = MockServer::start().await;
+    let dogs_live = load_fixture("rg-sample-dogs.json");
+    let cats_live = load_fixture("rg-sample-cats.json");
+
+    Mock::given(method("POST"))
+        .and(path("/v5/public/animals/search/available/dogs"))
+        .respond_with(ResponseTemplate::new(200).set_body_string(dogs_live))
+        .mount(&mock_server)
+        .await;
+    Mock::given(method("POST"))
+        .and(path("/v5/public/animals/search/available/cats"))
+        .respond_with(ResponseTemplate::new(200).set_body_string(cats_live))
+        .mount(&mock_server)
+        .await;
+
+    let config = RescueGroupsConfig {
+        api_key: "test-key".to_owned(),
+        base_url: format!("{}/v5", mock_server.uri()),
+    };
+    let (pc, _) = polite_client_for(&mock_server.uri());
+    let connector = RescueGroupsConnector::with_client(config, pc);
+
+    let records = connector
+        .poll(None)
+        .await
+        .expect("poll must not fail deserializing the real v5 payload shape");
+    assert_eq!(records.len(), 6, "3 dogs + 3 cats from the live sample captures");
+
+    let dogs: Vec<_> = records.iter().filter(|r| r.species == Species::Dog).collect();
+    let cats: Vec<_> = records.iter().filter(|r| r.species == Species::Cat).collect();
+    assert_eq!(dogs.len(), 3, "expected 3 dog records");
+    assert_eq!(cats.len(), 3, "expected 3 cat records");
+
+    for rec in &records {
+        assert!(
+            rec.source_animal_id.as_deref().is_some_and(|id| !id.is_empty()),
+            "every record must have a populated (string) source_animal_id"
+        );
+    }
+
+    // Spot-check a known real dog record end-to-end (name/breed/photo).
+    let doli = dogs
+        .iter()
+        .find(|r| r.source_animal_id.as_deref() == Some("10131543"))
+        .expect("Doli (10131543) must be present");
+    assert_eq!(doli.breed_primary.as_deref(), Some("Husky"));
+    assert!(!doli.photos.is_empty(), "Doli must have a photo resolved via `included`");
+    assert!(doli.photos[0].url.starts_with("https://cdn.rescuegroups.org"));
+
+    // Spot-check a known real cat record end-to-end.
+    let stowaway = cats
+        .iter()
+        .find(|r| r.source_animal_id.as_deref() == Some("10013509"))
+        .expect("Stowaway (10013509) must be present");
+    assert_eq!(stowaway.breed_primary.as_deref(), Some("Domestic Short Hair"));
+    assert!(!stowaway.colors.is_empty(), "Stowaway must have a color resolved via `included`");
+}
+
 // ─── AC3: Socrata normalizes Austin fixture ──────────────────────────────────
 
 #[tokio::test]

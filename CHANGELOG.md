@@ -1,5 +1,19 @@
 # Changelog
 
+## homeward-connectors v0.2.2 — 2026-08-12
+
+Fixes the RescueGroups connector's "error decoding response body", the
+follow-on production error after v0.2.1 fixed the 404. The `/public` path
+was correct, but the connector's deserialization structs still assumed a
+synthetic payload shape that never matched the real v5 JSON:API response
+(`meta.count` not `totalRecords`; real attribute names like `breedPrimary`/
+`sizeGroup`/`descriptionText`/`createdDate`; `species`/`colors`/`pictures`
+as relationship references resolved via the top-level `included[]` array,
+not inline attributes). Species is now passed in directly from the
+per-species request rather than parsed from the payload. Added two
+live-captured sample payloads as regression fixtures and a deserialization
+test running them end-to-end through `poll()`.
+
 ## homeward-connectors v0.2.1 — 2026-08-12
 
 Fixes the RescueGroups connector's 404 against the live v5 API.

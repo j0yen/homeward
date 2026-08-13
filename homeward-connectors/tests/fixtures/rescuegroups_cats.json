@@ -4,39 +4,47 @@
       "id": "rg-cat-1",
       "type": "animals",
       "attributes": {
-        "species": "Cat",
         "sex": "spayed female",
         "ageString": "young",
-        "sizeDescription": "small",
+        "sizeGroup": "small",
         "name": "Mittens",
         "breedString": "Domestic Shorthair",
-        "primaryBreed": "Domestic Shorthair",
-        "secondaryBreed": null,
-        "colors": ["orange"],
-        "description": "A playful cat",
+        "breedPrimary": "Domestic Shorthair",
+        "breedSecondary": null,
+        "descriptionText": "A playful cat",
         "updatedDate": "2024-01-15T09:00:00Z",
-        "pubDate": "2024-01-10T07:00:00Z",
-        "statusCode": "available",
-        "foundLocation": null,
-        "chipStatus": "Scanned - Chip Present"
+        "createdDate": "2024-01-10T07:00:00Z"
       },
       "relationships": {
+        "colors": {
+          "data": [
+            { "type": "colors", "id": "c2" }
+          ]
+        },
         "pictures": {
           "data": [
-            {
-              "id": "pic-2",
-              "type": "pictures",
-              "attributes": {
-                "urlFull": "https://example.com/photos/mittens.jpg",
-                "isPrimary": true
-              }
-            }
+            { "type": "pictures", "id": "p2" }
           ]
         }
       }
     }
   ],
+  "included": [
+    {
+      "type": "colors",
+      "id": "c2",
+      "attributes": { "name": "orange" }
+    },
+    {
+      "type": "pictures",
+      "id": "p2",
+      "attributes": {
+        "large": { "url": "https://example.com/photos/mittens.jpg" },
+        "order": 1
+      }
+    }
+  ],
   "meta": {
-    "totalRecords": 1
+    "count": 1
   }
 }

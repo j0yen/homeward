@@ -1,5 +1,30 @@
 # Changelog
 
+## v0.2.2 — 2026-08-12
+
+Fixes the RescueGroups connector's "error decoding response body" that
+appeared in production after v0.2.1 fixed the 404. The `/public` path was
+right, but the deserialization structs still assumed a synthetic shape
+that doesn't match the real v5 JSON:API payload:
+
+- `meta.count`, not `meta.totalRecords`.
+- `id` is a JSON string, not a number (already correct, kept string).
+- `breedPrimary`/`breedSecondary`/`sizeGroup`/`descriptionText`/`createdDate`
+  replace the old (never-real) `primaryBreed`/`secondaryBreed`/
+  `sizeDescription`/`description`/`pubDate` field names.
+- `species` is not an attribute at all — the connector already knows which
+  species it queried (one request per species), so that's passed straight
+  through instead of parsed from the payload.
+- `colors` and `pictures` are JSON:API relationships (reference `type`+`id`
+  only); the full resource data lives in the top-level `included[]` array
+  and is now resolved via a `(type, id)` lookup built per page.
+
+Added two live-captured sample payloads (`rg-sample-dogs.json`,
+`rg-sample-cats.json`, 3 records each, public API data) as regression
+fixtures, plus a deserialization test running them end-to-end through
+`poll()` and asserting populated PetRecords (species, breed, photos,
+colors) per species.
+
 ## v0.2.1 — 2026-08-12
 
 Fixes the RescueGroups connector's 404 against the live v5 API. The

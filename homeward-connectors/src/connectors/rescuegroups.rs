@@ -9,7 +9,10 @@
 //! - Cache static lookups (breeds/species) — the `ToS` requires it
 //! - Images are hotlinked only (never downloaded)
 
-use std::time::Duration;
+use std::{
+    collections::{HashMap, HashSet},
+    time::Duration,
+};
 
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
@@ -142,6 +145,7 @@ impl RescueGroupsConnector {
             return Ok(RgPage {
                 data: vec![],
                 meta: RgMeta { total: 0 },
+                included: vec![],
             });
         }
 
@@ -168,15 +172,17 @@ impl Connector for RescueGroupsConnector {
         };
 
         let mut records = Vec::new();
-        let mut seen_ids = std::collections::HashSet::new();
+        let mut seen_ids = HashSet::new();
 
         for species in SPECIES {
+            let species_enum = species_from_query(species);
             let mut offset = 0u64;
 
             loop {
                 let page = self.fetch_page(species, offset, since_ts.as_ref()).await?;
                 let total = page.meta.total;
                 let batch_len = u64::try_from(page.data.len()).unwrap_or(u64::MAX);
+                let included = build_included_index(&page.included);
 
                 for item in page.data {
                     if !seen_ids.insert(item.id.clone()) {
@@ -184,7 +190,7 @@ impl Connector for RescueGroupsConnector {
                         // in more than one species page.
                         continue;
                     }
-                    match normalize_rg_record(item, &self.config) {
+                    match normalize_rg_record(item, species_enum, &included, &self.config) {
                         Ok(rec) => records.push(rec),
                         Err(e) => {
                             warn!("skipping RescueGroups record: {e}");
@@ -218,16 +224,30 @@ impl Connector for RescueGroupsConnector {
 }
 
 // ─── Serde types for JSON:API v5 ─────────────────────────────────────────────
+//
+// The real `/public/animals/search/available/{species}` payload is a JSON:API
+// envelope: `data[]` holds sparse animal resources (attributes + relationship
+// *references*), and `included[]` holds the full resources those references
+// point to (pictures, colors, breeds, species, statuses, locations, orgs —
+// matched by `(type, id)`). Species is deliberately NOT read from the
+// payload: the real API exposes it only as a `relationships.species`
+// reference, but the connector already knows which species it asked for
+// (one request per species — see `SPECIES`), so that's passed in directly
+// instead of round-tripping through `included`.
 
 #[derive(Debug, Deserialize)]
 struct RgPage {
     data: Vec<RgAnimal>,
     meta: RgMeta,
+    #[serde(default)]
+    included: Vec<RgIncludedItem>,
 }
 
 #[derive(Debug, Deserialize)]
 struct RgMeta {
-    #[serde(rename = "totalRecords", alias = "total")]
+    /// Total matching records across all pages (real key is `count`, not
+    /// `totalRecords` — the old name was never valid against the live API).
+    #[serde(rename = "count")]
     total: u64,
 }
 
@@ -240,80 +260,142 @@ struct RgAnimal {
     relationships: Option<RgRelationships>,
 }
 
+/// Animal attributes. Every field is `Option` — the real API omits most
+/// attributes on a per-record basis (e.g. `breedSecondary`, `sizeGroup`)
+/// depending on what the source shelter filled in. Unknown/unlisted
+/// attributes (there are ~44-54 per record) are silently ignored by serde.
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct RgAttributes {
-    species: Option<String>,
     sex: Option<String>,
     age_string: Option<String>,
-    size_description: Option<String>,
+    #[serde(rename = "sizeGroup")]
+    size_group: Option<String>,
     /// Animal's name at shelter (not mapped to `PetRecord` yet).
     #[allow(dead_code)]
     name: Option<String>,
     #[serde(rename = "breedString")]
     breed_string: Option<String>,
-    #[serde(rename = "primaryBreed")]
+    #[serde(rename = "breedPrimary")]
     primary_breed: Option<String>,
-    #[serde(rename = "secondaryBreed")]
+    #[serde(rename = "breedSecondary")]
     secondary_breed: Option<String>,
-    colors: Option<Vec<String>>,
+    #[serde(rename = "descriptionText")]
     description: Option<String>,
     #[serde(rename = "updatedDate")]
     updated_date: Option<String>,
-    /// Status code from `RescueGroups` (not normalized yet).
-    #[allow(dead_code)]
-    #[serde(rename = "statusCode")]
-    status_code: Option<String>,
+    /// Record creation timestamp — the closest real-API equivalent of the
+    /// old (never-actually-present) `pubDate` field; used for `first_seen`.
+    #[serde(rename = "createdDate")]
+    created_date: Option<String>,
+    /// Not present on adoptable-animal records in practice, kept optional
+    /// in case a future source populates it.
     found_location: Option<String>,
+    /// Not present in the live v5 payload today; kept optional so the
+    /// connector degrades gracefully rather than erroring if it appears.
     chip_status: Option<String>,
-    pub_date: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
 struct RgRelationships {
-    pictures: Option<RgPictureRel>,
+    colors: Option<RgRelationshipData>,
+    pictures: Option<RgRelationshipData>,
+}
+
+/// A JSON:API relationship: just resource references (`type` + `id`) — the
+/// full resource lives in the top-level `included[]` array.
+#[derive(Debug, Deserialize)]
+struct RgRelationshipData {
+    #[serde(default)]
+    data: Vec<RgResourceRef>,
 }
 
 #[derive(Debug, Deserialize)]
-struct RgPictureRel {
-    data: Option<Vec<RgPictureRef>>,
-}
-
-#[derive(Debug, Deserialize)]
-struct RgPictureRef {
-    /// JSON:API picture resource ID (not used for display).
-    #[allow(dead_code)]
-    id: Option<String>,
-    /// JSON:API resource type (always "pictures").
-    #[allow(dead_code)]
+struct RgResourceRef {
     #[serde(rename = "type")]
-    kind: Option<String>,
-    // Included picture attributes
-    attributes: Option<RgPictureAttrs>,
+    kind: String,
+    id: String,
 }
 
+/// One entry of the JSON:API `included[]` array. `attributes` is kept as
+/// raw JSON since its shape varies by `type` (pictures/colors/breeds/etc.)
+/// and we only need to pick a couple of fields out of a couple of types.
 #[derive(Debug, Deserialize)]
-#[serde(rename_all = "camelCase")]
-struct RgPictureAttrs {
-    #[serde(rename = "urlFull", alias = "url")]
-    url: Option<String>,
-    is_primary: Option<bool>,
+struct RgIncludedItem {
+    #[serde(rename = "type")]
+    kind: String,
+    id: String,
+    #[serde(default)]
+    attributes: serde_json::Value,
+}
+
+/// Lookup from `(type, id)` to attributes, built once per page so
+/// relationship references can be resolved against `included`.
+type IncludedIndex = HashMap<(String, String), serde_json::Value>;
+
+fn build_included_index(included: &[RgIncludedItem]) -> IncludedIndex {
+    included
+        .iter()
+        .map(|item| ((item.kind.clone(), item.id.clone()), item.attributes.clone()))
+        .collect()
+}
+
+/// Map the species query segment (`"dogs"`/`"cats"`) to the schema enum.
+/// `SPECIES` only ever yields these two values, so the fallback is
+/// unreachable in practice, not a silent misclassification risk.
+fn species_from_query(species: &str) -> Species {
+    match species {
+        "cats" => Species::Cat,
+        _ => Species::Dog,
+    }
+}
+
+/// Resolve a `pictures` relationship into `PhotoRef`s via `included`.
+/// Prefers the `large` variant (a reasonably sized hotlink), falling back to
+/// `original`/`small`. `order == 1` is treated as the primary photo — the
+/// real payload has no `isPrimary` flag, just a 1-indexed `order`.
+fn resolve_photos(refs: &[RgResourceRef], included: &IncludedIndex) -> Vec<PhotoRef> {
+    refs.iter()
+        .filter_map(|r| {
+            let attrs = included.get(&(r.kind.clone(), r.id.clone()))?;
+            let url = attrs
+                .get("large")
+                .or_else(|| attrs.get("original"))
+                .or_else(|| attrs.get("small"))
+                .and_then(|v| v.get("url"))
+                .and_then(|v| v.as_str())?;
+            let is_primary = attrs.get("order").and_then(serde_json::Value::as_u64) == Some(1);
+            Some(PhotoRef {
+                url: url.to_owned(),
+                attribution: None,
+                is_primary,
+            })
+        })
+        .collect()
+}
+
+/// Resolve a `colors` relationship into color names via `included`.
+fn resolve_colors(refs: &[RgResourceRef], included: &IncludedIndex) -> Vec<String> {
+    refs.iter()
+        .filter_map(|r| {
+            included
+                .get(&(r.kind.clone(), r.id.clone()))
+                .and_then(|attrs| attrs.get("name"))
+                .and_then(|v| v.as_str())
+                .map(ToOwned::to_owned)
+        })
+        .collect()
 }
 
 // ─── Normalization ─────────────────────────────────────────────────────────
 
 fn normalize_rg_record(
     animal: RgAnimal,
+    species: Species,
+    included: &IncludedIndex,
     _config: &RescueGroupsConfig,
 ) -> Result<PetRecord, ConnectorError> {
     let attr = &animal.attributes;
-
-    let species_str = attr
-        .species
-        .as_deref()
-        .unwrap_or("unknown");
-    let species = Species::from_str_strict(species_str)
-        .map_err(|_| ConnectorError::UnknownSpecies(species_str.to_owned()))?;
 
     let now = Utc::now();
 
@@ -324,14 +406,14 @@ fn normalize_rg_record(
         .map_or(now, |dt| dt.with_timezone(&Utc));
 
     let first_seen = attr
-        .pub_date
+        .created_date
         .as_deref()
         .and_then(|s| DateTime::parse_from_rfc3339(s).ok())
         .map_or(last_seen, |dt| dt.with_timezone(&Utc));
 
     let sex = attr.sex.as_deref().map(parse_sex);
     let age_bucket = attr.age_string.as_deref().map(parse_age);
-    let size = attr.size_description.as_deref().map(parse_size);
+    let size = attr.size_group.as_deref().map(parse_size);
 
     let breed_primary = attr
         .primary_breed
@@ -344,27 +426,21 @@ fn normalize_rg_record(
         .as_deref()
         .map_or(ChipStatus::Unknown, parse_chip_status);
 
-    let photos: Vec<PhotoRef> = animal
+    let picture_refs: &[RgResourceRef] = animal
         .relationships
         .as_ref()
         .and_then(|r| r.pictures.as_ref())
-        .and_then(|p| p.data.as_ref())
-        .map(|pics| {
-            pics.iter()
-                .filter_map(|p| {
-                    p.attributes.as_ref()?.url.as_ref().map(|url| PhotoRef {
-                        url: url.clone(),
-                        attribution: None,
-                        is_primary: p
-                            .attributes
-                            .as_ref()
-                            .and_then(|a| a.is_primary)
-                            .unwrap_or(false),
-                    })
-                })
-                .collect()
-        })
+        .map(|p| p.data.as_slice())
         .unwrap_or_default();
+    let photos = resolve_photos(picture_refs, included);
+
+    let color_refs: &[RgResourceRef] = animal
+        .relationships
+        .as_ref()
+        .and_then(|r| r.colors.as_ref())
+        .map(|c| c.data.as_slice())
+        .unwrap_or_default();
+    let colors = resolve_colors(color_refs, included);
 
     Ok(PetRecord {
         canonical_id: Ulid::new(),
@@ -376,7 +452,7 @@ fn normalize_rg_record(
         sex,
         age_bucket,
         size,
-        colors: attr.colors.clone().unwrap_or_default(),
+        colors,
         markings_text: attr.description.clone(),
         intake_type: IntakeType::Adoptable,
         availability: Availability::Adoptable,
@@ -443,11 +519,14 @@ mod tests {
     use super::*;
     use serde_json::json;
 
-    fn make_animal(id: &str, species: &str, extra: serde_json::Value) -> RgAnimal {
+    /// Build a minimal but structurally real `RgAnimal`: no `species`
+    /// attribute (the real payload never has one — it's supplied by the
+    /// caller, matching the per-species request), `createdDate` instead of
+    /// the old fictitious `pubDate`.
+    fn make_animal(id: &str, extra: serde_json::Value) -> RgAnimal {
         let mut attrs = json!({
-            "species": species,
             "updatedDate": "2024-01-15T10:00:00Z",
-            "pubDate": "2024-01-10T08:00:00Z",
+            "createdDate": "2024-01-10T08:00:00Z",
         });
         if let (serde_json::Value::Object(a), serde_json::Value::Object(e)) =
             (&mut attrs, extra)
@@ -467,23 +546,23 @@ mod tests {
     fn normalizes_dog_record() {
         let animal = make_animal(
             "dog-1",
-            "Dog",
             json!({
-                "primaryBreed": "Labrador Retriever",
+                "breedPrimary": "Labrador Retriever",
                 "sex": "male",
                 "ageString": "adult",
-                "sizeDescription": "large",
+                "sizeGroup": "large",
             }),
         );
         let config = RescueGroupsConfig {
             api_key: "test".to_owned(),
             base_url: "http://localhost".to_owned(),
         };
-        let rec = normalize_rg_record(animal, &config).expect("normalize");
+        let rec = normalize_rg_record(animal, Species::Dog, &IncludedIndex::new(), &config)
+            .expect("normalize");
         assert_eq!(rec.species, Species::Dog);
         assert_eq!(rec.intake_type, IntakeType::Adoptable);
         assert_eq!(rec.source.tos_class, TosClass::Api);
-        assert!(rec.photos.is_empty()); // no photos in fixture
+        assert!(rec.photos.is_empty()); // no pictures relationship in fixture
         assert!(rec.breed_primary.as_deref() == Some("Labrador Retriever"));
     }
 
@@ -491,9 +570,8 @@ mod tests {
     fn normalizes_cat_record() {
         let animal = make_animal(
             "cat-1",
-            "Cat",
             json!({
-                "primaryBreed": "Domestic Shorthair",
+                "breedPrimary": "Domestic Shorthair",
                 "sex": "spayed female",
                 "ageString": "young",
             }),
@@ -502,7 +580,8 @@ mod tests {
             api_key: "test".to_owned(),
             base_url: "http://localhost".to_owned(),
         };
-        let rec = normalize_rg_record(animal, &config).expect("normalize");
+        let rec = normalize_rg_record(animal, Species::Cat, &IncludedIndex::new(), &config)
+            .expect("normalize");
         assert_eq!(rec.species, Species::Cat);
         assert_eq!(rec.sex, Some(Sex::SpayedFemale));
     }
@@ -513,23 +592,20 @@ mod tests {
             api_key: "test".to_owned(),
             base_url: "http://localhost".to_owned(),
         };
-        let dog = make_animal("dog-2", "Dog", json!({}));
-        let cat = make_animal("cat-2", "Cat", json!({}));
-        let dog_rec = normalize_rg_record(dog, &config).expect("dog");
-        let cat_rec = normalize_rg_record(cat, &config).expect("cat");
+        let dog = make_animal("dog-2", json!({}));
+        let cat = make_animal("cat-2", json!({}));
+        let dog_rec = normalize_rg_record(dog, Species::Dog, &IncludedIndex::new(), &config)
+            .expect("dog");
+        let cat_rec = normalize_rg_record(cat, Species::Cat, &IncludedIndex::new(), &config)
+            .expect("cat");
         assert_eq!(dog_rec.species, Species::Dog);
         assert_eq!(cat_rec.species, Species::Cat);
     }
 
     #[test]
-    fn unknown_species_returns_error() {
-        let animal = make_animal("bird-1", "Bird", json!({}));
-        let config = RescueGroupsConfig {
-            api_key: "test".to_owned(),
-            base_url: "http://localhost".to_owned(),
-        };
-        let err = normalize_rg_record(animal, &config).expect_err("should fail");
-        assert!(matches!(err, ConnectorError::UnknownSpecies(_)));
+    fn species_from_query_maps_dogs_and_cats() {
+        assert_eq!(species_from_query("dogs"), Species::Dog);
+        assert_eq!(species_from_query("cats"), Species::Cat);
     }
 
     #[test]
@@ -599,5 +675,71 @@ mod tests {
     #[test]
     fn species_list_is_dogs_and_cats_one_at_a_time() {
         assert_eq!(SPECIES, ["dogs", "cats"]);
+    }
+
+    // ─── Deserialization regression: real v5 `/public` payload shape ──────────
+    //
+    // Captured live (3 records each) from the real API. Guards against the
+    // production "error decoding response body" regression: these exact
+    // structs must deserialize this exact JSON:API envelope (string `id`,
+    // `meta.count` not `totalRecords`, relationship refs resolved via
+    // `included`, ~50 mostly-optional attributes).
+
+    #[test]
+    fn deserializes_real_dogs_sample_and_populates_records() {
+        let raw = include_str!("../../tests/fixtures/rg-sample-dogs.json");
+        let page: RgPage = serde_json::from_str(raw).expect("real dogs sample must deserialize");
+        assert_eq!(page.data.len(), 3);
+
+        let included = build_included_index(&page.included);
+        let config = RescueGroupsConfig {
+            api_key: "test".to_owned(),
+            base_url: "http://localhost".to_owned(),
+        };
+
+        let mut saw_doli = false;
+        for animal in page.data {
+            let id = animal.id.clone();
+            let rec = normalize_rg_record(animal, Species::Dog, &included, &config)
+                .expect("normalize real dog record");
+            assert!(!rec.source_animal_id.as_deref().unwrap_or_default().is_empty());
+            assert_eq!(rec.species, Species::Dog);
+            if id == "10131543" {
+                saw_doli = true;
+                assert_eq!(rec.breed_primary.as_deref(), Some("Husky"));
+                assert!(!rec.photos.is_empty(), "Doli must have a photo resolved via `included`");
+                assert!(rec.photos[0].url.starts_with("https://cdn.rescuegroups.org"));
+            }
+        }
+        assert!(saw_doli, "expected animal 10131543 (Doli) in the dogs sample");
+    }
+
+    #[test]
+    fn deserializes_real_cats_sample_and_populates_records() {
+        let raw = include_str!("../../tests/fixtures/rg-sample-cats.json");
+        let page: RgPage = serde_json::from_str(raw).expect("real cats sample must deserialize");
+        assert_eq!(page.data.len(), 3);
+
+        let included = build_included_index(&page.included);
+        let config = RescueGroupsConfig {
+            api_key: "test".to_owned(),
+            base_url: "http://localhost".to_owned(),
+        };
+
+        let mut saw_stowaway = false;
+        for animal in page.data {
+            let id = animal.id.clone();
+            let rec = normalize_rg_record(animal, Species::Cat, &included, &config)
+                .expect("normalize real cat record");
+            assert!(!rec.source_animal_id.as_deref().unwrap_or_default().is_empty());
+            assert_eq!(rec.species, Species::Cat);
+            if id == "10013509" {
+                saw_stowaway = true;
+                assert_eq!(rec.breed_primary.as_deref(), Some("Domestic Short Hair"));
+                assert!(!rec.colors.is_empty(), "Stowaway must have a color resolved via `included`");
+                assert!(!rec.photos.is_empty(), "Stowaway must have a photo resolved via `included`");
+            }
+        }
+        assert!(saw_stowaway, "expected animal 10013509 (Stowaway) in the cats sample");
     }
 }
