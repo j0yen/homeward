@@ -83,8 +83,15 @@ impl RescueGroupsConfig {
 ///
 /// The endpoint lives under `/public` and takes exactly one species segment —
 /// a comma-joined list like `dogs,cats` 404s on the real API.
-fn build_search_url(base_url: &str, species: &str, offset: u64) -> String {
-    format!("{base_url}/public/animals/search/available/{species}?limit={PAGE_SIZE}&offset={offset}")
+///
+/// Paginates via `page` (1-based), not `offset`: verified live that the real
+/// API silently ignores `offset` entirely (identical `pageReturned:1` content
+/// no matter what offset is sent), while `page` advances correctly (distinct
+/// records, `meta.pageReturned` matching the requested page). The JSON:API-
+/// standard `page[number]`/`page[size]` form was also tried and returns no
+/// data at all — `page` (bare) is the only form that works against this API.
+fn build_search_url(base_url: &str, species: &str, page: u64) -> String {
+    format!("{base_url}/public/animals/search/available/{species}?limit={PAGE_SIZE}&page={page}")
 }
 
 /// Build the JSON:API `filters` array for a delta poll's "since" watermark
@@ -141,17 +148,17 @@ impl RescueGroupsConnector {
     async fn fetch_page(
         &self,
         species: &str,
-        offset: u64,
+        page: u64,
         since: Option<&DateTime<Utc>>,
     ) -> Result<RgPage, ConnectorError> {
-        let url_str = build_search_url(&self.config.base_url, species, offset);
+        let url_str = build_search_url(&self.config.base_url, species, page);
         let url = Url::parse(&url_str)?;
 
         let filters = build_filters(since);
         let body = serde_json::json!({ "data": { "filters": filters } });
         let body_bytes = serde_json::to_vec(&body)?;
 
-        debug!(%url, offset, species, "fetching RescueGroups page");
+        debug!(%url, page, species, "fetching RescueGroups page");
 
         let resp = self
             .client
@@ -168,7 +175,12 @@ impl RescueGroupsConnector {
         if resp.status() == StatusCode::NOT_MODIFIED {
             return Ok(RgPage {
                 data: vec![],
-                meta: RgMeta { total: 0 },
+                meta: RgMeta {
+                    total: 0,
+                    count_returned: 0,
+                    page_returned: 0,
+                    pages: 0,
+                },
                 included: vec![],
             });
         }
@@ -200,12 +212,13 @@ impl Connector for RescueGroupsConnector {
 
         for species in SPECIES {
             let species_enum = species_from_query(species);
-            let mut offset = 0u64;
+            let mut page_num = 1u64;
 
             loop {
-                let page = self.fetch_page(species, offset, since_ts.as_ref()).await?;
-                let total = page.meta.total;
-                let batch_len = u64::try_from(page.data.len()).unwrap_or(u64::MAX);
+                let page = self.fetch_page(species, page_num, since_ts.as_ref()).await?;
+                let pages_total = page.meta.pages;
+                let page_returned = page.meta.page_returned;
+                let count_returned = page.meta.count_returned;
                 let included = build_included_index(&page.included);
 
                 for item in page.data {
@@ -222,10 +235,16 @@ impl Connector for RescueGroupsConnector {
                     }
                 }
 
-                offset += PAGE_SIZE;
-                if batch_len < PAGE_SIZE || offset >= total {
+                // `offset` is silently ignored by the real API (verified live:
+                // identical `pageReturned:1` content no matter what offset was
+                // sent) — `page` is what actually advances. Terminate on
+                // `pageReturned >= pages` (also covers the zero-match case,
+                // where `pages` is 0) or a short page (`countReturned < limit`),
+                // mirroring the old offset-based dual condition.
+                if page_returned >= pages_total || count_returned < PAGE_SIZE {
                     break;
                 }
+                page_num += 1;
             }
         }
 
@@ -272,8 +291,25 @@ struct RgPage {
 struct RgMeta {
     /// Total matching records across all pages (real key is `count`, not
     /// `totalRecords` — the old name was never valid against the live API).
+    /// Not read by the pagination loop (`pages`/`pageReturned` decide
+    /// termination) — kept for completeness of the deserialized shape.
+    #[allow(dead_code)]
     #[serde(rename = "count")]
     total: u64,
+    /// Records returned on this page. Used only as a defensive fallback for
+    /// loop termination (see `poll`); normally `pages`/`pageReturned` decide.
+    #[serde(default, rename = "countReturned")]
+    count_returned: u64,
+    /// 1-based page number this response actually served. Verified live: the
+    /// API echoes back which page it served regardless of what page was
+    /// requested, so this — not the requested page number — is the source of
+    /// truth for "have we reached the last page".
+    #[serde(default, rename = "pageReturned")]
+    page_returned: u64,
+    /// Total number of pages available for this query (0 on a zero-match
+    /// page). Paired with `pageReturned` to decide when to stop paging.
+    #[serde(default)]
+    pages: u64,
 }
 
 #[derive(Debug, Deserialize)]
@@ -669,17 +705,17 @@ mod tests {
 
     #[test]
     fn build_search_url_uses_public_prefix() {
-        let url = build_search_url("https://api.rescuegroups.org/v5", "dogs", 0);
+        let url = build_search_url("https://api.rescuegroups.org/v5", "dogs", 1);
         assert_eq!(
             url,
-            "https://api.rescuegroups.org/v5/public/animals/search/available/dogs?limit=250&offset=0"
+            "https://api.rescuegroups.org/v5/public/animals/search/available/dogs?limit=250&page=1"
         );
     }
 
     #[test]
     fn build_search_url_never_comma_joins_species() {
         for species in SPECIES {
-            let url = build_search_url("https://api.rescuegroups.org/v5", species, 0);
+            let url = build_search_url("https://api.rescuegroups.org/v5", species, 1);
             assert!(
                 !url.contains(','),
                 "url must not comma-join species: {url}"
@@ -688,12 +724,15 @@ mod tests {
         }
     }
 
+    // Regression: `offset` is silently ignored by the real API (verified live
+    // — identical `pageReturned:1` content no matter what offset was sent).
+    // `page` is the query param that actually advances.
     #[test]
-    fn build_search_url_carries_offset_and_page_size() {
-        let url = build_search_url("https://api.rescuegroups.org/v5", "cats", 500);
+    fn build_search_url_carries_page_and_page_size() {
+        let url = build_search_url("https://api.rescuegroups.org/v5", "cats", 3);
         assert_eq!(
             url,
-            "https://api.rescuegroups.org/v5/public/animals/search/available/cats?limit=250&offset=500"
+            "https://api.rescuegroups.org/v5/public/animals/search/available/cats?limit=250&page=3"
         );
     }
 
@@ -831,5 +870,71 @@ mod tests {
         let raw = r#"{"meta":{"count":0,"countReturned":0,"pageReturned":1,"limit":250,"pages":0,"transactionId":"x"}}"#;
         let page: RgPage = serde_json::from_str(raw).expect("zero-match page must deserialize");
         assert!(page.data.is_empty());
+    }
+
+    // ─── Pagination regression: `offset` is ignored, `page` advances ──────────
+    //
+    // Verified live against the real API: sending `offset=0` vs `offset=250`
+    // (or any other value) returns byte-identical `data` and `pageReturned:1`
+    // every time — `offset` is silently ignored. `page=N` is the query param
+    // that actually advances (confirmed: `page=2` returns distinct record ids
+    // and echoes `pageReturned:2`). These tests cover the `RgMeta` fields the
+    // new page-loop termination logic depends on, and the loop logic itself.
+
+    #[test]
+    fn rg_meta_deserializes_pagination_fields() {
+        let raw = r#"{"count":31893,"countReturned":5,"pageReturned":2,"limit":5,"pages":6379,"transactionId":"x"}"#;
+        let meta: RgMeta = serde_json::from_str(raw).expect("meta must deserialize");
+        assert_eq!(meta.total, 31893);
+        assert_eq!(meta.count_returned, 5);
+        assert_eq!(meta.page_returned, 2);
+        assert_eq!(meta.pages, 6379);
+    }
+
+    #[test]
+    fn rg_meta_pagination_fields_default_when_absent() {
+        // Only `count` is guaranteed present on every response shape observed
+        // live (e.g. the zero-match payload). The rest must default rather
+        // than fail deserialization.
+        let raw = r#"{"count":0}"#;
+        let meta: RgMeta = serde_json::from_str(raw).expect("meta must deserialize");
+        assert_eq!(meta.total, 0);
+        assert_eq!(meta.count_returned, 0);
+        assert_eq!(meta.page_returned, 0);
+        assert_eq!(meta.pages, 0);
+    }
+
+    /// Mirrors the loop-termination condition in `Connector::poll` for
+    /// `RescueGroupsConnector`: `page_returned >= pages_total || count_returned
+    /// < PAGE_SIZE`. Exercised directly here (rather than only through the
+    /// wiremock integration test) so the termination arithmetic itself is
+    /// pinned independent of HTTP plumbing.
+    fn should_stop_paging(page_returned: u64, pages_total: u64, count_returned: u64) -> bool {
+        page_returned >= pages_total || count_returned < PAGE_SIZE
+    }
+
+    #[test]
+    fn pagination_loop_continues_when_more_pages_remain() {
+        // Full page (250 of 250), page 1 of many → keep going.
+        assert!(!should_stop_paging(1, 6379, PAGE_SIZE));
+    }
+
+    #[test]
+    fn pagination_loop_stops_on_last_page() {
+        // Page number caught up to the total page count → stop.
+        assert!(should_stop_paging(6379, 6379, PAGE_SIZE));
+    }
+
+    #[test]
+    fn pagination_loop_stops_on_short_page_even_if_pages_looks_bigger() {
+        // Defensive fallback: a short page (fewer than `limit` records) always
+        // stops the loop, regardless of what `pages`/`pageReturned` say.
+        assert!(should_stop_paging(1, 6379, PAGE_SIZE - 1));
+    }
+
+    #[test]
+    fn pagination_loop_stops_immediately_on_zero_match_page() {
+        // The zero-match shape: pages=0, pageReturned=1, countReturned=0.
+        assert!(should_stop_paging(1, 0, 0));
     }
 }

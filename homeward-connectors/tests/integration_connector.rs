@@ -25,7 +25,7 @@ use homeward_schema::{Species, TosClass};
 use reqwest::Client;
 use wiremock::{
     Mock, MockServer, ResponseTemplate,
-    matchers::{header, header_exists, method, path},
+    matchers::{header, header_exists, method, path, query_param},
 };
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -373,6 +373,83 @@ async fn ac2_rescuegroups_delta_poll_sends_animals_namespaced_filter_field() {
         chrono::DateTime::parse_from_rfc3339(criteria)
             .unwrap_or_else(|e| panic!("criteria must parse as RFC3339: {criteria}: {e}"));
     }
+}
+
+/// Regression test for the offset-pagination bug: the real API silently
+/// ignores `offset` (verified live — identical `pageReturned:1` content no
+/// matter what offset is sent) but honors `page`. This mocks a two-page dogs
+/// response (`meta.pages: 2`) keyed on the `page` query param and asserts
+/// the connector (a) requests both `page=1` and `page=2`, (b) merges records
+/// from both pages, and (c) stops after page 2 rather than looping forever
+/// or re-requesting page 1.
+#[tokio::test]
+async fn ac2_rescuegroups_pages_via_page_param_not_offset() {
+    let mock_server = MockServer::start().await;
+
+    let page1 = load_fixture("rescuegroups_dogs_page1.json");
+    let page2 = load_fixture("rescuegroups_dogs_page2.json");
+    let cats_fixture = load_fixture("rescuegroups_cats.json");
+
+    Mock::given(method("POST"))
+        .and(path("/v5/public/animals/search/available/dogs"))
+        .and(query_param("page", "1"))
+        .respond_with(ResponseTemplate::new(200).set_body_string(page1))
+        .mount(&mock_server)
+        .await;
+    Mock::given(method("POST"))
+        .and(path("/v5/public/animals/search/available/dogs"))
+        .and(query_param("page", "2"))
+        .respond_with(ResponseTemplate::new(200).set_body_string(page2))
+        .mount(&mock_server)
+        .await;
+    Mock::given(method("POST"))
+        .and(path("/v5/public/animals/search/available/cats"))
+        .respond_with(ResponseTemplate::new(200).set_body_string(cats_fixture))
+        .mount(&mock_server)
+        .await;
+
+    let config = RescueGroupsConfig {
+        api_key: "test-key".to_owned(),
+        base_url: format!("{}/v5", mock_server.uri()),
+    };
+    let (pc, _) = polite_client_for(&mock_server.uri());
+    let connector = RescueGroupsConnector::with_client(config, pc);
+
+    let records = connector.poll(None).await.expect("poll");
+
+    let dog_ids: Vec<_> = records
+        .iter()
+        .filter(|r| r.species == Species::Dog)
+        .filter_map(|r| r.source_animal_id.as_deref())
+        .collect();
+    assert!(
+        dog_ids.contains(&"rg-dog-page1") && dog_ids.contains(&"rg-dog-page2"),
+        "expected records merged from both pages, got: {dog_ids:?}"
+    );
+
+    let received = mock_server.received_requests().await.expect("requests");
+    let dog_requests: Vec<_> = received
+        .iter()
+        .filter(|r| r.url.path() == "/v5/public/animals/search/available/dogs")
+        .collect();
+    assert_eq!(
+        dog_requests.len(),
+        2,
+        "expected exactly page=1 and page=2 requests for dogs, got: {:?}",
+        dog_requests.iter().map(|r| r.url.query()).collect::<Vec<_>>()
+    );
+    assert!(
+        dog_requests.iter().any(|r| r.url.query() == Some("limit=250&page=1")),
+        "expected a page=1 request"
+    );
+    assert!(
+        dog_requests.iter().any(|r| r.url.query() == Some("limit=250&page=2")),
+        "expected a page=2 request"
+    );
+    assert!(
+        !dog_requests.iter().any(|r| r.url.query().is_some_and(|q| q.contains("offset"))),
+        "must not send `offset` — the real API silently ignores it"
+    );
 }
 
 // ─── AC3: Socrata normalizes Austin fixture ──────────────────────────────────

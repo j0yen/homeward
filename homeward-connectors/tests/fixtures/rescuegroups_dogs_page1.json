@@ -1,0 +1,33 @@
+{
+    "meta": {
+        "count": 251,
+        "countReturned": 250,
+        "pageReturned": 1,
+        "limit": 250,
+        "pages": 2,
+        "transactionId": "page1-txn"
+    },
+    "data": [
+        {
+            "id": "rg-dog-page1",
+            "type": "animals",
+            "attributes": {
+                "sex": "male",
+                "ageString": "adult",
+                "sizeGroup": "large",
+                "name": "Rex",
+                "breedString": "German Shepherd",
+                "breedPrimary": "German Shepherd",
+                "breedSecondary": null,
+                "descriptionText": "Page 1 dog",
+                "updatedDate": "2024-02-01T10:00:00Z",
+                "createdDate": "2024-01-20T08:00:00Z"
+            },
+            "relationships": {
+                "colors": { "data": [] },
+                "pictures": { "data": [] }
+            }
+        }
+    ],
+    "included": []
+}
