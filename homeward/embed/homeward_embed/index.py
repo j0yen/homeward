@@ -94,7 +94,8 @@ class EmbedIndex:
             )
             logger.info("Initialized new HNSW index (dim=%d, cap=%d)", embed_dim, max_elements)
 
-        self._index.set_ef(50)
+        self._ef = 50
+        self._index.set_ef(self._ef)
 
     # ------------------------------------------------------------------
     # Public API
@@ -159,6 +160,11 @@ class EmbedIndex:
                 return []
             # Over-fetch when filtering so we have enough after species post-filter
             fetch_k = min(k * 5, n) if species_filter else min(k, n)
+            # hnswlib requires ef >= the requested k, or knn_query raises. Bump ef
+            # (never lower it — a larger ef only costs latency, not correctness).
+            if fetch_k > self._ef:
+                self._ef = fetch_k
+                self._index.set_ef(self._ef)
             labels, distances = self._index.knn_query(vector.reshape(1, -1), k=fetch_k)
 
         results: list[tuple[str, float]] = []

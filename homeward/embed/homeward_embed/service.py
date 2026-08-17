@@ -157,6 +157,31 @@ def _embed_with_crop(image: Image.Image, species: Optional[str] = None) -> tuple
     return vec, detected
 
 
+def _dedup_matches(raw_matches: list[tuple[str, float]], k: int) -> list[tuple[str, float]]:
+    """Collapse raw per-photo kNN hits into one entry per animal.
+
+    An enrolled animal may have several photos in the gallery, so the same
+    canonical_id can occupy multiple raw hit slots. This keeps each
+    canonical_id's single best-scoring hit and returns the top *k* distinct
+    animals sorted by score descending.
+
+    Args:
+        raw_matches: Raw (canonical_id, score) hits from the index, one per photo,
+            in any order.
+        k: Number of distinct animals to return.
+
+    Returns:
+        Up to k (canonical_id, score) pairs, one per distinct canonical_id, sorted
+        by score descending. Fewer than k if fewer distinct animals are present.
+    """
+    best_by_id: dict[str, float] = {}
+    for canonical_id, score in raw_matches:
+        if canonical_id not in best_by_id or score > best_by_id[canonical_id]:
+            best_by_id[canonical_id] = score
+    deduped = sorted(best_by_id.items(), key=lambda item: item[1], reverse=True)
+    return deduped[:k]
+
+
 # ---------------------------------------------------------------------------
 # Endpoints
 # ---------------------------------------------------------------------------
@@ -200,8 +225,12 @@ async def query(req: QueryRequest) -> QueryResponse:
         image = Image.open(io.BytesIO(raw))
 
     vec, _ = _embed_with_crop(image, species=req.species_filter)
-    results = _index.query(vec, k=req.k, species_filter=req.species_filter)
-    matches = [QueryMatch(canonical_id=cid, score=score) for cid, score in results]
+    # Over-fetch raw per-photo hits so dedup below still has k distinct animals
+    # left after collapsing an animal's multiple enrolled photos.
+    fetch_k = max(req.k * 5, req.k + 20)
+    raw_results = _index.query(vec, k=fetch_k, species_filter=req.species_filter)
+    deduped = _dedup_matches(raw_results, req.k)
+    matches = [QueryMatch(canonical_id=cid, score=score) for cid, score in deduped]
     return QueryResponse(matches=matches)
 
 
