@@ -261,6 +261,7 @@ impl Connector for RescueGroupsConnector {
 
 #[derive(Debug, Deserialize)]
 struct RgPage {
+    #[serde(default)]
     data: Vec<RgAnimal>,
     meta: RgMeta,
     #[serde(default)]
@@ -814,5 +815,21 @@ mod tests {
             }
         }
         assert!(saw_stowaway, "expected animal 10013509 (Stowaway) in the cats sample");
+    }
+
+    // ─── Deserialization regression: zero-match page omits `data` entirely ────
+    //
+    // The real API doesn't send `"data":[]` on a zero-match page — it omits
+    // the `data` key altogether, leaving only `meta`. Without `#[serde(default)]`
+    // on `RgPage::data`, this fails with "missing field `data`", which surfaces
+    // as the intermittent "HTTP error: error decoding response body" poll
+    // failure (roughly half of poll cycles, whenever a page's filter matches
+    // zero records).
+
+    #[test]
+    fn deserializes_zero_match_page_with_no_data_key() {
+        let raw = r#"{"meta":{"count":0,"countReturned":0,"pageReturned":1,"limit":250,"pages":0,"transactionId":"x"}}"#;
+        let page: RgPage = serde_json::from_str(raw).expect("zero-match page must deserialize");
+        assert!(page.data.is_empty());
     }
 }
