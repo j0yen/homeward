@@ -54,7 +54,7 @@ Flickr-Dog are research-gated and not bundled.
 
 | Variable | Default | Description |
 |---|---|---|
-| `HW_EMBED_MODEL` | `base` | DINOv2 variant: `small` (384-d) or `base` (768-d) |
+| `HW_EMBED_MODEL` | `base` | DINOv2 variant: `small` (384-d), `base` (768-d), or `large` (1024-d) |
 | `HW_EMBED_INDEX_DIR` | `~/.local/share/homeward/embed-index` | Index storage path |
 | `HW_EMBED_PORT` | `8741` | Service port |
 | `HW_EMBED_HOST` | `127.0.0.1` | Service bind address |

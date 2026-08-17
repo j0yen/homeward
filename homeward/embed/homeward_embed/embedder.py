@@ -1,10 +1,12 @@
-"""DINOv2 photo embedder — produces L2-normalized 768-d (ViT-B) or 384-d (ViT-S) vectors.
+"""DINOv2 photo embedder — produces L2-normalized 1024-d (ViT-L), 768-d (ViT-B),
+or 384-d (ViT-S) vectors.
 
 Model choices:
   "facebook/dinov2-small" → 384-d  (ViT-S/14, faster on CPU)
   "facebook/dinov2-base"  → 768-d  (ViT-B/14, default, better accuracy)
+  "facebook/dinov2-large" → 1024-d (ViT-L/14, slower, higher accuracy)
 
-Both are Apache-2.0 licensed and commercially usable.
+All three are Apache-2.0 licensed and commercially usable.
 
 EXIF: any EXIF metadata present on a PIL image is stripped before processing
 via image.tobytes() round-trip — raw pixel data carries no EXIF.
@@ -23,14 +25,16 @@ from transformers import AutoImageProcessor, AutoModel  # type: ignore[import-un
 
 logger = logging.getLogger(__name__)
 
-ModelVariant = Literal["small", "base"]
+ModelVariant = Literal["small", "base", "large"]
 _MODEL_IDS: dict[ModelVariant, str] = {
     "small": "facebook/dinov2-small",
     "base": "facebook/dinov2-base",
+    "large": "facebook/dinov2-large",
 }
 _EMBED_DIMS: dict[ModelVariant, int] = {
     "small": 384,
     "base": 768,
+    "large": 1024,
 }
 
 
@@ -50,7 +54,8 @@ class PhotoEmbedder:
     """Embed a PIL image to an L2-normalized vector using DINOv2.
 
     Args:
-        variant: "small" (384-d, ViT-S/14) or "base" (768-d, ViT-B/14).
+        variant: "small" (384-d, ViT-S/14), "base" (768-d, ViT-B/14), or
+            "large" (1024-d, ViT-L/14).
         device: torch device string. Defaults to "cuda" if available, else "cpu".
     """
 
@@ -60,7 +65,7 @@ class PhotoEmbedder:
         device: str | None = None,
     ) -> None:
         if variant not in _MODEL_IDS:
-            msg = f"Unknown variant {variant!r}; choose 'small' or 'base'."
+            msg = f"Unknown variant {variant!r}; choose one of {sorted(_MODEL_IDS)}."
             raise ValueError(msg)
         self._variant = variant
         self._embed_dim = _EMBED_DIMS[variant]

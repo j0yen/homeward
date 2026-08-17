@@ -11,9 +11,9 @@ Commands:
   homeward-embed attest deliver — same as 'attest' (explicit form).
 
 Usage:
-  uv run homeward-embed warmup [--variant small|base]
-  uv run homeward-embed smoke  [--variant small|base] [--base-url http://...]
-  uv run homeward-embed attest [--variant small|base] [--out <path>]
+  uv run homeward-embed warmup [--variant small|base|large]
+  uv run homeward-embed smoke  [--variant small|base|large] [--base-url http://...]
+  uv run homeward-embed attest [--variant small|base|large] [--out <path>]
   uv run python -m homeward_embed.cli warmup
 """
 
@@ -744,7 +744,7 @@ def main(argv: Optional[list[str]] = None) -> None:
     p_warmup.add_argument(
         "--variant",
         default=_DEFAULT_VARIANT,
-        choices=["small", "base"],
+        choices=["small", "base", "large"],
         help="DINOv2 variant (default: %(default)s; override with HOMEWARD_EMBED_VARIANT).",
     )
     p_warmup.add_argument(
@@ -762,7 +762,7 @@ def main(argv: Optional[list[str]] = None) -> None:
     p_smoke.add_argument(
         "--variant",
         default=_DEFAULT_VARIANT,
-        choices=["small", "base"],
+        choices=["small", "base", "large"],
         help="DINOv2 variant (default: %(default)s).",
     )
     p_smoke.add_argument(
@@ -795,7 +795,7 @@ def main(argv: Optional[list[str]] = None) -> None:
     p_eval.add_argument(
         "--embed-variant",
         default=_DEFAULT_VARIANT,
-        choices=["small", "base"],
+        choices=["small", "base", "large"],
         dest="embed_variant",
         help="DINOv2 variant (default: %(default)s).",
     )
@@ -834,7 +834,7 @@ def main(argv: Optional[list[str]] = None) -> None:
     p_attest.add_argument(
         "--variant",
         default=_DEFAULT_VARIANT,
-        choices=["small", "base"],
+        choices=["small", "base", "large"],
         help="DINOv2 variant (default: %(default)s).",
     )
     p_attest.add_argument(
