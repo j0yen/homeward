@@ -1,0 +1,687 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Paws &amp; Petals</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Paws &amp; Petals — a live wall of adoptable shelter dogs and cats.">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='20' fill='%23faf6ef'/%3E%3Cellipse cx='50' cy='62' rx='26' ry='20' fill='%238a9a7e'/%3E%3Ccircle cx='24' cy='38' r='11' fill='%238a9a7e'/%3E%3Ccircle cx='44' cy='24' r='12' fill='%238a9a7e'/%3E%3Ccircle cx='66' cy='24' r='12' fill='%238a9a7e'/%3E%3Ccircle cx='80' cy='42' r='11' fill='%238a9a7e'/%3E%3C/svg%3E">
+<style>
+  :root {
+    --cream: #faf6ef;
+    --cream-deep: #f3ebdf;
+    --sage: #8a9a7e;
+    --sage-deep: #6f8064;
+    --blush: #e7b6ac;
+    --blush-deep: #d99a90;
+    --text: #4a4238;
+    --text-soft: #7a7166;
+    --wallbg: #0c0c0e;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: var(--wallbg);
+    color: var(--cream);
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ── The wall ─────────────────────────────────────────────────────── */
+
+  #wall {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 0;
+    background: var(--wallbg);
+    min-height: 100vh;
+  }
+
+  .tile {
+    position: relative;
+    aspect-ratio: 1 / 1;
+    overflow: hidden;
+    background: #17171a;
+    cursor: pointer;
+  }
+
+  .tile img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    transition: transform 0.35s ease;
+  }
+
+  .tile:hover img { transform: scale(1.04); }
+
+  .tile.tile-new { animation: tile-in 0.55s ease both; }
+
+  @keyframes tile-in {
+    from { opacity: 0; transform: scale(0.82); }
+    to   { opacity: 1; transform: scale(1); }
+  }
+
+  #sentinel { height: 1px; }
+
+  /* ── Floating brand chip ──────────────────────────────────────────── */
+
+  #chip {
+    position: fixed;
+    top: 14px;
+    left: 14px;
+    z-index: 50;
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    background: var(--cream);
+    color: var(--text);
+    padding: 0.55rem 0.95rem 0.55rem 0.55rem;
+    border-radius: 999px;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
+    max-width: calc(100vw - 28px);
+  }
+
+  #chip svg { width: 28px; height: 28px; flex-shrink: 0; }
+
+  #chip .chip-title {
+    font-family: ui-serif, Georgia, "Times New Roman", serif;
+    font-weight: 600;
+    color: var(--sage-deep);
+    font-size: 0.95rem;
+    line-height: 1.2;
+  }
+
+  #chip .chip-count {
+    color: var(--text-soft);
+    font-size: 0.75rem;
+    line-height: 1.2;
+  }
+
+  /* ── Footer ────────────────────────────────────────────────────────── */
+
+  #site-footer {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 40;
+    text-align: center;
+    font-size: 0.72rem;
+    color: rgba(250, 246, 239, 0.6);
+    background: linear-gradient(to top, rgba(12, 12, 14, 0.85), rgba(12, 12, 14, 0));
+    padding: 1.1rem 0.5rem 0.55rem;
+    pointer-events: none;
+  }
+
+  /* ── Popover ───────────────────────────────────────────────────────── */
+
+  .popover {
+    position: absolute;
+    z-index: 60;
+    width: 280px;
+    max-width: calc(100vw - 24px);
+    background: var(--cream);
+    border: 1px solid var(--sage);
+    border-radius: 12px;
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.4);
+    padding: 0.9rem 1rem 0.8rem;
+    color: var(--text);
+    font-size: 0.82rem;
+  }
+
+  .popover[hidden] { display: none; }
+
+  .popover h3 {
+    margin: 0 0 0.5rem;
+    font-family: ui-serif, Georgia, "Times New Roman", serif;
+    color: var(--sage-deep);
+    font-size: 1.05rem;
+  }
+
+  .popover dl {
+    margin: 0;
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 0.18rem 0.6rem;
+    max-height: 260px;
+    overflow-y: auto;
+  }
+
+  .popover dt {
+    font-weight: 600;
+    color: var(--sage-deep);
+    white-space: nowrap;
+  }
+
+  .popover dd {
+    margin: 0;
+    color: var(--text);
+    word-break: break-word;
+  }
+
+  .popover .desc {
+    grid-column: 1 / -1;
+    max-height: 110px;
+    overflow-y: auto;
+    border-top: 1px solid var(--blush);
+    margin-top: 0.5rem;
+    padding-top: 0.5rem;
+    white-space: pre-line;
+    color: var(--text);
+  }
+
+  .popover .attrib {
+    grid-column: 1 / -1;
+    font-size: 0.7rem;
+    color: var(--text-soft);
+    margin-top: 0.4rem;
+  }
+
+  /* ── Toasts ────────────────────────────────────────────────────────── */
+
+  #toast-container {
+    position: fixed;
+    top: 14px;
+    right: 14px;
+    z-index: 70;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    align-items: flex-end;
+    pointer-events: none;
+  }
+
+  .toast {
+    background: var(--sage);
+    color: var(--cream);
+    padding: 0.5rem 0.85rem;
+    border-radius: 8px;
+    font-size: 0.8rem;
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.35);
+    animation: toast-in 0.3s ease both, toast-out 0.4s ease 3.6s forwards;
+  }
+
+  @keyframes toast-in {
+    from { opacity: 0; transform: translateY(-6px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes toast-out {
+    to { opacity: 0; transform: translateY(-6px); }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .tile img, .tile.tile-new, .toast { animation: none !important; transition: none !important; }
+  }
+</style>
+</head>
+<body>
+
+<div id="chip">
+  <svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Paws and Petals mark">
+    <circle cx="46" cy="30" r="13" fill="#e7b6ac"/>
+    <circle cx="26" cy="42" r="13" fill="#e7b6ac"/>
+    <circle cx="66" cy="42" r="13" fill="#e7b6ac"/>
+    <circle cx="46" cy="52" r="13" fill="#e7b6ac"/>
+    <circle cx="46" cy="41" r="10" fill="#f3ebdf"/>
+    <ellipse cx="66" cy="82" rx="30" ry="24" fill="#8a9a7e"/>
+    <circle cx="36" cy="58" r="12" fill="#8a9a7e"/>
+    <circle cx="58" cy="46" r="13" fill="#8a9a7e"/>
+    <circle cx="84" cy="46" r="13" fill="#8a9a7e"/>
+    <circle cx="100" cy="60" r="12" fill="#8a9a7e"/>
+  </svg>
+  <div>
+    <div class="chip-title">Paws &amp; Petals</div>
+    <div class="chip-count" id="chip-count">Loading buddies&hellip;</div>
+  </div>
+</div>
+
+<main id="wall" aria-label="Live wall of adoptable shelter dogs and cats"></main>
+<div id="sentinel"></div>
+
+<div id="popover" class="popover" hidden></div>
+<div id="toast-container" aria-live="polite"></div>
+
+<footer id="site-footer">Photos remain the property of their source shelters and rescues.</footer>
+
+<script>
+(function () {
+  'use strict';
+
+  var wall = document.getElementById('wall');
+  var sentinel = document.getElementById('sentinel');
+  var popover = document.getElementById('popover');
+  var toasts = document.getElementById('toast-container');
+  var chipCount = document.getElementById('chip-count');
+
+  var cursor = null;
+  var loading = false;
+  var done = false;
+  var activeTileEl = null;
+  var liveTotal = null;
+  var hideTimer = null;
+
+  // Cross-origin SSE stream host (bypasses the Cloudflare proxy, which stalls
+  // /api/stream over HTTP/2 — see stream.pawsandpetals.org), the dedupe guard
+  // shared between the SSE path and the polling fallback below, and the
+  // running high-water mark used to detect genuinely new buddies while polling.
+  var seenIds = Object.create(null);
+  var newestKnownId = null;
+  var sseFailCount = 0;
+  var pollFallbackTimer = null;
+
+  function trackSeen(id) {
+    seenIds[id] = true;
+    if (newestKnownId === null || id > newestKnownId) newestKnownId = id;
+  }
+
+  function speciesLabel(s) {
+    if (!s) return '';
+    return s.charAt(0).toUpperCase() + s.slice(1);
+  }
+
+  function titleCase(s) {
+    if (!s) return '';
+    return String(s).split('_').map(function (w) {
+      return w.charAt(0).toUpperCase() + w.slice(1);
+    }).join(' ');
+  }
+
+  function fmtDate(iso) {
+    if (!iso) return null;
+    var d = new Date(iso);
+    if (isNaN(d.getTime())) return iso;
+    return d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+  }
+
+  function decodeEntities(text) {
+    var map = {
+      '&nbsp;': ' ', '&#39;': "'", '&quot;': '"',
+      '&mdash;': '—', '&hellip;': '…', '&rsquo;': '’', '&amp;': '&'
+    };
+    return text.replace(/&nbsp;|&#39;|&quot;|&mdash;|&hellip;|&rsquo;|&amp;/g, function (m) {
+      return map[m] || m;
+    });
+  }
+
+  function makeTile(buddy) {
+    var el = document.createElement('div');
+    el.className = 'tile';
+    el.dataset.id = buddy.canonical_id;
+    var img = document.createElement('img');
+    img.loading = 'lazy';
+    img.src = buddy.primary_photo_url;
+    var r = buddy.record || {};
+    img.alt = [r.breed_primary, speciesLabel(buddy.species)].filter(Boolean).join(' ') || 'Shelter animal photo';
+    el.appendChild(img);
+
+    el.addEventListener('mouseenter', function () { showPopover(el, buddy); });
+    el.addEventListener('mouseleave', hidePopoverSoon);
+    el.addEventListener('touchstart', function (ev) {
+      ev.stopPropagation();
+      if (activeTileEl === el) { hidePopover(); return; }
+      showPopover(el, buddy);
+    }, { passive: true });
+
+    return el;
+  }
+
+  function appendBuddies(items) {
+    var frag = document.createDocumentFragment();
+    for (var i = 0; i < items.length; i++) {
+      var b = items[i];
+      if (!b.primary_photo_url) continue;
+      if (seenIds[b.canonical_id]) continue;
+      trackSeen(b.canonical_id);
+      frag.appendChild(makeTile(b));
+    }
+    wall.appendChild(frag);
+  }
+
+  // Shared by both the SSE 'buddy' handler and the polling fallback below,
+  // so a buddy that arrives via one path is never re-inserted via the other.
+  function prependBuddy(buddy) {
+    if (!buddy.primary_photo_url) return;
+    if (seenIds[buddy.canonical_id]) return;
+    trackSeen(buddy.canonical_id);
+    var el = makeTile(buddy);
+    el.classList.add('tile-new');
+    wall.insertBefore(el, wall.firstChild);
+    showToast(buddy);
+    if (liveTotal !== null) {
+      liveTotal += 1;
+      renderCount(liveTotal);
+    }
+  }
+
+  function showToast(buddy) {
+    var t = document.createElement('div');
+    t.className = 'toast';
+    var r = buddy.record || {};
+    var breed = r.breed_primary || 'Mixed breed';
+    t.textContent = 'New buddy: ' + breed + ' (' + speciesLabel(buddy.species) + ')';
+    toasts.appendChild(t);
+    setTimeout(function () { t.remove(); }, 4200);
+  }
+
+  // On a large enough monitor, a single 100-tile page can fit entirely
+  // within the viewport: the document never overflows, no scrollbar ever
+  // appears, and the sentinel sits inside the viewport from the very first
+  // paint. IntersectionObserver only fires on intersection CHANGES, so if
+  // the sentinel is already intersecting and stays that way (nothing ever
+  // crosses the threshold again), it never re-fires and the wall wedges at
+  // one page. So rather than relying solely on the observer, re-check after
+  // every append and keep pulling pages until the page genuinely overflows
+  // by a comfortable margin or the corpus is exhausted.
+  var OVERFLOW_BUFFER_PX = 600;
+
+  function needsMorePages() {
+    if (done) return false;
+    return document.documentElement.scrollHeight <= window.innerHeight + OVERFLOW_BUFFER_PX;
+  }
+
+  function loadMore() {
+    if (loading || done) return;
+    loading = true;
+    var url = new URL('/api/buddies', window.location.href);
+    url.searchParams.set('limit', '100');
+    if (cursor) url.searchParams.set('before', cursor);
+    fetch(url).then(function (res) { return res.json(); }).then(function (data) {
+      appendBuddies(data.items || []);
+      cursor = data.next_cursor || null;
+      if (!cursor) done = true;
+    }).catch(function (e) {
+      console.error('loadMore failed', e);
+    }).finally(function () {
+      loading = false;
+      // Keep the in-flight guard (loading is false again by the time this
+      // runs) so pages still load strictly one at a time.
+      if (needsMorePages()) loadMore();
+    });
+  }
+
+  function fieldRow(dl, label, value) {
+    if (value === null || value === undefined) return;
+    if (typeof value === 'string' && value.trim() === '') return;
+    var dt = document.createElement('dt');
+    dt.textContent = label;
+    var dd = document.createElement('dd');
+    dd.textContent = value;
+    dl.appendChild(dt);
+    dl.appendChild(dd);
+  }
+
+  function chipStatusText(chip) {
+    if (!chip || !chip.status) return null;
+    switch (chip.status) {
+      case 'scanned':
+        return chip.chip ? ('Scanned (' + chip.chip + ')') : 'Scanned, no chip number recorded';
+      case 'scan_no_chip':
+        return 'Scanned, no chip found';
+      case 'not_scanned':
+        return 'Not yet scanned';
+      default:
+        return null;
+    }
+  }
+
+  function buildPopoverContent(buddy) {
+    var r = buddy.record || {};
+    popover.innerHTML = '';
+
+    var h3 = document.createElement('h3');
+    h3.textContent = [r.breed_primary, r.breed_secondary].filter(Boolean).join(' / ') || speciesLabel(buddy.species);
+    popover.appendChild(h3);
+
+    var dl = document.createElement('dl');
+    fieldRow(dl, 'ID', buddy.canonical_id);
+    fieldRow(dl, 'Species', speciesLabel(buddy.species));
+    fieldRow(dl, 'Sex', r.sex ? titleCase(r.sex) : null);
+    fieldRow(dl, 'Age', r.age_bucket ? titleCase(r.age_bucket) : null);
+    fieldRow(dl, 'Size', r.size ? titleCase(r.size) : null);
+    fieldRow(dl, 'Colors', (r.colors && r.colors.length) ? r.colors.join(', ') : null);
+    fieldRow(dl, 'Availability', buddy.availability ? titleCase(buddy.availability) : null);
+    fieldRow(dl, 'Intake type', r.intake_type ? titleCase(r.intake_type) : null);
+    fieldRow(dl, 'Intake date', fmtDate(r.intake_date));
+    fieldRow(dl, 'Outcome date', fmtDate(r.outcome_date));
+    fieldRow(dl, 'Chip status', chipStatusText(r.chip_status));
+
+    if (r.location) {
+      var loc = [r.location.city_county, r.location.state].filter(Boolean).join(', ');
+      fieldRow(dl, 'Location', loc || null);
+    } else if (r.found_location_text) {
+      fieldRow(dl, 'Found near', r.found_location_text);
+    }
+
+    fieldRow(dl, 'Source', (r.source && r.source.name) ? titleCase(r.source.name) : null);
+    fieldRow(dl, 'First seen', fmtDate(r.first_seen));
+    fieldRow(dl, 'Last seen', fmtDate(r.last_seen));
+    fieldRow(dl, 'Last confirmed', fmtDate(r.last_confirmed));
+
+    popover.appendChild(dl);
+
+    if (r.markings_text) {
+      var desc = document.createElement('div');
+      desc.className = 'desc';
+      desc.textContent = decodeEntities(r.markings_text);
+      popover.appendChild(desc);
+    }
+
+    var photos = r.photos || [];
+    var primaryPhoto = null;
+    for (var i = 0; i < photos.length; i++) {
+      if (photos[i].is_primary) { primaryPhoto = photos[i]; break; }
+    }
+    if (!primaryPhoto) primaryPhoto = photos[0];
+    if (primaryPhoto && primaryPhoto.attribution) {
+      var attrib = document.createElement('div');
+      attrib.className = 'attrib';
+      attrib.textContent = 'Photo: ' + primaryPhoto.attribution;
+      popover.appendChild(attrib);
+    }
+  }
+
+  function showPopover(tileEl, buddy) {
+    if (hideTimer) { clearTimeout(hideTimer); hideTimer = null; }
+    activeTileEl = tileEl;
+    buildPopoverContent(buddy);
+    popover.hidden = false;
+    positionPopover(tileEl);
+  }
+
+  function hidePopoverSoon() {
+    hideTimer = setTimeout(hidePopover, 150);
+  }
+
+  function hidePopover() {
+    popover.hidden = true;
+    activeTileEl = null;
+  }
+
+  function positionPopover(tileEl) {
+    var rect = tileEl.getBoundingClientRect();
+    var pw = 280, margin = 10;
+
+    var ph = popover.offsetHeight || 220;
+
+    var left = rect.right + margin + window.scrollX;
+    if (left + pw > window.scrollX + window.innerWidth) {
+      left = rect.left - pw - margin + window.scrollX;
+    }
+    if (left < window.scrollX + margin) {
+      left = Math.min(rect.left, window.innerWidth - pw - margin) + window.scrollX;
+    }
+
+    var top = rect.top + window.scrollY;
+    if (top + ph > window.scrollY + window.innerHeight) {
+      top = Math.max(window.scrollY + margin, rect.bottom + window.scrollY - ph);
+    }
+
+    popover.style.left = Math.max(margin, left) + 'px';
+    popover.style.top = Math.max(margin, top) + 'px';
+  }
+
+  document.addEventListener('click', function (ev) {
+    if (popover.hidden) return;
+    if (popover.contains(ev.target)) return;
+    if (activeTileEl && activeTileEl.contains(ev.target)) return;
+    hidePopover();
+  });
+
+  popover.addEventListener('mouseenter', function () {
+    if (hideTimer) { clearTimeout(hideTimer); hideTimer = null; }
+  });
+  popover.addEventListener('mouseleave', hidePopoverSoon);
+
+  var io = new IntersectionObserver(function (entries) {
+    entries.forEach(function (entry) {
+      if (entry.isIntersecting) loadMore();
+    });
+  }, { rootMargin: '600px' });
+  io.observe(sentinel);
+
+  // Defense in depth for the observer above: a window resize (e.g. moving
+  // the tab to a bigger monitor, or a browser chrome change) can put the
+  // sentinel back in view without ever firing a fresh intersection change.
+  // loadMore()'s own needsMorePages() check after each append already
+  // covers the common "wedged on first page" case; this covers the rarer
+  // mid-session resize case the same way.
+  window.addEventListener('resize', function () {
+    if (needsMorePages()) loadMore();
+  });
+
+  function renderCount(n) {
+    chipCount.textContent = n.toLocaleString() + ' buddies and counting';
+  }
+
+  function loadStats() {
+    fetch('/api/stats').then(function (res) { return res.json(); }).then(function (data) {
+      if (typeof data.total === 'number') {
+        liveTotal = data.total;
+        renderCount(liveTotal);
+      }
+    }).catch(function (e) {
+      console.error('stats load failed', e);
+    });
+  }
+
+  // On pawsandpetals.org/www, Cloudflare's HTTP/2 edge silently stalls
+  // /api/stream (zero bytes, not even headers — real browsers all speak h2).
+  // stream.pawsandpetals.org is DNS-only (grey cloud), going straight to the
+  // Caddy origin, so SSE works there regardless of protocol. Anywhere else
+  // (pages.dev copy, localhost dev, direct hub access) same-origin still
+  // works fine, so stay same-origin there.
+  function streamUrl() {
+    var host = window.location.hostname;
+    if (host === 'pawsandpetals.org' || host === 'www.pawsandpetals.org') {
+      return 'https://stream.pawsandpetals.org/api/stream';
+    }
+    return new URL('/api/stream', window.location.href).href;
+  }
+
+  // Polling fallback for when SSE cannot get through at all (some network
+  // path still blocking it): re-fetch the newest page of /api/buddies and
+  // prepend anything past `newestKnownId` through the same prependBuddy path
+  // SSE uses, so both paths dedupe against each other via seenIds.
+  function pollForNewBuddies() {
+    var url = new URL('/api/buddies', window.location.href);
+    url.searchParams.set('limit', '25');
+    fetch(url).then(function (res) { return res.json(); }).then(function (data) {
+      var items = data.items || [];
+      var fresh = [];
+      for (var i = 0; i < items.length; i++) {
+        var id = items[i].canonical_id;
+        if (newestKnownId !== null && id <= newestKnownId) break; // newest-first: rest are old
+        if (!seenIds[id]) fresh.push(items[i]);
+      }
+      // fresh is newest-first; prepend oldest-of-the-new first so the
+      // actual newest ends up on top, same ordering SSE produces.
+      for (var j = fresh.length - 1; j >= 0; j--) {
+        prependBuddy(fresh[j]);
+      }
+    }).catch(function (e) {
+      console.error('poll fallback failed', e);
+    });
+  }
+
+  function startPollFallback() {
+    if (pollFallbackTimer) return;
+    pollForNewBuddies();
+    pollFallbackTimer = setInterval(pollForNewBuddies, 60000);
+  }
+
+  function stopPollFallback() {
+    if (pollFallbackTimer) {
+      clearInterval(pollFallbackTimer);
+      pollFallbackTimer = null;
+    }
+  }
+
+  function connectStream() {
+    var es;
+    try {
+      es = new EventSource(streamUrl());
+    } catch (e) {
+      handleSseFailure();
+      return;
+    }
+    es.addEventListener('buddy', function (ev) {
+      try {
+        var buddy = JSON.parse(ev.data);
+        prependBuddy(buddy);
+      } catch (e) {
+        console.error('malformed buddy event', e);
+      }
+    });
+    es.onopen = function () {
+      sseFailCount = 0;
+      stopPollFallback();
+      // Reconnects can miss broadcasts (dropped/lagged clients aren't
+      // replayed — see stream.rs), so grab the true count right away
+      // instead of waiting out the rest of the resync interval.
+      loadStats();
+    };
+    es.onerror = function () {
+      es.close();
+      handleSseFailure();
+    };
+  }
+
+  // Two consecutive failures to open the stream (not just a drop after a
+  // good connection, since onopen resets the count) means something on this
+  // network path is blocking SSE outright: start the polling fallback and
+  // slow SSE retries down to every few minutes so we do not hammer either
+  // endpoint while the wall stays live off polling.
+  function handleSseFailure() {
+    sseFailCount += 1;
+    if (sseFailCount >= 2) {
+      startPollFallback();
+      setTimeout(connectStream, 180000 + Math.floor(Math.random() * 30000));
+    } else {
+      setTimeout(connectStream, 3000);
+    }
+  }
+
+  // /api/stats is edge-cached ~30s, so a plain periodic re-fetch is cheap.
+  // Jittered 60-90s (rather than a fixed interval) so many open tabs don't
+  // all hit the endpoint in lockstep.
+  function scheduleStatsResync() {
+    var delay = 60000 + Math.floor(Math.random() * 30000);
+    setTimeout(function () {
+      loadStats();
+      scheduleStatsResync();
+    }, delay);
+  }
+
+  loadMore();
+  loadStats();
+  scheduleStatsResync();
+  connectStream();
+})();
+</script>
+</body>
+</html>
