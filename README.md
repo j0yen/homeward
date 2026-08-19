@@ -58,6 +58,10 @@ Configuration lives in `~/.config/homeward/homeward.env` (see `deploy/homeward.e
 
 Working multi-crate system, actively developed (v0.36.0). The matching path runs real photo-embedding fusion end to end. Accuracy is recorded honestly in `EVAL.md`: the bundled `eval-smoke` fixture proves the harness arithmetic, not a real-world accuracy number — measured accuracy against held-out datasets is reported separately there. The model weights it depends on (DINOv2, YOLO COCO) are documented in `homeward/embed/README.md`; non-commercial and research-gated weights are deliberately not bundled.
 
+## Live match demo
+
+[Finding Coconut](https://claude.ai/code/artifact/cf3fc099-3138-4080-84d6-672741d83770) — two real queries against the production embed index: a doctored photo of an enrolled dog (rank 1 at 0.978 with a 0.22 margin), and a never-seen Labrador that surfaces five Labrador lookalikes without a false match. Real photos, scores, and ranked candidates from the live system.
+
 ## License
 
 MIT OR Apache-2.0 © Joe Yen
