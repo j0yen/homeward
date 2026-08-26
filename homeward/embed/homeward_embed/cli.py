@@ -338,6 +338,7 @@ def cmd_eval(args: argparse.Namespace) -> int:
         "rank20": result.rank20,
         "mAP": result.mAP,
         "n_queries": result.n_queries,
+        "per_query": result.extra.get("per_query", []),
         "n_gallery": result.n_gallery,
         "embed_variant": result.embed_variant,
         "ks": list(ks),

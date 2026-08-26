@@ -54,6 +54,32 @@ uv run pytest tests/test_eval.py::TestFixtureCorrectness -v
 
 ---
 
+## Measured accuracy — cross-session holdout (DINOv2, 2026-08-26)
+
+The 500-individual holdout above pairs photos from the same listing session, so
+its numbers read optimistic for the real task (an owner's older photo against a
+shelter's current intake photo). This holdout fixes that using RescueGroups v5
+picture `created` timestamps: an animal's pictures are clustered into capture
+sessions (≥30 days apart); the gallery entry is one photo from the *newest*
+session and the queries are up to three photos from the nearest earlier session
+30–730 days older. 600 individuals (300 dog / 300 cat) from 311 organizations,
+1,221 queries, median gap 101 days. Tooling in `scripts/xsession/`.
+
+| variant | rank-1 | rank-5 | rank-20 | mAP |
+|---|---|---|---|---|
+| large (deployed) | **0.449** | 0.693 | 0.880 | 0.558 |
+| base | 0.407 | 0.646 | 0.846 | 0.514 |
+
+Same-session large for comparison: 0.611 / 0.827 / 0.937 / 0.706.
+
+Breakdown (large): dogs rank-1 0.538, cats 0.346. By gap: 30–60 d 0.538,
+61–120 d 0.436, 121–365 d 0.410, 1–2 y 0.341. 327/600 individuals get a rank-1
+hit from at least one of their query photos. The ranked-shortlist framing holds
+(rank-20 0.88); a single top-hit framing does not, and cats are the weak spot.
+
+`eval-results.json` now includes `per_query` (true rank and top-1 id per query)
+so slices like these can be computed without re-running.
+
 ## How to run against PetFace (headline figure)
 
 PetFace is a research-gated dataset.  It requires a signed data-use agreement

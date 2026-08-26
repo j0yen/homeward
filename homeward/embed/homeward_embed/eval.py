@@ -280,6 +280,7 @@ def run_eval(
         rank_correct: dict[int, int] = {k: 0 for k in ks}
         ap_values: list[float] = []
 
+        per_query: list[dict] = []
         for q in queries:
             vec = embed_sample(q)
             results = index.query(vec, k=max_k, species_filter=species_filter)
@@ -289,6 +290,15 @@ def run_eval(
                 if q.individual_id in top_k:
                     rank_correct[k] += 1
             ap_values.append(average_precision(ranked_ids, q.individual_id))
+            # rank of the true individual within the top max_k (None = not retrieved)
+            true_rank = ranked_ids.index(q.individual_id) + 1 if q.individual_id in ranked_ids else None
+            per_query.append({
+                "individual_id": q.individual_id,
+                "image_path": str(q.image_path),
+                "species": q.species,
+                "true_rank": true_rank,
+                "top1": ranked_ids[0] if ranked_ids else None,
+            })
 
     n = len(queries)
     return EvalResult(
@@ -299,6 +309,7 @@ def run_eval(
         n_queries=n,
         n_gallery=len(gallery),
         embed_variant=embed_variant,
+        extra={"per_query": per_query},
     )
 
 
