@@ -1,0 +1,24 @@
+[Unit]
+Description=Homeward wall service (public photo wall) — hub instance
+Documentation=https://github.com/j0yen/homeward
+After=network.target homeward-ingest.service
+Wants=homeward-ingest.service
+# NOTE: wm-node should-run homeward-wall currently exits 1 (no placement.toml
+# entry for this service name yet), so the ExecCondition guard used by the
+# other homeward-*.service units is intentionally omitted here. Add it back
+# once homeward-wall is registered in placement.toml:
+#   ExecCondition=%h/.local/bin/wm-node should-run homeward-wall
+
+[Service]
+Type=exec
+EnvironmentFile=-%h/.config/homeward/homeward.env
+Environment=HOMEWARD_WALL_PORT=8090
+ExecStart=%h/.local/bin/homeward-walld
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=homeward-wall
+
+[Install]
+WantedBy=default.target

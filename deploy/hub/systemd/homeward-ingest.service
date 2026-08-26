@@ -1,0 +1,22 @@
+[Unit]
+Description=Homeward ingest daemon (AIMD cadence loop) — hub instance
+Documentation=https://github.com/j0yen/homeward
+After=network.target homeward-embed.service
+Wants=homeward-embed.service
+# Guard: only runs on nodes where placement.toml marks homeward-ingest as "hub"
+# wm-node should-run returns 0 (allow) or 1 (skip) based on node placement role
+
+[Service]
+Type=exec
+# Only start if this node is the hub (ExecCondition exits non-zero → unit skips cleanly)
+ExecCondition=%h/.local/bin/wm-node should-run homeward-ingest
+EnvironmentFile=-%h/.config/homeward/homeward.env
+ExecStart=%h/.local/bin/homeward-ingestd run --db %h/.local/share/homeward/homeward-ingest.db
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=homeward-ingest
+
+[Install]
+WantedBy=default.target

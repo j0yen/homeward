@@ -1,0 +1,20 @@
+[Unit]
+Description=Homeward embed sidecar (FastAPI / DINOv2) — hub instance
+Documentation=https://github.com/j0yen/homeward
+After=network.target
+
+[Service]
+Type=exec
+EnvironmentFile=-%h/.config/homeward/homeward.env
+Environment=HW_EMBED_MODEL=large
+WorkingDirectory=%h/homeward-embed
+ExecStart=%h/homeward-embed/.venv/bin/homeward-embed-svc
+Restart=always
+RestartSec=5
+MemoryHigh=4G
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=homeward-embed
+
+[Install]
+WantedBy=default.target

@@ -1,0 +1,11 @@
+[Unit]
+Description=Homeward embed legacy backfill (full, no time window)
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/python3 /home/jsy/.local/bin/backfill_legacy_enroll.py
+WorkingDirectory=/home/jsy
+Restart=no
+
+[Install]
+WantedBy=default.target

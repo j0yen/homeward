@@ -1,0 +1,24 @@
+[Unit]
+Description=Homeward report service (owner lost-pet API) — hub instance
+Documentation=https://github.com/j0yen/homeward
+After=network.target homeward-ingest.service
+# Guard: only runs on nodes where placement.toml marks homeward-report as "hub"
+
+[Service]
+Type=exec
+# Only start if this node is the hub (ExecCondition exits non-zero → unit skips cleanly)
+ExecCondition=%h/.local/bin/wm-node should-run homeward-report
+# Base service config (port, data dirs, etc.)
+EnvironmentFile=-%h/.config/homeward/homeward.env
+# Messaging credentials (relay endpoint + SMTP); optional so unit still starts
+# in dry-run mode if the file is absent.  See cloud/secrets/hub-messaging.md.
+EnvironmentFile=-%h/.config/wintermute/secrets/messaging.env
+ExecStart=%h/.local/bin/homeward-reportd serve --port 8080
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=homeward-report
+
+[Install]
+WantedBy=default.target

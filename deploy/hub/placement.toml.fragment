@@ -1,0 +1,6 @@
+# Lines the constellation hub carries in ~/.config/wintermute/placement.toml.
+# wm-node should-run <name> reads this; the ingest/report units gate on it.
+# homeward-wall has NO entry yet, so its unit omits the ExecCondition guard.
+homeward-ingest = "hub"
+homeward-report = "hub"
+homeward-embed  = "hub"

@@ -54,6 +54,8 @@ homeward down             # stop the fleet
 
 Configuration lives in `~/.config/homeward/homeward.env` (see `deploy/homeward.env.sample`) and `sources.toml`.
 
+The live pawsandpetals.org instance on the constellation hub is captured verbatim in [`deploy/hub/`](deploy/hub/README.md).
+
 ## Status
 
 Working multi-crate system, actively developed (v0.36.0). The matching path runs real photo-embedding fusion end to end. Accuracy is recorded honestly in `EVAL.md`: the bundled `eval-smoke` fixture proves the harness arithmetic, not a real-world accuracy number — measured accuracy against held-out datasets is reported separately there. The model weights it depends on (DINOv2, YOLO COCO) are documented in `homeward/embed/README.md`; non-commercial and research-gated weights are deliberately not bundled.

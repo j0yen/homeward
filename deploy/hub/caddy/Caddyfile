@@ -1,0 +1,28 @@
+pawsandpetals.org, www.pawsandpetals.org {
+	encode gzip
+
+	@root path /
+	@buddies path /api/buddies*
+	@stats path /api/stats
+	@nostore path /api/stream /health
+
+	header @root Cache-Control "public, s-maxage=300, max-age=60"
+	header @buddies Cache-Control "public, s-maxage=300, max-age=60"
+	header @stats Cache-Control "public, s-maxage=30, max-age=15"
+
+	reverse_proxy @nostore 127.0.0.1:8090 {
+		flush_interval -1
+		header_down Cache-Control "no-store"
+	}
+
+	reverse_proxy 127.0.0.1:8090 {
+		flush_interval -1
+	}
+}
+
+stream.pawsandpetals.org {
+	reverse_proxy 127.0.0.1:8090 {
+		flush_interval -1
+		header_down Cache-Control "no-store"
+	}
+}
