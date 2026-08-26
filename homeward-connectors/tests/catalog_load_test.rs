@@ -73,7 +73,7 @@ fn ac2_all_entries_have_required_column_map_fields() {
     }
 }
 
-/// AC3: The 4 built-in cities (austin, dallas, sonoma, long_beach) are present
+/// AC3: The live built-in cities (austin, dallas, sonoma) are present; long_beach is disabled
 /// in the catalog and their key fields match the const-fn built-in equivalents.
 #[test]
 fn ac3_four_builtin_cities_present_and_match_const_fns() {
@@ -118,24 +118,24 @@ fn ac3_four_builtin_cities_present_and_match_const_fns() {
     assert_eq!(loaded_sonoma.column_map.intake_type, builtin_sonoma.column_map.intake_type, "sonoma: intake_type col");
     assert_eq!(loaded_sonoma.column_map.outcome_date, builtin_sonoma.column_map.outcome_date, "sonoma: outcome_date col");
 
-    let builtin_lb = SocrataConfig::long_beach();
-    let loaded_lb = find("long_beach");
-    assert_eq!(loaded_lb.domain,     builtin_lb.domain,     "long_beach: domain mismatch");
-    assert_eq!(loaded_lb.dataset_id, builtin_lb.dataset_id, "long_beach: dataset_id mismatch");
-    assert_eq!(loaded_lb.column_map.animal_id,   builtin_lb.column_map.animal_id,   "long_beach: animal_id col");
-    assert_eq!(loaded_lb.column_map.animal_type, builtin_lb.column_map.animal_type, "long_beach: animal_type col");
-    assert_eq!(loaded_lb.column_map.intake_type, builtin_lb.column_map.intake_type, "long_beach: intake_type col");
-    assert_eq!(loaded_lb.column_map.outcome_date, builtin_lb.column_map.outcome_date, "long_beach: outcome_date col");
+    // long_beach is disabled in deploy/sources.toml (commented out 2026-06-24:
+    // data.longbeach.gov answers 403). The const fn remains a built-in, but the
+    // catalog deliberately omits it — assert the omission so re-enabling it
+    // forces this test to be revisited.
+    assert!(
+        !sources.iter().any(|s| s.name == "long_beach"),
+        "long_beach re-enabled in deploy/sources.toml — restore its column checks here"
+    );
 }
 
-/// AC3b: catalog contains at least 6 sources (4 built-ins + 2 additional).
+/// AC3b: catalog contains at least 5 sources (3 live built-ins + 2 additional).
 #[test]
 fn ac3b_catalog_has_at_least_six_sources() {
     let path = catalog_path();
     let catalog = load_catalog(&path).expect("catalog loads");
     assert!(
-        catalog.socrata.len() >= 6,
-        "expected at least 6 [[socrata]] sources (4 built-ins + 2 additional), got {}",
+        catalog.socrata.len() >= 5,
+        "expected at least 5 [[socrata]] sources (3 live built-ins + 2 additional), got {}",
         catalog.socrata.len()
     );
 }

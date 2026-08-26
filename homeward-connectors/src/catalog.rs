@@ -176,7 +176,7 @@ intake_type = "intake_type"
         assert!(catalog.arcgis.is_empty());
     }
 
-    // AC3: The pre-existing deploy/sources.toml loads with the same Socrata names.
+    // AC3: The pre-existing deploy/sources.toml loads with the live built-in Socrata names.
     #[test]
     fn test_deploy_sources_toml_regression() {
         // Walk up from Cargo.toml location to find deploy/sources.toml.
@@ -207,9 +207,13 @@ intake_type = "intake_type"
             names.contains(&"sonoma"),
             "sonoma missing from catalog: {names:?}"
         );
+        // long_beach is commented out in deploy/sources.toml since 2026-06-24
+        // (data.longbeach.gov answers 403 to every request). It stays a
+        // built-in in socrata.rs; the catalog deliberately omits it, so
+        // assert the omission rather than the presence.
         assert!(
-            names.contains(&"long_beach"),
-            "long_beach missing from catalog: {names:?}"
+            !names.contains(&"long_beach"),
+            "long_beach re-enabled in deploy/sources.toml — update this test: {names:?}"
         );
     }
 

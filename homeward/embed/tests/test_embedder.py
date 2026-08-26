@@ -133,10 +133,13 @@ class TestPhotoEmbedder:
                     return {"pixel_values": torch.zeros(1, 3, 224, 224)}
 
             pp.from_pretrained.return_value = FakeProcessorSmall()
-            from importlib import reload
-            import homeward_embed.embedder as emb_mod
-            reload(emb_mod)
-            embedder = emb_mod.PhotoEmbedder(variant="small", device="cpu")
+            # No importlib.reload here: reloading inside the patch context
+            # re-runs `from transformers import AutoModel, ...` and replaces
+            # the patched names with the real ones, so the test hit the HF
+            # Hub for real (and failed whenever the cache was unavailable).
+            from homeward_embed.embedder import PhotoEmbedder
+
+            embedder = PhotoEmbedder(variant="small", device="cpu")
 
         assert embedder.embed_dim == 384
 
