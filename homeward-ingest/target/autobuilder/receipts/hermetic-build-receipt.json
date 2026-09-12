@@ -1,0 +1,17 @@
+{
+  "captured_at": "2026-09-12T17:31:05Z",
+  "cargo_exit_code": 0,
+  "head_sha": "af6aa41512225d18463b3e73d4a8c8261027ade0",
+  "ignore_rules": [
+    "loopback",
+    "unix-domain"
+  ],
+  "new_sockets": [],
+  "platform": "linux",
+  "receipt_digest": "sha256:a19d8d9d014e31f351319f682598ef63a9f5af9027e3ae93531cf840026b488a",
+  "rustc_wrapper_disabled": true,
+  "sample_interval_ms": 150,
+  "schema": "autobuilder.hermetic_build_receipt.v2",
+  "strict": false,
+  "verdict": "pass"
+}

@@ -1,0 +1,10 @@
+{
+  "captured_at": "2026-09-12T17:31:49Z",
+  "cargo_exit": 0,
+  "elapsed_seconds": 44.303612417,
+  "head_sha": "af6aa41512225d18463b3e73d4a8c8261027ade0",
+  "max_seconds": 600.0,
+  "receipt_digest": "sha256:21a8b2ed6f763b9fcbc3f42afc33c6149a1abf10ed1c02fe07ae64730dcf6350",
+  "schema": "autobuilder.cold_build_time_receipt.v1",
+  "verdict": "pass"
+}

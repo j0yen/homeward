@@ -1,0 +1,13 @@
+{
+  "baseline_path": "extended-gates.bench-baseline.json",
+  "captured_at": "2026-09-12T17:31:05Z",
+  "comparisons": [],
+  "head_sha": "af6aa41512225d18463b3e73d4a8c8261027ade0",
+  "max_regression_pct": 0.0,
+  "receipt_digest": "sha256:75bea08f338366d4a1f786c37cbd66ee3aefcfd4be73fe7c585481074523a5b1",
+  "regressed": [
+    "no baseline file"
+  ],
+  "schema": "autobuilder.bench_delta_receipt.v1",
+  "verdict": "skipped"
+}

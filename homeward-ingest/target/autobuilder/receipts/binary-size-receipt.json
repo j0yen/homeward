@@ -1,0 +1,12 @@
+{
+  "captured_at": "2026-09-12T17:31:05Z",
+  "default_max_bytes": 52428800,
+  "head_sha": "af6aa41512225d18463b3e73d4a8c8261027ade0",
+  "measurements": [],
+  "over_budget": [
+    "target/release not found"
+  ],
+  "receipt_digest": "sha256:39b4b52736010b3a3d074660967c80a078cfd83ab681441700d04dc567cd90ed",
+  "schema": "autobuilder.binary_size_receipt.v1",
+  "verdict": "skipped"
+}

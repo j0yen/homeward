@@ -1,0 +1,11 @@
+{
+  "captured_at": "2026-09-12T17:31:05Z",
+  "head_sha": "af6aa41512225d18463b3e73d4a8c8261027ade0",
+  "incompatibilities": [
+    "no schemas/ directory"
+  ],
+  "receipt_digest": "sha256:2a1df9a7a835e7855bc2be65f62d1fb06eb6b94fc60f67e2f9799251622ec7cf",
+  "schema": "autobuilder.schema_compat_receipt.v1",
+  "schemas_checked": [],
+  "verdict": "skipped"
+}

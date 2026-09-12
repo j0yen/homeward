@@ -1,0 +1,11 @@
+{
+  "captured_at": "2026-09-12T17:31:49Z",
+  "cargo_check_exit": 0,
+  "declared_msrv": "1.86",
+  "head_sha": "af6aa41512225d18463b3e73d4a8c8261027ade0",
+  "note": "",
+  "receipt_digest": "sha256:53398946e6533ce304d578087d63bd6b99f7b1d0f9db5ad42ae86a333806746a",
+  "schema": "autobuilder.msrv_verify_receipt.v1",
+  "toolchain_available": true,
+  "verdict": "pass"
+}

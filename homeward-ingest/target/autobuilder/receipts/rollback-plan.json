@@ -1,0 +1,165 @@
+{
+  "base_note": null,
+  "base_ref": "v0.1.1",
+  "base_sha": "f7563edad85fd66dad5dd3d4c8c7509082297417",
+  "base_tag": null,
+  "blocking_count": 2,
+  "captured_at": "2026-09-12T17:31:04Z",
+  "classified": {
+    "mechanical_chain": 0,
+    "mechanical_merge": 1,
+    "mechanical_pattern": 0,
+    "substantive": 13
+  },
+  "commit_count": 14,
+  "commits": [
+    {
+      "class": "substantive",
+      "mechanical": false,
+      "note": "clean revert",
+      "parent_count": 1,
+      "revertable": true,
+      "sha": "af6aa41512225d18463b3e73d4a8c8261027ade0",
+      "short_sha": "af6aa41",
+      "subject": "agent: refresh intent card for homeward-ingest-backfill"
+    },
+    {
+      "class": "substantive",
+      "mechanical": false,
+      "note": "clean revert",
+      "parent_count": 1,
+      "revertable": true,
+      "sha": "f990e3a89323aea9fc7f21e95b6366ab49657333",
+      "short_sha": "f990e3a",
+      "subject": "homeward-ingest: changelog for v0.2.0 backfill release"
+    },
+    {
+      "class": "substantive",
+      "mechanical": false,
+      "note": "clean revert",
+      "parent_count": 1,
+      "revertable": true,
+      "sha": "d885ce381acb49f00c4818b9d7ff69cf096f4e3f",
+      "short_sha": "d885ce3",
+      "subject": "homeward-ingest: v0.2.0 — RG population backfill command"
+    },
+    {
+      "class": "mechanical_merge",
+      "mechanical": true,
+      "note": "clean merge revert (`git revert -m 1`)",
+      "parent_count": 2,
+      "revertable": true,
+      "sha": "87aded1f909187ba49351004c7234249a042bfc7",
+      "short_sha": "87aded1",
+      "subject": "Merge branch 'build/homeward-ingest-backfill'"
+    },
+    {
+      "class": "substantive",
+      "mechanical": false,
+      "note": "clean revert",
+      "parent_count": 1,
+      "revertable": true,
+      "sha": "db0bf815fa1f5a3bfe90f23c98d419de2d67da64",
+      "short_sha": "db0bf81",
+      "subject": "eval(embed): cross-session holdout — honest lost-vs-found numbers"
+    },
+    {
+      "class": "substantive",
+      "mechanical": false,
+      "note": "clean revert",
+      "parent_count": 1,
+      "revertable": true,
+      "sha": "0ad0087239dd6e63a93de015676353125f0633b4",
+      "short_sha": "0ad0087",
+      "subject": "test: fix the two long-standing failures (long_beach catalog, embed small-variant)"
+    },
+    {
+      "class": "substantive",
+      "mechanical": false,
+      "note": "clean revert",
+      "parent_count": 1,
+      "revertable": true,
+      "sha": "44692943edd0645e542fc37003faaad0180ed974",
+      "short_sha": "4469294",
+      "subject": "deploy(hub): capture the live constellation hub scaffolding"
+    },
+    {
+      "class": "substantive",
+      "mechanical": false,
+      "note": "clean revert",
+      "parent_count": 1,
+      "revertable": true,
+      "sha": "a3afc60c9b8cea10c1f9b8bc3db4a48b661027cf",
+      "short_sha": "a3afc60",
+      "subject": "feat(wall): integrate homeward-wall crate into the main workspace"
+    },
+    {
+      "class": "substantive",
+      "mechanical": false,
+      "note": "clean revert",
+      "parent_count": 1,
+      "revertable": true,
+      "sha": "6cccd17f1c23402b4206b7c658406cbabd5fe454",
+      "short_sha": "6cccd17",
+      "subject": "docs(wall): link the Finding Coconut live match demo"
+    },
+    {
+      "class": "substantive",
+      "mechanical": false,
+      "note": "clean revert",
+      "parent_count": 1,
+      "revertable": true,
+      "sha": "ebea436e98a19b28b997ad775555c19542c01103",
+      "short_sha": "ebea436",
+      "subject": "feat(embed): dedupe /query matches per animal"
+    },
+    {
+      "class": "substantive",
+      "mechanical": false,
+      "note": "conflicts during revert",
+      "parent_count": 1,
+      "revertable": false,
+      "sha": "726203a6c2ceb5e2faa7cf10999c295d4056e889",
+      "short_sha": "726203a",
+      "subject": "fix(connectors): rescuegroups pagination must use page, not offset"
+    },
+    {
+      "class": "substantive",
+      "mechanical": false,
+      "note": "conflicts during revert",
+      "parent_count": 1,
+      "revertable": false,
+      "sha": "0a96f550d19cd00b0b98365df3b4b35a5788ac5b",
+      "short_sha": "0a96f55",
+      "subject": "fix(connectors): tolerate missing data key on zero-match rescuegroups pages"
+    },
+    {
+      "class": "substantive",
+      "mechanical": false,
+      "note": "clean revert",
+      "parent_count": 1,
+      "revertable": true,
+      "sha": "8481e96ac2efcd8b8f26ccc4e8a8e3ce9088868b",
+      "short_sha": "8481e96",
+      "subject": "feat(embed): add DINOv2-large embed variant (1024-d)"
+    },
+    {
+      "class": "substantive",
+      "mechanical": false,
+      "note": "clean revert",
+      "parent_count": 1,
+      "revertable": true,
+      "sha": "1290a9508b7e3ca8795cd5c9831369ef53e11268",
+      "short_sha": "1290a95",
+      "subject": "fix(connectors): rescuegroups delta cursor must be RFC3339"
+    }
+  ],
+  "head_sha": "af6aa41512225d18463b3e73d4a8c8261027ade0",
+  "mechanical_count": 1,
+  "receipt_digest": "sha256:ef18be8fafc2f8b6dd56c43d26d50c6829146ee345b9dc6148a31a9603c694f5",
+  "revertable_count": 12,
+  "rollback_md": "target/autobuilder/rollback.md",
+  "rollback_model": "revert-commits",
+  "schema": "autobuilder.rollback_plan_receipt.v2",
+  "verdict": "block"
+}

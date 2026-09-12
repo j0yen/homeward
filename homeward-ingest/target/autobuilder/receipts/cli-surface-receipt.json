@@ -1,0 +1,11 @@
+{
+  "bins_checked": [],
+  "captured_at": "2026-09-12T17:31:05Z",
+  "drifted": [
+    "no cli-surface-snapshots/ directory"
+  ],
+  "head_sha": "af6aa41512225d18463b3e73d4a8c8261027ade0",
+  "receipt_digest": "sha256:f79254311c71d93c7a0bc2d5636845034ca65c9f7f09e303f3ca8f116431dd26",
+  "schema": "autobuilder.cli_surface_receipt.v1",
+  "verdict": "skipped"
+}

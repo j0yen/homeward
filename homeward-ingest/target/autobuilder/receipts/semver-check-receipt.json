@@ -1,0 +1,13 @@
+{
+  "additions": [],
+  "base_ref": "HEAD~1",
+  "breaking_changes": [],
+  "captured_at": "2026-09-12T17:31:05Z",
+  "compatibility": "patch",
+  "expected_bump": "patch",
+  "head_ref": "HEAD",
+  "head_sha": "af6aa41512225d18463b3e73d4a8c8261027ade0",
+  "receipt_digest": "sha256:fc38be43c22bdc78a57d7222f042f763ee5c619dec8ba2e0d56cdadc1fb66bc0",
+  "schema": "autobuilder.semver_check_receipt.v1",
+  "verdict": "pass"
+}

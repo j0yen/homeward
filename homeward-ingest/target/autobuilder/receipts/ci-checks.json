@@ -1,0 +1,13 @@
+{
+  "captured_at": "2026-09-12T17:31:05Z",
+  "failure_count": 0,
+  "head_sha": "af6aa41512225d18463b3e73d4a8c8261027ade0",
+  "pending_count": 0,
+  "receipt_digest": "sha256:7cb8a1774c0e7c0bd06d575d1ba3828fb8e2ffbdf6ea6c4e9b4e2e5597002341",
+  "repo": "j0yen/homeward",
+  "run_count": 0,
+  "runs": [],
+  "schema": "autobuilder.ci_checks_receipt.v1",
+  "success_count": 0,
+  "verdict": "block"
+}

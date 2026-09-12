@@ -1,0 +1,13 @@
+{
+  "campaign_slug": "",
+  "captured_at": "2026-09-12T17:31:05Z",
+  "head_sha": "af6aa41512225d18463b3e73d4a8c8261027ade0",
+  "receipt_digest": "sha256:c3b749ccc334c7cb6a584698ca06027eacab0a9c1381140b7884afe8108b1d16",
+  "schema": "autobuilder.experiment_receipt.v1",
+  "skip_reason": "no campaign outcomes file at /home/jsy/wintermute/homeward/homeward-ingest/target/autobuilder/experiment-outcomes.json",
+  "slice_count": 0,
+  "slices": [],
+  "total_iterations": 0,
+  "verdict": "skipped",
+  "wall_clock_seconds": 0
+}

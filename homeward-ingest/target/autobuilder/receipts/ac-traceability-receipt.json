@@ -1,0 +1,13 @@
+{
+  "ac_ids": [],
+  "captured_at": "2026-09-12T17:31:05Z",
+  "head_sha": "af6aa41512225d18463b3e73d4a8c8261027ade0",
+  "prd_path": "<none>",
+  "receipt_digest": "sha256:eaf71b5eaa9412962d505aff5e1ae948957d23d4904a328aebaccdc41437088e",
+  "schema": "autobuilder.ac_traceability_receipt.v1",
+  "tests_per_ac": {},
+  "untraced_ac_ids": [
+    "no PRD-*.md found in project root"
+  ],
+  "verdict": "block"
+}

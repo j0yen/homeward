@@ -1,0 +1,82 @@
+{
+  "head_sha": "af6aa41512225d18463b3e73d4a8c8261027ade0",
+  "head": "af6aa41512225d18463b3e73d4a8c8261027ade0",
+  "script_sha256": "63c3855d69fc963ccd5dcd4270a3fc1cf861d2325e3ee033385c164eaab64d75",
+  "verdict": "block",
+  "exit_code": 1,
+  "new_blocks": [
+    "vti-plan",
+    "proof-receipt",
+    "risk-gate",
+    "reviewer-agent",
+    "rollback-plan",
+    "ci-checks",
+    "session-trace",
+    "supply-audit",
+    "license-audit",
+    "sbom",
+    "ac-traceability"
+  ],
+  "inherited_blocks": [],
+  "cargo_route": {
+    "intended": "local",
+    "burst": 0,
+    "local": 0,
+    "passthrough": 0,
+    "host": "local"
+  },
+  "blocks": [
+    {
+      "receipt": "intake",
+      "finding": "autobuilder intake exited non-zero (schema violation in agent/intent-card.json, missing file, or receipt write failure — see output above)",
+      "path": "",
+      "scope": "inherited"
+    },
+    {
+      "receipt": "proof-receipt",
+      "finding": "autobuilder loop --iteration 0 exited non-zero",
+      "path": "",
+      "scope": "in-scope"
+    },
+    {
+      "receipt": "vti-plan",
+      "finding": "autobuilder vti-plan exited non-zero",
+      "path": "",
+      "scope": "inherited"
+    },
+    {
+      "receipt": "rollback-plan",
+      "finding": "commits since v0.1.1 are not all revert-clean (see target/autobuilder/rollback.md); fix forward, or a human rewrites history and says so — this script never edits history to force a pass",
+      "path": "",
+      "scope": "inherited"
+    },
+    {
+      "receipt": "ci-checks",
+      "finding": "workflow(s) on HEAD are not green, or still pending (the next tick retries)",
+      "path": "",
+      "scope": "inherited"
+    },
+    {
+      "receipt": "extended-receipts",
+      "finding": "one or more extended producers did not pass|skip (see output above)",
+      "path": "",
+      "scope": "inherited"
+    }
+  ],
+  "attribution": {
+    "in_scope": 1,
+    "inherited": 5
+  },
+  "phases": {
+    "risk-gate": "skip",
+    "intake": "0!",
+    "proof-receipt": "1!",
+    "vti-plan": "0!",
+    "rollback-plan": "0!",
+    "ci-checks": "1!",
+    "receipts": "49!",
+    "reviewer": "skip",
+    "gate": "0!"
+  },
+  "wall_s": 51
+}
