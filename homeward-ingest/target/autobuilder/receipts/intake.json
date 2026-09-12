@@ -1,58 +1,64 @@
 {
   "acceptance_criteria": [
     {
-      "description": "Given a dev DB seeded with 100 of 500 fixture animals, When backfill runs against a fixture RG server, Then the DB holds all 500 with zero duplicate RG ids.",
+      "description": "Given the server on stdio with a fixture DB, When a client calls tools/list, Then exactly search_pets and get_pet appear with JSON schemas and recent_intakes lists as a resource.",
       "id": "AC1",
       "level": "MUST",
-      "test": "tests/acceptance_ac1.rs"
+      "test": "homeward-mcp/tests/mcp_ac01_tools_list_and_resource.rs"
     },
     {
-      "description": "Given a backfill interrupted at ~50%, When the command re-runs, Then it resumes from persisted progress and the final DB matches AC1's result exactly.",
+      "description": "Given fixture intakes near location X, When search_pets(dog, X, 50km) is called, Then only in-radius dogs return, each with hotlinked photo URL, coarse location, and brokered shelter contact — and no person-level PII field exists in the payload.",
       "id": "AC2",
       "level": "MUST",
-      "test": "tests/acceptance_ac2.rs"
+      "test": "homeward-mcp/tests/mcp_ac02_search_pets_radius_and_privacy.rs"
     },
     {
-      "description": "Given the fixture RG server returns 429 on every third request, When backfill runs, Then it completes with all animals present and the log shows backoff events, not failures.",
+      "description": "Given a search with no matches, When called, Then an empty result with a well-formed shape returns (no error, no nulls where lists belong).",
       "id": "AC3",
       "level": "MUST",
-      "test": "tests/acceptance_ac3.rs"
+      "test": "homeward-mcp/tests/mcp_ac03_empty_result_well_formed.rs"
     },
     {
-      "description": "Given fixture animals with photos, When backfill completes, Then each has an embedding entry and the enrollment audit reads id_map.json as a list (audit count == list length for enrolled ids).",
+      "description": "Given an invalid species value, When search_pets is called, Then a typed MCP error returns and the server stays up.",
       "id": "AC4",
       "level": "MUST",
-      "test": "tests/acceptance_ac4.rs"
+      "test": "homeward-mcp/tests/mcp_ac04_invalid_species_typed_error.rs"
     },
     {
-      "description": "Given the fixture RG server, When backfill paginates, Then requests use page-based parameters and no request carries an `offset` param.",
+      "description": "Given the DB file is absent, When any tool is called, Then a clean typed error returns (no traceback in the client payload) and the process does not exit.",
       "id": "AC5",
       "level": "MUST",
-      "test": "tests/acceptance_ac5.rs"
+      "test": "homeward-mcp/tests/mcp_ac05_missing_db_clean_error.rs"
     },
     {
-      "description": "Given a completed run, When the report prints, Then it shows per-source fetched/inserted/skipped/failed and DB-total vs RG-total lines.",
+      "description": "Given the same entry point, When started with --http, Then the same tool calls succeed over streamable HTTP as over stdio.",
       "id": "AC6",
-      "level": "SHOULD",
-      "test": "tests/acceptance_ac6.rs"
+      "level": "MUST",
+      "test": "homeward-mcp/tests/mcp_ac06_http_and_stdio_parity.rs"
     },
     {
-      "description": "Given `--dry-run`, When invoked, Then coverage and page estimate print and the DB mtime is unchanged.",
+      "description": "Given a 60k-row fixture DB, When 200 timed search_pets calls run, Then p95 < 200 ms.",
       "id": "AC7",
       "level": "SHOULD",
       "test": "tests/acceptance_ac7.rs"
     },
     {
-      "description": "Given an empty DB, When backfill runs, Then it completes without special-casing (empty input edge).",
+      "description": "Given 20 concurrent HTTP clients for 60 s, When they issue mixed tool calls, Then zero errors and no request starves >2 s.",
       "id": "AC8",
-      "level": "MAY",
+      "level": "SHOULD",
       "test": "tests/acceptance_ac8.rs"
+    },
+    {
+      "description": "Given the deploy recipe, When applied on a hub-like environment, Then a homeward-mcp user unit runs alongside the existing four services' conventions.",
+      "id": "AC9",
+      "level": "MAY",
+      "test": "tests/acceptance_ac9.rs"
     }
   ],
   "created_at": "2026-09-12T00:00:00Z",
   "five_whys_trace": [
     {
-      "a": "No. This card was mechanically regenerated from the landed PRD's frontmatter and body by scripts/intent-card-refresh.sh; no five-whys interview ran. See prd_source for the human-authored PRD (/home/jsy/Documents/PRDs/build-queue/PRD-homeward-ingest-backfill.md) this ships from.",
+      "a": "No. This card was mechanically regenerated from the landed PRD's frontmatter and body by scripts/intent-card-refresh.sh; no five-whys interview ran. See prd_source for the human-authored PRD (/home/jsy/Documents/PRDs/build-queue/PRD-homeward-mcp-server.md) this ships from.",
       "q": "Card auto-generated by intent-card-refresh.sh — was a 5-Whys interview conducted for it?",
       "why": 1
     }
@@ -62,11 +68,11 @@
     "rust_edition": "2024",
     "target_kind": "cli"
   },
-  "intent_slug": "homeward-ingest-backfill",
+  "intent_slug": "homeward-mcp-server",
   "non_goals": [],
-  "prd_source": "/home/jsy/Documents/PRDs/build-queue/PRD-homeward-ingest-backfill.md",
-  "receipt_digest": "sha256:004dc5b7cd5ab67a48d556b1325f7225602833e8560b6407fed4cbac93d5d491",
-  "root_motivation": "An owner searching for a pet sheltered before 2026-06-13 (or in any page the forward cursor skipped) gets zero results even when the pet is listed on RescueGroups — homeward has no record of it. Evidence: homeward-ops standing gap \"RG API ~62k animals, DB ~9.7k (pre-2026-06-13 cursor not backfilled)\" (verified 2026-08-31); RG v5 confirmed live with dogs+cats search endpoints 2026-09-12.",
+  "prd_source": "/home/jsy/Documents/PRDs/build-queue/PRD-homeward-mcp-server.md",
+  "receipt_digest": "sha256:2f8f550f474aabb92d03e1880e456a2626aebdb9ea1d8cbe1328a1536cdb4148",
+  "root_motivation": "Agents and assistants cannot query homeward: the database is live on the hub but reachable only via the wall UI (:8090) and the report API (:8081) — neither speaks MCP, so the fastest-growing consumer surface (agent tool use) has zero access. Evidence: homeward-ops service inventory (verified 2026-08-31); no MCP component exists in the repo; five prior `*-mcp` PRDs in built-prds/ establish the local pattern (recall-mcp, muster-mcp, docket-mcp, provenance-mcp, mdcollab-mcp).",
   "schema": "autobuilder.intent_card.v1",
   "scope": [],
   "unfakeable_metric": {

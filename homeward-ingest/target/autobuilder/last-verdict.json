@@ -1,6 +1,6 @@
 {
-  "head_sha": "af6aa41512225d18463b3e73d4a8c8261027ade0",
-  "head": "af6aa41512225d18463b3e73d4a8c8261027ade0",
+  "head_sha": "86f10e3ab9d1479ad78a07c7578603840d48a999",
+  "head": "86f10e3ab9d1479ad78a07c7578603840d48a999",
   "script_sha256": "63c3855d69fc963ccd5dcd4270a3fc1cf861d2325e3ee033385c164eaab64d75",
   "verdict": "block",
   "exit_code": 1,
@@ -15,6 +15,7 @@
     "supply-audit",
     "license-audit",
     "sbom",
+    "msrv-verify",
     "ac-traceability"
   ],
   "inherited_blocks": [],
@@ -26,12 +27,6 @@
     "host": "local"
   },
   "blocks": [
-    {
-      "receipt": "intake",
-      "finding": "autobuilder intake exited non-zero (schema violation in agent/intent-card.json, missing file, or receipt write failure — see output above)",
-      "path": "",
-      "scope": "inherited"
-    },
     {
       "receipt": "proof-receipt",
       "finding": "autobuilder loop --iteration 0 exited non-zero",
@@ -65,18 +60,18 @@
   ],
   "attribution": {
     "in_scope": 1,
-    "inherited": 5
+    "inherited": 4
   },
   "phases": {
     "risk-gate": "skip",
-    "intake": "0!",
-    "proof-receipt": "1!",
+    "intake": "0",
+    "proof-receipt": "0!",
     "vti-plan": "0!",
-    "rollback-plan": "0!",
-    "ci-checks": "1!",
-    "receipts": "49!",
+    "rollback-plan": "1!",
+    "ci-checks": "0!",
+    "receipts": "41!",
     "reviewer": "skip",
     "gate": "0!"
   },
-  "wall_s": 51
+  "wall_s": 42
 }

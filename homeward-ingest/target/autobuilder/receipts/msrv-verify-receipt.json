@@ -1,11 +1,11 @@
 {
-  "captured_at": "2026-09-12T17:31:49Z",
-  "cargo_check_exit": 0,
+  "captured_at": "2026-09-12T19:41:38Z",
+  "cargo_check_exit": 101,
   "declared_msrv": "1.86",
-  "head_sha": "af6aa41512225d18463b3e73d4a8c8261027ade0",
+  "head_sha": "86f10e3ab9d1479ad78a07c7578603840d48a999",
   "note": "",
-  "receipt_digest": "sha256:53398946e6533ce304d578087d63bd6b99f7b1d0f9db5ad42ae86a333806746a",
+  "receipt_digest": "sha256:9da865fcc24f55310474a2686384e28679643da7d6451e124224c67b53c31f3d",
   "schema": "autobuilder.msrv_verify_receipt.v1",
   "toolchain_available": true,
-  "verdict": "pass"
+  "verdict": "block"
 }
