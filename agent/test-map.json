@@ -1,0 +1,10 @@
+{
+  "ac_test_map": {
+    "AC1": "homeward-mcp/tests/mcp_ac01_tools_list_and_resource.rs",
+    "AC2": "homeward-mcp/tests/mcp_ac02_search_pets_radius_and_privacy.rs",
+    "AC3": "homeward-mcp/tests/mcp_ac03_empty_result_well_formed.rs",
+    "AC4": "homeward-mcp/tests/mcp_ac04_invalid_species_typed_error.rs",
+    "AC5": "homeward-mcp/tests/mcp_ac05_missing_db_clean_error.rs",
+    "AC6": "homeward-mcp/tests/mcp_ac06_http_and_stdio_parity.rs"
+  }
+}
