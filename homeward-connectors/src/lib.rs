@@ -26,7 +26,7 @@ pub use connector::{Connector, Cursor};
 pub use connectors::arcgis::ArcGisConnector;
 pub use connectors::opendatasoft::OpenDataSoftConnector;
 pub use connectors::petfbi::{PetFbiConfig, PetFbiConnector};
-pub use connectors::rescuegroups::RescueGroupsConnector;
+pub use connectors::rescuegroups::{RescueGroupsConnector, RgPageResult};
 pub use connectors::socrata::{SocrataColumnMap, SocrataConfig, SocrataConnector};
 pub use discover::{CoverageHole, HoleCandidateRow, load_holes_from_file, load_holes_from_str};
 pub use error::ConnectorError;

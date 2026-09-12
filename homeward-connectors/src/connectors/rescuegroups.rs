@@ -39,6 +39,19 @@ const BASE_URL: &str = "https://api.rescuegroups.org/v5";
 /// Default page size for paging through results.
 const PAGE_SIZE: u64 = 250;
 
+/// Maximum number of retry attempts on 429/5xx for a single page fetch.
+///
+/// `PoliteClient::get` already retries GETs; the search endpoint is a POST
+/// (filters travel in the body) so it bypasses that path entirely and, until
+/// this constant's retry loop below, had no backoff of its own — a 429 on a
+/// `fetch_page` call surfaced immediately as a hard error instead of backing
+/// off and resuming (homeward-ingest-backfill AC3).
+const PAGE_MAX_RETRIES: u32 = 5;
+
+/// Base delay for `fetch_page`'s exponential backoff (doubled per attempt,
+/// overridden by a `Retry-After` header when the server sends one).
+const PAGE_BACKOFF_BASE: Duration = Duration::from_millis(500);
+
 /// Species queried one at a time — the `search/available` endpoint only
 /// accepts a single species segment per request (a comma-joined list 404s).
 const SPECIES: [&str; 2] = ["dogs", "cats"];
@@ -160,42 +173,143 @@ impl RescueGroupsConnector {
 
         debug!(%url, page, species, "fetching RescueGroups page");
 
-        let resp = self
-            .client
-            .inner()
-            .post(url.as_str())
-            .header("Authorization", &self.config.api_key)
-            .header("User-Agent", HOMEWARD_USER_AGENT)
-            .header("Accept", "application/vnd.api+json")
-            .header("Content-Type", "application/vnd.api+json")
-            .body(body_bytes)
-            .send()
-            .await?;
+        let mut attempt = 0u32;
+        loop {
+            let resp = self
+                .client
+                .inner()
+                .post(url.as_str())
+                .header("Authorization", &self.config.api_key)
+                .header("User-Agent", HOMEWARD_USER_AGENT)
+                .header("Accept", "application/vnd.api+json")
+                .header("Content-Type", "application/vnd.api+json")
+                .body(body_bytes.clone())
+                .send()
+                .await?;
 
-        if resp.status() == StatusCode::NOT_MODIFIED {
-            return Ok(RgPage {
-                data: vec![],
-                meta: RgMeta {
-                    total: 0,
-                    count_returned: 0,
-                    page_returned: 0,
-                    pages: 0,
-                },
-                included: vec![],
-            });
+            let status = resp.status();
+
+            if status == StatusCode::NOT_MODIFIED {
+                return Ok(RgPage {
+                    data: vec![],
+                    meta: RgMeta {
+                        total: 0,
+                        count_returned: 0,
+                        page_returned: 0,
+                        pages: 0,
+                    },
+                    included: vec![],
+                });
+            }
+
+            // 429/503: back off (Retry-After if present, else exponential)
+            // and retry the SAME page — never advance on a rate-limited
+            // response. This is what turns a rate-limited backfill run into
+            // a log of backoff events rather than a hard failure.
+            if status == StatusCode::TOO_MANY_REQUESTS || status == StatusCode::SERVICE_UNAVAILABLE
+            {
+                if attempt >= PAGE_MAX_RETRIES {
+                    return Err(ConnectorError::RateLimitExhausted {
+                        host: url.host_str().unwrap_or("").to_owned(),
+                    });
+                }
+                let retry_after = resp
+                    .headers()
+                    .get("Retry-After")
+                    .and_then(|v| v.to_str().ok())
+                    .and_then(|s| s.parse::<u64>().ok())
+                    .map(Duration::from_secs);
+                let backoff = retry_after
+                    .unwrap_or_else(|| PAGE_BACKOFF_BASE * 2u32.saturating_pow(attempt));
+                warn!(
+                    attempt,
+                    page,
+                    species,
+                    status = status.as_u16(),
+                    ?backoff,
+                    "RescueGroups rate-limited — backing off"
+                );
+                tokio::time::sleep(backoff).await;
+                attempt += 1;
+                continue;
+            }
+
+            if !status.is_success() {
+                let status_code = status.as_u16();
+                let body = resp.text().await.unwrap_or_default();
+                return Err(ConnectorError::UnexpectedStatus {
+                    status: status_code,
+                    body: body.chars().take(256).collect(),
+                });
+            }
+
+            let page: RgPage = resp.json().await?;
+            return Ok(page);
+        }
+    }
+
+    /// Fetch and normalize one page of a single `species`, for callers that
+    /// drive their own page-by-page loop (e.g. a resumable backfill) instead
+    /// of consuming the whole-population [`Connector::poll`].
+    ///
+    /// Always a full (non-delta) fetch — `since` is not exposed here because
+    /// a historical backfill has no watermark to filter on. Reuses the exact
+    /// same `fetch_page` path (and its page-based pagination + 429 backoff)
+    /// that [`Connector::poll`] uses, per the "never offset" requirement.
+    ///
+    /// # Errors
+    /// Propagates [`ConnectorError`] on transport, rate-limit-exhausted, or
+    /// deserialization failure.
+    pub async fn fetch_normalized_page(
+        &self,
+        species: &str,
+        page: u64,
+    ) -> Result<RgPageResult, ConnectorError> {
+        let rg_page = self.fetch_page(species, page, None).await?;
+        let species_enum = species_from_query(species);
+        let included = build_included_index(&rg_page.included);
+
+        let mut records = Vec::with_capacity(rg_page.data.len());
+        for item in rg_page.data {
+            match normalize_rg_record(item, species_enum, &included, &self.config) {
+                Ok(rec) => records.push(rec),
+                Err(e) => warn!("skipping RescueGroups record: {e}"),
+            }
         }
 
-        if !resp.status().is_success() {
-            let status = resp.status().as_u16();
-            let body = resp.text().await.unwrap_or_default();
-            return Err(ConnectorError::UnexpectedStatus {
-                status,
-                body: body.chars().take(256).collect(),
-            });
-        }
+        Ok(RgPageResult {
+            records,
+            page_returned: rg_page.meta.page_returned,
+            pages_total: rg_page.meta.pages,
+            count_returned: rg_page.meta.count_returned,
+            total: rg_page.meta.total,
+        })
+    }
+}
 
-        let page: RgPage = resp.json().await?;
-        Ok(page)
+/// Result of one normalized page fetch via [`RescueGroupsConnector::fetch_normalized_page`].
+#[derive(Debug, Clone)]
+pub struct RgPageResult {
+    /// Normalized records for this page (records that failed normalization
+    /// are skipped with a warning, not included here).
+    pub records: Vec<PetRecord>,
+    /// 1-based page number the API actually served (source of truth for
+    /// loop termination — see [`build_search_url`]'s doc comment).
+    pub page_returned: u64,
+    /// Total number of pages available for this query.
+    pub pages_total: u64,
+    /// Records returned on this page (defensive fallback for termination).
+    pub count_returned: u64,
+    /// Total matching records across all pages, for coverage estimates.
+    pub total: u64,
+}
+
+impl RgPageResult {
+    /// `true` when this was the last page for its species (mirrors the
+    /// termination condition `Connector::poll` uses internally).
+    #[must_use]
+    pub const fn is_last_page(&self) -> bool {
+        self.page_returned >= self.pages_total || self.count_returned < PAGE_SIZE
     }
 }
 
@@ -292,8 +406,8 @@ struct RgMeta {
     /// Total matching records across all pages (real key is `count`, not
     /// `totalRecords` — the old name was never valid against the live API).
     /// Not read by the pagination loop (`pages`/`pageReturned` decide
-    /// termination) — kept for completeness of the deserialized shape.
-    #[allow(dead_code)]
+    /// termination); exposed via [`RgPageResult::total`] for backfill
+    /// coverage estimates (dry-run page/coverage reporting).
     #[serde(rename = "count")]
     total: u64,
     /// Records returned on this page. Used only as a defensive fallback for
