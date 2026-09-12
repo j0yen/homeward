@@ -2,7 +2,7 @@
 
 ## v0.37.0 — 2026-09-12
 
-### homeward-mcp: read-only MCP server over the shelter database
+### homeward-mcp: read-only MCP server over the shelter database (crate homeward-mcp 0.1.0)
 
 Adds a new workspace member, `homeward-mcp`, exposing the shelter intake
 database over MCP: `search_pets` (species + lat/lon+radius_km or
