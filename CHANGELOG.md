@@ -1,5 +1,19 @@
 # Changelog
 
+## v0.37.0 — 2026-09-12
+
+### homeward-mcp: read-only MCP server over the shelter database
+
+Adds a new workspace member, `homeward-mcp`, exposing the shelter intake
+database over MCP: `search_pets` (species + lat/lon+radius_km or
+postal_code, optional since/breed/color, limit≤50) and `get_pet(id)` tools,
+plus a `recent_intakes` resource. Serves both stdio and streamable HTTP
+from one entry point (`homeward-mcp serve [--http :PORT]`). Read-only —
+opens the ingest DB read-only, no tool mutates state. Every output carries
+the homeward legal-ethics contract: hotlinked photo URLs (never re-hosted
+bytes), coarse location, and a brokered shelter-contact route — no owner
+PII field appears anywhere in a tool payload.
+
 ## homeward-connectors v0.2.4 — 2026-08-13
 
 Fixes a production HTTP 500 on delta polls — the last link in the
