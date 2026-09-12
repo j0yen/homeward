@@ -4,3 +4,4 @@
 homeward-ingest = "hub"
 homeward-report = "hub"
 homeward-embed  = "hub"
+homeward-mcp    = "hub"

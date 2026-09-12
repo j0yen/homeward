@@ -1,0 +1,22 @@
+[Unit]
+Description=Homeward MCP server (read-only shelter-DB tools) — hub instance
+Documentation=https://github.com/j0yen/homeward
+After=network.target homeward-ingest.service
+# Guard: only runs on nodes where placement.toml marks homeward-mcp as "hub"
+
+[Service]
+Type=exec
+# Only start if this node is the hub (ExecCondition exits non-zero → unit skips cleanly)
+ExecCondition=%h/.local/bin/wm-node should-run homeward-mcp
+# Base service config (DB path, etc.) — same convention as the other four
+# hub services; homeward-mcp reads HOMEWARD_INGEST_DB from this file.
+EnvironmentFile=-%h/.config/homeward/homeward.env
+ExecStart=%h/.local/bin/homeward-mcp serve --http :8095
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=homeward-mcp
+
+[Install]
+WantedBy=default.target
