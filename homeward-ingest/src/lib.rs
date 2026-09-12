@@ -12,7 +12,10 @@
 //! - [`embed_client`] — async HTTP client for the homeward-embed Python sidecar.
 //! - [`enroll`] — enrollment worker that wires the delta event stream to
 //!   `EmbedClient::enroll`, populating the vector gallery the matcher searches.
+//! - [`backfill`] — one-time historical-population backfill against
+//!   `RescueGroups` (`homeward-ingestd backfill`), resumable and idempotent.
 
+pub mod backfill;
 pub mod departure;
 pub mod dedup;
 pub mod embed_client;
