@@ -3,16 +3,26 @@
   "base_ref": "v0.1.1",
   "base_sha": "f7563edad85fd66dad5dd3d4c8c7509082297417",
   "base_tag": null,
-  "blocking_count": 6,
-  "captured_at": "2026-09-12T19:41:37Z",
+  "blocking_count": 8,
+  "captured_at": "2026-09-12T21:24:23Z",
   "classified": {
     "mechanical_chain": 0,
     "mechanical_merge": 1,
     "mechanical_pattern": 0,
-    "substantive": 20
+    "substantive": 21
   },
-  "commit_count": 21,
+  "commit_count": 22,
   "commits": [
+    {
+      "class": "substantive",
+      "mechanical": false,
+      "note": "clean revert",
+      "parent_count": 1,
+      "revertable": true,
+      "sha": "cc195cc0e9bb48a970952942644993b407e1478f",
+      "short_sha": "cc195cc",
+      "subject": "homeward-ingest: gate receipts at 86f10e3 (verdict=block, see PRD iter_log)"
+    },
     {
       "class": "substantive",
       "mechanical": false,
@@ -76,9 +86,9 @@
     {
       "class": "substantive",
       "mechanical": false,
-      "note": "clean revert",
+      "note": "conflicts during revert",
       "parent_count": 1,
-      "revertable": true,
+      "revertable": false,
       "sha": "e930121b57a2e81cd7cafcb58d56f8d0e081c9d9",
       "short_sha": "e930121",
       "subject": "homeward-ingest: gate receipts at af6aa415 (verdict=block, see PRD iter_log)"
@@ -96,9 +106,9 @@
     {
       "class": "substantive",
       "mechanical": false,
-      "note": "clean revert",
+      "note": "conflicts during revert",
       "parent_count": 1,
-      "revertable": true,
+      "revertable": false,
       "sha": "f990e3a89323aea9fc7f21e95b6366ab49657333",
       "short_sha": "f990e3a",
       "subject": "homeward-ingest: changelog for v0.2.0 backfill release"
@@ -224,10 +234,10 @@
       "subject": "fix(connectors): rescuegroups delta cursor must be RFC3339"
     }
   ],
-  "head_sha": "86f10e3ab9d1479ad78a07c7578603840d48a999",
+  "head_sha": "cc195cc0e9bb48a970952942644993b407e1478f",
   "mechanical_count": 1,
-  "receipt_digest": "sha256:1a1c4894e438a772075bef4339e701edfc2c8c2ae92453cee7c7ad4ffbb599b2",
-  "revertable_count": 15,
+  "receipt_digest": "sha256:79b5aed4bee70c6e2ce9aa01a23696db722f550b057ecde74212577678c0c73f",
+  "revertable_count": 14,
   "rollback_md": "target/autobuilder/rollback.md",
   "rollback_model": "revert-commits",
   "schema": "autobuilder.rollback_plan_receipt.v2",

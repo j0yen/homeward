@@ -1,8 +1,8 @@
 {
   "artifacts": [
     {
-      "digest_run_a": "sha256:69bf23d946caa7bc67554512e6abc5a9ca85dfa3952f3845ec2299481ce3a651",
-      "digest_run_b": "sha256:69bf23d946caa7bc67554512e6abc5a9ca85dfa3952f3845ec2299481ce3a651",
+      "digest_run_a": "sha256:8dcaef12fa28fb1897eed940dea298570c0a0ef42eba58ea7596297d24efb900",
+      "digest_run_b": "sha256:8dcaef12fa28fb1897eed940dea298570c0a0ef42eba58ea7596297d24efb900",
       "path": "release/libhomeward_ingest.rlib"
     },
     {
@@ -16,10 +16,10 @@
       "path": "release/.cargo-lock"
     }
   ],
-  "captured_at": "2026-09-12T19:42:18Z",
-  "head_sha": "86f10e3ab9d1479ad78a07c7578603840d48a999",
+  "captured_at": "2026-09-12T21:25:10Z",
+  "head_sha": "cc195cc0e9bb48a970952942644993b407e1478f",
   "mismatched": [],
-  "receipt_digest": "sha256:6ec1641f9964bdb719dacb1e38c89329b36f6d5f4a938bcf8371f3bbc3903b6b",
+  "receipt_digest": "sha256:7df0d7086de7fb495dfa66df43ab2bcad8ea888cec02f80a356fc73c6fec7117",
   "schema": "autobuilder.determinism_receipt.v1",
   "verdict": "pass"
 }

@@ -1,11 +1,11 @@
 {
-  "captured_at": "2026-09-12T19:41:38Z",
-  "head_sha": "86f10e3ab9d1479ad78a07c7578603840d48a999",
+  "captured_at": "2026-09-12T21:24:24Z",
+  "head_sha": "cc195cc0e9bb48a970952942644993b407e1478f",
   "kill_pct": 0.0,
   "min_pct": 50.0,
   "mutations_attempted": 0,
   "mutations_killed": 0,
-  "receipt_digest": "sha256:4da1222acd143cb0544bfc6e5837fedfdf2a3271e365bf2ee8a1e91ba1b0e4e0",
+  "receipt_digest": "sha256:f759f4153c276f1adac5c94c48b641f97d0eada835a47bb10b91e08001151a0b",
   "schema": "autobuilder.mutation_kill_receipt.v1",
   "survivors": [],
   "verdict": "skipped"

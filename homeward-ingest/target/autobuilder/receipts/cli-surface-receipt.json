@@ -1,11 +1,11 @@
 {
   "bins_checked": [],
-  "captured_at": "2026-09-12T19:41:37Z",
+  "captured_at": "2026-09-12T21:24:24Z",
   "drifted": [
     "no cli-surface-snapshots/ directory"
   ],
-  "head_sha": "86f10e3ab9d1479ad78a07c7578603840d48a999",
-  "receipt_digest": "sha256:78d806334296090587ded68fc79993e12f429023746717c3c6fcfbc24de080fe",
+  "head_sha": "cc195cc0e9bb48a970952942644993b407e1478f",
+  "receipt_digest": "sha256:d452226d23ac3b3d1dc08c8bdabdcfb724b71db4022aad2570ae7bcbf7dd4d63",
   "schema": "autobuilder.cli_surface_receipt.v1",
   "verdict": "skipped"
 }

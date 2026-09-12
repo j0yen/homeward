@@ -1,10 +1,10 @@
 {
-  "captured_at": "2026-09-12T19:41:37Z",
-  "head_sha": "86f10e3ab9d1479ad78a07c7578603840d48a999",
+  "captured_at": "2026-09-12T21:24:24Z",
+  "head_sha": "cc195cc0e9bb48a970952942644993b407e1478f",
   "incompatibilities": [
     "no schemas/ directory"
   ],
-  "receipt_digest": "sha256:40b1e4cad0917700bf4af746ceaf969b02220515252b8f3e1ea90dc75fb94f26",
+  "receipt_digest": "sha256:8103b82dba6a8e44336e122114ad61232b555020873a4bc2cc2fb4956e1ee8a8",
   "schema": "autobuilder.schema_compat_receipt.v1",
   "schemas_checked": [],
   "verdict": "skipped"
