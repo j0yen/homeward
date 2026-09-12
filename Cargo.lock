@@ -1207,7 +1207,7 @@ dependencies = [
 
 [[package]]
 name = "homeward"
-version = "0.36.0"
+version = "0.37.0"
 
 [[package]]
 name = "homeward-connectors"
