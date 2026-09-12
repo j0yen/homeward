@@ -1,6 +1,6 @@
 {
-  "head_sha": "cc195cc0e9bb48a970952942644993b407e1478f",
-  "head": "cc195cc0e9bb48a970952942644993b407e1478f",
+  "head_sha": "724cb1dc696c0cf120678a3c087398627130b6e5",
+  "head": "724cb1dc696c0cf120678a3c087398627130b6e5",
   "script_sha256": "63c3855d69fc963ccd5dcd4270a3fc1cf861d2325e3ee033385c164eaab64d75",
   "verdict": "block",
   "exit_code": 1,
@@ -69,9 +69,9 @@
     "vti-plan": "0!",
     "rollback-plan": "0!",
     "ci-checks": "0!",
-    "receipts": "47!",
+    "receipts": "43!",
     "reviewer": "skip",
     "gate": "0!"
   },
-  "wall_s": 48
+  "wall_s": 44
 }

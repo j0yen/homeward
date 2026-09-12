@@ -1,13 +1,13 @@
 {
-  "captured_at": "2026-09-12T21:24:47Z",
+  "captured_at": "2026-09-12T21:27:40Z",
   "deterministic": true,
   "exit_codes": [
     0,
     0,
     0
   ],
-  "head_sha": "cc195cc0e9bb48a970952942644993b407e1478f",
-  "receipt_digest": "sha256:67d2fa9cf8edd175ff8625df8f2b08d1ae8882626a4675590bef3d07057e96df",
+  "head_sha": "724cb1dc696c0cf120678a3c087398627130b6e5",
+  "receipt_digest": "sha256:62b8993fb7c307d35a36a6a0e2e65eabc45ee86617e1c9e80a7fb716e5341588",
   "runs": 3,
   "schema": "autobuilder.flake_audit_receipt.v1",
   "verdict": "pass"
