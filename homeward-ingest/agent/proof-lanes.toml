@@ -1,43 +1,60 @@
-# proof-lanes.toml — maps changed paths to verification lanes.
-# Every changed path in Stage 3 must resolve to >= 1 lane here.
-# Modeled on homeward-schema/agent/proof-lanes.toml (PRD-build-homeward-ingest-autobuilder-onboard).
+# proof-lanes.toml — change-class -> required-lane routing for vti-plan
+# (autobuilder's Stage-4 "Vertical Test Index" receipt).
+#
+# Schema is `[[lane]]` (id, globs, required_commands) — the schema the
+# CURRENTLY-INSTALLED autobuilder's `vti-plan` subcommand actually parses
+# (autobuilder/src/vti_plan.rs's LanesFile/LaneSpec). Modeled on
+# tether-link/agent/proof-lanes.toml and ac-judge/agent/proof-lanes.toml,
+# both of which pass vti-plan today — NOT on homeward-schema's
+# agent/proof-lanes.toml, whose `[lanes.<name>]` + `confidence` shape
+# predates this schema and fails `agent/proof-lanes.toml is not valid
+# TOML` against the installed autobuilder (verified directly against
+# homeward-schema's own file during this PRD's gate run — it was never
+# actually onboarded against the current autobuilder, it only looked
+# onboarded).
+#
+# Path prefix: vti-plan runs `git -C <repo> diff --name-only <base>..HEAD`
+# against the homeward WORKSPACE ROOT (extend-gate.sh invokes it with
+# `--project homeward-ingest` from cwd=<workspace root>), and git always
+# reports paths relative to the repo's top level — never cwd-relative. So
+# every homeward-ingest path below is prefixed `homeward-ingest/`; only
+# the shared `Cargo.lock` (workspace-root file) is bare.
 
-[lanes.core-types]
-paths = ["src/lib.rs", "src/events.rs", "src/embed_client.rs"]
-gates = ["cargo check", "cargo clippy", "cargo test"]
-confidence = 0.95
+[[lane]]
+id = "rust-source"
+description = "Behavior changes in homeward-ingest/src/"
+globs = ["homeward-ingest/src/**/*.rs"]
+required_commands = [
+  "cargo check --workspace",
+  "cargo clippy --workspace -- -D warnings",
+  "cargo test --workspace",
+]
 
-[lanes.store]
-paths = ["src/store.rs"]
-gates = ["cargo check", "cargo clippy", "cargo test --test backfill_tests"]
-confidence = 0.9
+[[lane]]
+id = "rust-tests"
+description = "Test-only changes in homeward-ingest/tests/"
+globs = ["homeward-ingest/tests/**/*.rs"]
+required_commands = [
+  "cargo test --workspace",
+]
 
-[lanes.dedup]
-paths = ["src/dedup.rs"]
-gates = ["cargo check", "cargo clippy", "cargo test --test federated_dedup_tests"]
-confidence = 0.95
+[[lane]]
+id = "deps"
+description = "Cargo.toml / Cargo.lock changes"
+globs = ["homeward-ingest/Cargo.toml", "Cargo.lock"]
+required_commands = [
+  "cargo check --workspace",
+]
 
-[lanes.departure]
-paths = ["src/departure.rs"]
-gates = ["cargo check", "cargo clippy", "cargo test"]
-confidence = 0.9
-
-[lanes.enroll]
-paths = ["src/enroll.rs"]
-gates = ["cargo check", "cargo clippy", "cargo test --test backfill_tests"]
-confidence = 0.9
-
-[lanes.backfill]
-paths = ["src/backfill.rs"]
-gates = ["cargo check", "cargo clippy", "cargo test --test backfill_tests"]
-confidence = 0.9
-
-[lanes.orchestrator]
-paths = ["src/orchestrator.rs", "src/main.rs"]
-gates = ["cargo check", "cargo clippy", "cargo test"]
-confidence = 0.9
-
-[lanes.acceptance]
-paths = ["tests/backfill_tests.rs", "tests/federated_dedup_tests.rs"]
-gates = ["cargo test --workspace"]
-confidence = 1.0
+[[lane]]
+id = "onboarding"
+description = "Autobuilder onboarding scaffold and its own bookkeeping (agent/, scripts/, CHANGELOG.md, receipts) — PRD-build-homeward-ingest-autobuilder-onboard"
+globs = [
+  "homeward-ingest/agent/**",
+  "homeward-ingest/scripts/**",
+  "homeward-ingest/CHANGELOG.md",
+  "homeward-ingest/target/autobuilder/**",
+]
+required_commands = [
+  "homeward-ingest/scripts/run-metrics.sh",
+]
