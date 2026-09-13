@@ -1,24 +1,55 @@
 {
   "base_note": null,
-  "base_ref": "v0.2.3",
-  "base_sha": "50489ad44d4a3615aba18ab28927347fe5fbf232",
+  "base_ref": "v0.39.0",
+  "base_sha": "4f2d35e678b0d307cdfa570b3c9c550c461b33ef",
   "base_tag": null,
-  "blocking_count": 0,
-  "captured_at": "2026-09-13T04:13:28Z",
+  "blocking_count": 1,
+  "captured_at": "2026-09-13T21:07:27Z",
   "classified": {
     "mechanical_chain": 0,
     "mechanical_merge": 0,
     "mechanical_pattern": 0,
-    "substantive": 0
+    "substantive": 3
   },
-  "commit_count": 0,
-  "commits": [],
-  "head_sha": "13e3b8be3e44bf3977a4d44df6725473c7dda883",
+  "commit_count": 3,
+  "commits": [
+    {
+      "class": "substantive",
+      "mechanical": false,
+      "note": "clean revert",
+      "parent_count": 1,
+      "revertable": true,
+      "sha": "65fe3d24939f693b18eec54a6cbb0527859afae9",
+      "short_sha": "65fe3d2",
+      "subject": "homeward-ingest: add dedicated AC5 test (backfill never sends offset)"
+    },
+    {
+      "class": "substantive",
+      "mechanical": false,
+      "note": "clean revert",
+      "parent_count": 1,
+      "revertable": true,
+      "sha": "de4e9d49c1862468f3331f29ea910f7be8a2c1d5",
+      "short_sha": "de4e9d4",
+      "subject": "homeward-mcp: rename public-reachability test to this PRD's own AC1, add AC2 docs-check"
+    },
+    {
+      "class": "substantive",
+      "mechanical": false,
+      "note": "conflicts during revert",
+      "parent_count": 1,
+      "revertable": false,
+      "sha": "49b0a084abbbb3f5fd2fa2aaa8b52acd932d20d3",
+      "short_sha": "49b0a08",
+      "subject": "homeward-mcp: add AC4 public-reachability test, close hub-deploy's Tailscale-only test gap"
+    }
+  ],
+  "head_sha": "65fe3d24939f693b18eec54a6cbb0527859afae9",
   "mechanical_count": 0,
-  "receipt_digest": "sha256:a5c99c93b743f857f1f82d4d9ea13628e3fcc1a7997aac4140947bf4617436f3",
-  "revertable_count": 0,
+  "receipt_digest": "sha256:081d0c3b809c05c72672ea6521339195ac98095992e1bac13673543fe7abff5c",
+  "revertable_count": 2,
   "rollback_md": "target/autobuilder/rollback.md",
   "rollback_model": "revert-commits",
   "schema": "autobuilder.rollback_plan_receipt.v2",
-  "verdict": "pass"
+  "verdict": "block"
 }

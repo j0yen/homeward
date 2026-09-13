@@ -1,15 +1,44 @@
 {
-  "base_ref": "v0.2.3",
-  "base_sha": "50489ad44d4a3615aba18ab28927347fe5fbf232",
-  "captured_at": "2026-09-13T04:13:28Z",
-  "head_sha": "13e3b8be3e44bf3977a4d44df6725473c7dda883",
+  "base_ref": "v0.39.0",
+  "base_sha": "4f2d35e678b0d307cdfa570b3c9c550c461b33ef",
+  "captured_at": "2026-09-13T21:07:27Z",
+  "head_sha": "65fe3d24939f693b18eec54a6cbb0527859afae9",
   "min_confidence": 0.7,
   "proof_lanes_path": "agent/proof-lanes.toml",
   "proof_lanes_sha256": "sha256:2a55df6aebd91689da760c51ef3d7363b59b0daf317e33686c4e478b13b9ec71",
-  "receipt_digest": "sha256:64276d6a3147d7060cbf5cfb44c0de81a674355403e8d12a7c9e0271d6db1180",
-  "required_commands": [],
-  "routes": [],
+  "receipt_digest": "sha256:e3443386ea673570e88b4ab478baec53898f295b57639811553fc69755d0908d",
+  "required_commands": [
+    "cargo test --workspace"
+  ],
+  "routes": [
+    {
+      "confidence": 0.0,
+      "lanes": [],
+      "path": "deploy/hub/README.md"
+    },
+    {
+      "confidence": 1.0,
+      "lanes": [
+        "rust-tests"
+      ],
+      "path": "homeward-ingest/tests/backfill_tests.rs"
+    },
+    {
+      "confidence": 0.0,
+      "lanes": [],
+      "path": "tests/hub-deploy-public-reachability_ac1_public-reachability.sh"
+    },
+    {
+      "confidence": 0.0,
+      "lanes": [],
+      "path": "tests/hub-deploy-public-reachability_ac2_docs-name-public-address.sh"
+    }
+  ],
   "schema": "autobuilder.vti_plan_receipt.v1",
-  "unrouted_paths": [],
-  "verdict": "pass"
+  "unrouted_paths": [
+    "deploy/hub/README.md",
+    "tests/hub-deploy-public-reachability_ac1_public-reachability.sh",
+    "tests/hub-deploy-public-reachability_ac2_docs-name-public-address.sh"
+  ],
+  "verdict": "block"
 }

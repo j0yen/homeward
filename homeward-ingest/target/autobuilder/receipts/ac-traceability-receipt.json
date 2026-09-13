@@ -1,9 +1,9 @@
 {
   "ac_ids": [],
-  "captured_at": "2026-09-13T04:13:29Z",
-  "head_sha": "13e3b8be3e44bf3977a4d44df6725473c7dda883",
+  "captured_at": "2026-09-13T21:07:29Z",
+  "head_sha": "65fe3d24939f693b18eec54a6cbb0527859afae9",
   "prd_path": "<none>",
-  "receipt_digest": "sha256:15276e806076434646876a9caa0aa52dd6f68dbee6c782b875edecd908af1e28",
+  "receipt_digest": "sha256:a3d4b9ff543f950eca7668334341260fb0d7e119cf3c65add8b22b41b6e200c6",
   "schema": "autobuilder.ac_traceability_receipt.v1",
   "tests_per_ac": {},
   "untraced_ac_ids": [

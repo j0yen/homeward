@@ -2,11 +2,11 @@
   "advisories_found": [],
   "advisories_loaded": 0,
   "advisory_db_ref": "vendor/rustsec (0 advisories)",
-  "captured_at": "2026-09-13T04:13:29Z",
+  "captured_at": "2026-09-13T21:07:29Z",
   "deps_scanned": 380,
-  "head_sha": "13e3b8be3e44bf3977a4d44df6725473c7dda883",
+  "head_sha": "65fe3d24939f693b18eec54a6cbb0527859afae9",
   "ignored_advisories": [],
-  "receipt_digest": "sha256:63906d461a876a8c8cb2178f7714fafdf8f34a43002d1ac7a242cc834c75a995",
+  "receipt_digest": "sha256:8f6be0a12a7b7b58a167ef84c47aba96b325be6aeddca2c1323d1ea70f9c8ac4",
   "schema": "autobuilder.supply_audit_receipt.v1",
   "verdict": "pass"
 }

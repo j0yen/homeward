@@ -12,7 +12,7 @@
     "CC0-1.0",
     "0BSD"
   ],
-  "captured_at": "2026-09-13T04:13:29Z",
+  "captured_at": "2026-09-13T21:07:29Z",
   "deps_scanned": 380,
   "deps_unknown_license": [
     "adler2@2.0.1",
@@ -133,7 +133,7 @@
     "hermit-abi@0.5.3",
     "hkdf@0.10.0",
     "hmac@0.10.1",
-    "homeward@0.38.0",
+    "homeward@0.39.0",
     "homeward-connectors@0.2.4",
     "homeward-embed-client@0.1.0",
     "homeward-geocode@0.1.0",
@@ -396,8 +396,8 @@
     "zlib-rs@0.6.7",
     "zmij@1.0.23"
   ],
-  "head_sha": "13e3b8be3e44bf3977a4d44df6725473c7dda883",
-  "receipt_digest": "sha256:2e2d538acd8730c2630119aaece251bc40b49cb882b1817a6dcd823e3d1a0967",
+  "head_sha": "65fe3d24939f693b18eec54a6cbb0527859afae9",
+  "receipt_digest": "sha256:cb15f39ad833b95d2ab234ab86ea964f534d9559849dd44cd348db661aa5c626",
   "schema": "autobuilder.license_audit_receipt.v1",
   "verdict": "pass",
   "violations": []

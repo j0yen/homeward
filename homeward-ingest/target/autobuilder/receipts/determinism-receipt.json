@@ -1,13 +1,13 @@
 {
   "artifacts": [
     {
-      "digest_run_a": "sha256:1d81f0678834cbb87577b4e715aa26698663904841fb448e8ea366419614d489",
-      "digest_run_b": "sha256:1d81f0678834cbb87577b4e715aa26698663904841fb448e8ea366419614d489",
+      "digest_run_a": "sha256:54af6b5f7ef6a40bcafb4a4f70e432d987f69753cf58bdb60a4fe92fdc9f5336",
+      "digest_run_b": "sha256:54af6b5f7ef6a40bcafb4a4f70e432d987f69753cf58bdb60a4fe92fdc9f5336",
       "path": "release/libhomeward_ingest.rlib"
     },
     {
-      "digest_run_a": "sha256:059ddc865cff690bfe635831f1cb71d11d34c6debb32f73740dde1d2cc4ffffc",
-      "digest_run_b": "sha256:059ddc865cff690bfe635831f1cb71d11d34c6debb32f73740dde1d2cc4ffffc",
+      "digest_run_a": "sha256:423e3d989fa798b50d7f1568031683201969d7eb85e2b804f6beda490cb4b2f5",
+      "digest_run_b": "sha256:423e3d989fa798b50d7f1568031683201969d7eb85e2b804f6beda490cb4b2f5",
       "path": "release/homeward-ingestd"
     },
     {
@@ -16,10 +16,10 @@
       "path": "release/.cargo-lock"
     }
   ],
-  "captured_at": "2026-09-13T04:14:27Z",
-  "head_sha": "13e3b8be3e44bf3977a4d44df6725473c7dda883",
+  "captured_at": "2026-09-13T21:08:18Z",
+  "head_sha": "65fe3d24939f693b18eec54a6cbb0527859afae9",
   "mismatched": [],
-  "receipt_digest": "sha256:c07edd8063ac39d67c5b9938e1e38b0bf3ed18a313f52e540058f53107a52cad",
+  "receipt_digest": "sha256:3fcc9239e7a8cbd33b0fe8d9df8eb76d745e87380e0c6e33b6f44b139fbc7ce6",
   "schema": "autobuilder.determinism_receipt.v1",
   "verdict": "pass"
 }

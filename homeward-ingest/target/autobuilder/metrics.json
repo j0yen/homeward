@@ -1,6 +1,6 @@
 {
   "schema": "autobuilder.metrics.v1",
-  "head_sha": "13e3b8be3e44bf3977a4d44df6725473c7dda883",
+  "head_sha": "65fe3d24939f693b18eec54a6cbb0527859afae9",
   "iteration": null,
   "scalars": {
     "acceptance_tests_passing_count": 0,
@@ -19,5 +19,5 @@
   "proptest_density": null,
   "mutants_alive_count": null,
   "mutants_tested_count": null,
-  "captured_at": "2026-09-13T03:49:06Z"
+  "captured_at": "2026-09-13T21:06:58Z"
 }

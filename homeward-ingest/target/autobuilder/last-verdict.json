@@ -1,13 +1,15 @@
 {
-  "head_sha": "13e3b8be3e44bf3977a4d44df6725473c7dda883",
-  "head": "13e3b8be3e44bf3977a4d44df6725473c7dda883",
+  "head_sha": "65fe3d24939f693b18eec54a6cbb0527859afae9",
+  "head": "65fe3d24939f693b18eec54a6cbb0527859afae9",
   "script_sha256": "63c3855d69fc963ccd5dcd4270a3fc1cf861d2325e3ee033385c164eaab64d75",
   "verdict": "delta-pass",
   "exit_code": 0,
   "new_blocks": [],
   "inherited_blocks": [
+    "vti-plan",
     "risk-gate",
     "reviewer-agent",
+    "rollback-plan",
     "ci-checks",
     "msrv-verify",
     "ac-traceability"
@@ -20,6 +22,18 @@
     "host": "local"
   },
   "blocks": [
+    {
+      "receipt": "vti-plan",
+      "finding": "autobuilder vti-plan exited non-zero",
+      "path": "",
+      "scope": "inherited"
+    },
+    {
+      "receipt": "rollback-plan",
+      "finding": "commits since v0.39.0 are not all revert-clean (see target/autobuilder/rollback.md); fix forward, or a human rewrites history and says so — this script never edits history to force a pass",
+      "path": "",
+      "scope": "inherited"
+    },
     {
       "receipt": "ci-checks",
       "finding": "workflow(s) on HEAD are not green, or still pending (the next tick retries)",
@@ -35,18 +49,18 @@
   ],
   "attribution": {
     "in_scope": 0,
-    "inherited": 2
+    "inherited": 4
   },
   "phases": {
     "risk-gate": "skip",
     "intake": "0",
-    "proof-receipt": "1463",
-    "vti-plan": "0",
-    "rollback-plan": "0",
+    "proof-receipt": "29",
+    "vti-plan": "0!",
+    "rollback-plan": "0!",
     "ci-checks": "0!",
-    "receipts": "59!",
+    "receipts": "51!",
     "reviewer": "skip",
     "gate": "0!"
   },
-  "wall_s": 1522
+  "wall_s": 81
 }

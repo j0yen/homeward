@@ -829,11 +829,11 @@
         "version": "0.10.1"
       },
       {
-        "bom-ref": "homeward-0.38.0",
+        "bom-ref": "homeward-0.39.0",
         "name": "homeward",
-        "purl": "pkg:cargo/homeward@0.38.0",
+        "purl": "pkg:cargo/homeward@0.39.0",
         "type": "library",
-        "version": "0.38.0"
+        "version": "0.39.0"
       },
       {
         "bom-ref": "homeward-connectors-0.2.4",
@@ -2666,10 +2666,10 @@
     "specVersion": "1.5",
     "version": 1
   },
-  "captured_at": "2026-09-13T04:13:29Z",
+  "captured_at": "2026-09-13T21:07:29Z",
   "components_count": 380,
-  "head_sha": "13e3b8be3e44bf3977a4d44df6725473c7dda883",
-  "receipt_digest": "sha256:17c305bcafd77cfa258e2e54166500826dfc12a9c24a57551977a627144f0cc5",
+  "head_sha": "65fe3d24939f693b18eec54a6cbb0527859afae9",
+  "receipt_digest": "sha256:59dce56a0b26eeb49bd1fde0dbc2b117de138fb31bcb26cc649dbc752e3af50b",
   "schema": "autobuilder.sbom_receipt.v1",
   "verdict": "pass"
 }
