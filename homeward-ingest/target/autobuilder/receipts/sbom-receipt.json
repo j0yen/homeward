@@ -2666,10 +2666,10 @@
     "specVersion": "1.5",
     "version": 1
   },
-  "captured_at": "2026-09-13T03:42:09Z",
+  "captured_at": "2026-09-13T04:13:29Z",
   "components_count": 380,
-  "head_sha": "3824da382a6fb7e19b45826e958c85291eabc924",
-  "receipt_digest": "sha256:3301554124ef1f53afb140fcfd43c941d2e36526b36b2156096311dd2f050dbf",
+  "head_sha": "13e3b8be3e44bf3977a4d44df6725473c7dda883",
+  "receipt_digest": "sha256:17c305bcafd77cfa258e2e54166500826dfc12a9c24a57551977a627144f0cc5",
   "schema": "autobuilder.sbom_receipt.v1",
   "verdict": "pass"
 }

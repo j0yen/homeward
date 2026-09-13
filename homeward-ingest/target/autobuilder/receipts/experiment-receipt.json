@@ -1,8 +1,8 @@
 {
   "campaign_slug": "",
-  "captured_at": "2026-09-13T03:42:09Z",
-  "head_sha": "3824da382a6fb7e19b45826e958c85291eabc924",
-  "receipt_digest": "sha256:1170009653327287cee642ed1443c6f75c6d3b854c6f7089752a89580f35db2f",
+  "captured_at": "2026-09-13T04:13:29Z",
+  "head_sha": "13e3b8be3e44bf3977a4d44df6725473c7dda883",
+  "receipt_digest": "sha256:e011d94441cc5973f91dd7ba2d3ca154c01923cdefc5ff2914a6f4ecf19f6567",
   "schema": "autobuilder.experiment_receipt.v1",
   "skip_reason": "no campaign outcomes file at /home/jsy/wintermute/homeward/homeward-ingest/target/autobuilder/experiment-outcomes.json",
   "slice_count": 0,

@@ -2,12 +2,12 @@
   "additions": [],
   "base_ref": "HEAD~1",
   "breaking_changes": [],
-  "captured_at": "2026-09-13T03:42:09Z",
+  "captured_at": "2026-09-13T04:13:29Z",
   "compatibility": "patch",
   "expected_bump": "patch",
   "head_ref": "HEAD",
-  "head_sha": "3824da382a6fb7e19b45826e958c85291eabc924",
-  "receipt_digest": "sha256:5a54895bade202d4fe09059ad1cf6634851ed96e1d5fc4d5e5e73ecd4c0db97c",
+  "head_sha": "13e3b8be3e44bf3977a4d44df6725473c7dda883",
+  "receipt_digest": "sha256:e643e248b59b9f3f09335d12dc4dd19da9b68773ca1b9c6bdbc335f11e7f2251",
   "schema": "autobuilder.semver_check_receipt.v1",
   "verdict": "pass"
 }

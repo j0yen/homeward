@@ -1,63 +1,22 @@
 {
   "base_note": null,
-  "base_ref": "v0.2.2",
-  "base_sha": "3b7f1e4b6d30ba66a51f0ea9a93ee88178f84b5e",
+  "base_ref": "v0.2.3",
+  "base_sha": "50489ad44d4a3615aba18ab28927347fe5fbf232",
   "base_tag": null,
   "blocking_count": 0,
-  "captured_at": "2026-09-13T03:42:08Z",
+  "captured_at": "2026-09-13T04:13:28Z",
   "classified": {
     "mechanical_chain": 0,
     "mechanical_merge": 0,
     "mechanical_pattern": 0,
-    "substantive": 4
+    "substantive": 0
   },
-  "commit_count": 4,
-  "commits": [
-    {
-      "class": "substantive",
-      "mechanical": false,
-      "note": "clean revert",
-      "parent_count": 1,
-      "revertable": true,
-      "sha": "3824da382a6fb7e19b45826e958c85291eabc924",
-      "short_sha": "3824da3",
-      "subject": "homeward-ingest: v0.2.3 — symlink Cargo.lock to workspace root, unblocking supply-audit/license-audit/sbom (build-homeward-ingest-autobuilder-onboard)"
-    },
-    {
-      "class": "substantive",
-      "mechanical": false,
-      "note": "clean revert",
-      "parent_count": 1,
-      "revertable": true,
-      "sha": "f3b20c063d2909c61650c73f4626f36f2d062490",
-      "short_sha": "f3b20c0",
-      "subject": "deploy/hub/README: document the applied homeward-mcp unit"
-    },
-    {
-      "class": "substantive",
-      "mechanical": false,
-      "note": "clean revert",
-      "parent_count": 1,
-      "revertable": true,
-      "sha": "8da4c66ca8e9bc3aa5b85792e2875a061a91afe3",
-      "short_sha": "8da4c66",
-      "subject": "tests: add real hub-deploy AC verification scripts (PRD-homeward-mcp-hub-deploy)"
-    },
-    {
-      "class": "substantive",
-      "mechanical": false,
-      "note": "clean revert",
-      "parent_count": 1,
-      "revertable": true,
-      "sha": "5125ab6eb9d7f026206086d918feb3c5afa6bd64",
-      "short_sha": "5125ab6",
-      "subject": "homeward: regenerate Cargo.lock for homeward-ingest v0.2.2"
-    }
-  ],
-  "head_sha": "3824da382a6fb7e19b45826e958c85291eabc924",
+  "commit_count": 0,
+  "commits": [],
+  "head_sha": "13e3b8be3e44bf3977a4d44df6725473c7dda883",
   "mechanical_count": 0,
-  "receipt_digest": "sha256:4673820d640da686aa3e76cc6aee5727eb8a57295c2fc4018c94d0938dafc21d",
-  "revertable_count": 4,
+  "receipt_digest": "sha256:a5c99c93b743f857f1f82d4d9ea13628e3fcc1a7997aac4140947bf4617436f3",
+  "revertable_count": 0,
   "rollback_md": "target/autobuilder/rollback.md",
   "rollback_model": "revert-commits",
   "schema": "autobuilder.rollback_plan_receipt.v2",

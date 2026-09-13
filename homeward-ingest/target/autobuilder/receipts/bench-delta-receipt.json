@@ -1,10 +1,10 @@
 {
   "baseline_path": "extended-gates.bench-baseline.json",
-  "captured_at": "2026-09-13T03:42:09Z",
+  "captured_at": "2026-09-13T04:13:29Z",
   "comparisons": [],
-  "head_sha": "3824da382a6fb7e19b45826e958c85291eabc924",
+  "head_sha": "13e3b8be3e44bf3977a4d44df6725473c7dda883",
   "max_regression_pct": 0.0,
-  "receipt_digest": "sha256:111ef17490c50c0328e8d116dfd3f07943341c2b8666bbfdb927c8d9052406a8",
+  "receipt_digest": "sha256:01d37dc4c3a6bdb98f0fe539e95708cca3170e8735b3047e546619aefdeee29c",
   "regressed": [
     "no baseline file"
   ],

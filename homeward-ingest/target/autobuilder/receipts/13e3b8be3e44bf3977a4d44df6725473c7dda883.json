@@ -1,0 +1,25 @@
+{
+  "ac_passing_count": 0,
+  "ac_total_count": 0,
+  "audit": {
+    "advisory_count": 0,
+    "blocking_count": 0
+  },
+  "captured_at": "2026-09-13T04:13:28Z",
+  "clippy_warning_count": 0,
+  "head_sha": "13e3b8be3e44bf3977a4d44df6725473c7dda883",
+  "iteration": 0,
+  "metric_name": "acceptance_tests_passing_count",
+  "metric_value": 0.0,
+  "previous_metric_value": 0.0,
+  "receipt_digest": "sha256:c002a69d010ec169028103db251e647378c4c2f31da9b084308ac3323bd8b425",
+  "schema": "autobuilder.iteration_receipt.v1",
+  "verdict": "baseline",
+  "cargo_route": {
+    "intended": "local",
+    "burst": 0,
+    "local": 0,
+    "passthrough": 0,
+    "host": "local"
+  }
+}

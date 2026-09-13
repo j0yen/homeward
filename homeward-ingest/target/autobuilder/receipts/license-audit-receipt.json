@@ -12,7 +12,7 @@
     "CC0-1.0",
     "0BSD"
   ],
-  "captured_at": "2026-09-13T03:42:09Z",
+  "captured_at": "2026-09-13T04:13:29Z",
   "deps_scanned": 380,
   "deps_unknown_license": [
     "adler2@2.0.1",
@@ -396,8 +396,8 @@
     "zlib-rs@0.6.7",
     "zmij@1.0.23"
   ],
-  "head_sha": "3824da382a6fb7e19b45826e958c85291eabc924",
-  "receipt_digest": "sha256:c2e8f57bc3bc7c0edf2994de7b4b0f4a3939ab78607d3b46b22bab548431d709",
+  "head_sha": "13e3b8be3e44bf3977a4d44df6725473c7dda883",
+  "receipt_digest": "sha256:2e2d538acd8730c2630119aaece251bc40b49cb882b1817a6dcd823e3d1a0967",
   "schema": "autobuilder.license_audit_receipt.v1",
   "verdict": "pass",
   "violations": []
