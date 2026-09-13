@@ -1,8 +1,8 @@
 {
   "schema": "autobuilder.intent_card.v1",
-  "prd_source": "/home/jsy/Documents/PRDs/build-queue/PRD-homeward-mcp-photo-match.md",
-  "intent_slug": "homeward-mcp-photo-match",
-  "root_motivation": "The matcher is homeward's core value (baselines: r5 0.693, r20 0.880 \u2014 a 20-candidate shortlist finds an enrolled pet ~7 times in 8) yet it is unreachable from any agent: the embed service listens on the hub's loopback-adjacent :8741 and no public calling surface exists. An owner's assistant holding a photo today has no programmatic route to the shortlist. Evidence: homeward-ops service inventory + eval baselines (2026-08-26); embed service and HNSW index live since the original embed/match PRDs.",
+  "prd_source": "/home/jsy/Documents/PRDs/build-queue/PRD-homeward-ingest-location-backfill-missing.md",
+  "intent_slug": "homeward-ingest-location-backfill-missing",
+  "root_motivation": "Verified 2026-09-13 during PRD-homeward-mcp-hub-deploy's real-environment AC checks (`tests/hub-deploy_ac3_search-pets-live.sh` against the live hub): - `sqlite3 ~/.local/share/homeward/homeward-ingest.db \"select count(*) from canonical_records where json_extract(record_json,'$.location') is not null;\"` \u2192 `0` (out of 185374 total rows). - `rescuegroups.rs`'s `map_animal`-equivalent function builds every `PetRecord` with `location: None,` unconditionally (line 635) \u2014 never reads whatever address/lat-lon fields the RescueGroups JSON:API response actually carries for the animal's org/shelter. - Two consumer-facing effects: (1) `search_pets`'s \"coarse location\" promise is unmet for every real result; (2) `search_pets(lat, lon, radius_km)` and `search_pets(postal_code)` \u2014 both explicitly documented tool parameters \u2014 can never match anything against live data, since `filter.rs`'s radius/postal-code filters read the same always-`None` field.",
   "user_persona": "UNSPECIFIED \u2014 no existing intent card to carry forward from; set by hand (intent-card-refresh.sh cannot source this from a PRD).",
   "unfakeable_metric": {
     "name": "acceptance_tests_passing_count",
@@ -14,50 +14,26 @@
     {
       "id": "AC1",
       "level": "MUST",
-      "description": "Given a fixture index with known neighbors, When match_photo submits an enrolled animal's held-out photo, Then the ranked list matches the direct pipeline's output for the same inputs (ids and order).",
+      "description": "Given a RescueGroups API animal payload that includes an org/location relationship, When the connector maps it to a `PetRecord`, Then `location` is `Some(ShelterLocation { .. })` with real city/state (and lat/lon if the API provides them), not `None`.",
       "test": "homeward-mcp/tests/mcp_ac01_tools_list_and_resource.rs"
     },
     {
       "id": "AC2",
       "level": "MUST",
-      "description": "Given any successful match response, When inspected, Then it carries similarity per candidate, the advisory string, and the species baseline metadata.",
+      "description": "Given the existing 185k-row production DB, When a backfill pass runs against already-ingested RescueGroups records (using stored `source_animal_id`s to re-fetch or re-derive location), Then a measurable majority gain non-null `location` (some source records may genuinely lack a location upstream \u2014 100% is not required, but 0% must not persist).",
       "test": "homeward-mcp/tests/mcp_ac02_search_pets_radius_and_privacy.rs"
     },
     {
       "id": "AC3",
-      "level": "MUST",
-      "description": "Given a match call completes, When the filesystem and DB are audited, Then no submitted image bytes, query embeddings, or EXIF-bearing artifacts were written.",
+      "level": "SHOULD",
+      "description": "Given a live `search_pets(lat, lon, radius_km)` or `search_pets(postal_code)` call after this ships, When run against real data, Then it returns non-empty results for at least one real query center known to have nearby shelters.",
       "test": "homeward-mcp/tests/mcp_ac03_empty_result_well_formed.rs"
     },
     {
       "id": "AC4",
-      "level": "MUST",
-      "description": "Given the embed service is stopped, When match_photo is called, Then a typed degraded error returns within 5 s and a subsequent search_pets call still succeeds.",
+      "level": "SHOULD",
+      "description": "Given a fixture RescueGroups payload that includes org/location data, When the connector's mapping unit test runs, Then it asserts `location.is_some()`, so this regression class can't silently reappear.",
       "test": "homeward-mcp/tests/mcp_ac04_invalid_species_typed_error.rs"
-    },
-    {
-      "id": "AC5",
-      "level": "MUST",
-      "description": "Given a non-image payload and an oversized image, When submitted, Then each yields a typed validation error and the server stays up.",
-      "test": "homeward-mcp/tests/mcp_ac05_missing_db_clean_error.rs"
-    },
-    {
-      "id": "AC6",
-      "level": "SHOULD",
-      "description": "Given the ryzen7 harness cross-session pairs, When run through the MCP path, Then ranked-list parity \u226599% and the divergence report lists every non-matching pair.",
-      "test": "homeward-mcp/tests/mcp_ac06_http_and_stdio_parity.rs"
-    },
-    {
-      "id": "AC7",
-      "level": "SHOULD",
-      "description": "Given a warm embed service, When 50 timed matches run, Then p95 < 4 s.",
-      "test": "tests/acceptance_ac7.rs"
-    },
-    {
-      "id": "AC8",
-      "level": "MAY",
-      "description": "Given limit=5 and a radius filter, When applied, Then survivors keep their kNN relative order.",
-      "test": "tests/acceptance_ac8.rs"
     }
   ],
   "scope": [],
