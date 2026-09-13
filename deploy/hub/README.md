@@ -30,7 +30,7 @@ directory — `WorkingDirectory` must be that dir or YOLO silently re-downloads.
 - report listens on 8080 (unit flag overrides the env 8081) and reads an optional `messaging.env` for relay/SMTP
 - embed sidecar on 127.0.0.1:8741
 - wall service (port 8090) exists only here
-- mcp service (port 8095, streamable-HTTP `/mcp`, `GET /healthz`) exists only here; reachable directly over Tailscale (no Caddy route yet — see "MCP verification" below)
+- mcp service (port 8095, streamable-HTTP `/mcp`, `GET /healthz`) exists only here; reachable both over Tailscale and on the hub's public IP (no Caddy route yet — see "MCP verification" and "Supported address for external/mcphost callers" below)
 
 ## MCP verification (homeward-mcp, applied 2026-09-13)
 
@@ -43,6 +43,27 @@ every live result's `city_county`/`state` is null because
 `homeward-connectors`' RescueGroups mapper never populates `location` at
 all (0/185374 rows) — tracked in `PRD-homeward-ingest-location-backfill-missing.md`,
 not a defect in this deploy.
+
+`tests/hub-deploy_ac4_public-reachability.sh` closes a gap those three left:
+Tailscale-peer reachability (`100.66.158.49:8095`) is a real but *weaker*
+bar than what mcphost.dev's tenant tool-execution sandbox (2.28.40.4)
+actually needs, and mcphost.dev is not a Tailscale peer. That sandbox
+timed out against the Tailscale address entirely; the hub's **public**
+address, `178.105.64.66:8095`, is the one that actually works from
+mcphost.dev and is what every mcphost-tool wrapping of homeward-mcp must
+target (see PRD-homeward-mcp-hub-deploy-public-reachability-test-gap.md).
+AC4 pins its own egress route away from `tailscale0` before trusting a
+green result, so it fails loudly — not silently — if a future firewall
+change ever closes the public port.
+
+## Supported address for external/mcphost callers
+
+**Use `178.105.64.66:8095` (public IP), not `100.66.158.49:8095`
+(Tailscale), when wrapping homeward-mcp as a tool for a non-Tailscale
+caller such as an mcphost.dev tenant.** The Tailscale address only works
+for callers inside the fleet's Tailscale mesh (RedBaron/carbon/hub/ryzen7).
+There is no Caddy/TLS route yet for either address — both are plain HTTP
+directly to port 8095.
 
 ## Deploy recipe (binaries)
 
