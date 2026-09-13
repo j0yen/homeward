@@ -1,10 +1,15 @@
 {
-  "head_sha": "724cb1dc696c0cf120678a3c087398627130b6e5",
-  "head": "724cb1dc696c0cf120678a3c087398627130b6e5",
+  "head_sha": "e442dc77d0bcfb9de847c1a94bd8b79e3f5760b2",
+  "head": "e442dc77d0bcfb9de847c1a94bd8b79e3f5760b2",
   "script_sha256": "63c3855d69fc963ccd5dcd4270a3fc1cf861d2325e3ee033385c164eaab64d75",
   "verdict": "block",
   "exit_code": 1,
   "new_blocks": [
+    "supply-audit",
+    "license-audit",
+    "sbom"
+  ],
+  "inherited_blocks": [
     "vti-plan",
     "proof-receipt",
     "risk-gate",
@@ -12,13 +17,9 @@
     "rollback-plan",
     "ci-checks",
     "session-trace",
-    "supply-audit",
-    "license-audit",
-    "sbom",
     "msrv-verify",
     "ac-traceability"
   ],
-  "inherited_blocks": [],
   "cargo_route": {
     "intended": "local",
     "burst": 0,
@@ -65,13 +66,13 @@
   "phases": {
     "risk-gate": "skip",
     "intake": "0",
-    "proof-receipt": "0!",
-    "vti-plan": "0!",
+    "proof-receipt": "1!",
+    "vti-plan": "1!",
     "rollback-plan": "0!",
     "ci-checks": "0!",
-    "receipts": "43!",
+    "receipts": "105!",
     "reviewer": "skip",
     "gate": "0!"
   },
-  "wall_s": 44
+  "wall_s": 108
 }

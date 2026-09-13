@@ -1,10 +1,10 @@
 {
-  "captured_at": "2026-09-12T21:27:29Z",
+  "captured_at": "2026-09-13T01:02:43Z",
   "cargo_check_exit": 101,
   "declared_msrv": "1.86",
-  "head_sha": "724cb1dc696c0cf120678a3c087398627130b6e5",
+  "head_sha": "e442dc77d0bcfb9de847c1a94bd8b79e3f5760b2",
   "note": "",
-  "receipt_digest": "sha256:8014d0eb47abe922df0a90dc4f0ee0427a817dd0c9bf99a7cee2eb0720d7563b",
+  "receipt_digest": "sha256:60ab6ebe8108c5662088a6a4390386009636b23198a41d065b17411d1da0e3f5",
   "schema": "autobuilder.msrv_verify_receipt.v1",
   "toolchain_available": true,
   "verdict": "block"

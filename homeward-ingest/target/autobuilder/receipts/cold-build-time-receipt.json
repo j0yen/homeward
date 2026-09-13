@@ -1,10 +1,10 @@
 {
-  "captured_at": "2026-09-12T21:28:06Z",
+  "captured_at": "2026-09-13T01:04:17Z",
   "cargo_exit": 0,
-  "elapsed_seconds": 37.147169135,
-  "head_sha": "724cb1dc696c0cf120678a3c087398627130b6e5",
+  "elapsed_seconds": 94.899511359,
+  "head_sha": "e442dc77d0bcfb9de847c1a94bd8b79e3f5760b2",
   "max_seconds": 600.0,
-  "receipt_digest": "sha256:53e277c5ab701bbebf6038b061de896cebdcd2513a399f5345ef7fbf7115b87f",
+  "receipt_digest": "sha256:11899e8daca3515ae58b935bec228a0d53faf6b0e900add9c77a78e3eb821eb1",
   "schema": "autobuilder.cold_build_time_receipt.v1",
   "verdict": "pass"
 }
