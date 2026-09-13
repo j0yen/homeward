@@ -1,0 +1,23 @@
+{
+  "schema": "autobuilder.metrics.v1",
+  "head_sha": "3824da382a6fb7e19b45826e958c85291eabc924",
+  "iteration": null,
+  "scalars": {
+    "acceptance_tests_passing_count": 0,
+    "acceptance_tests_total_count": 0
+  },
+  "ac_passing_count": 0,
+  "ac_total_count": 0,
+  "ac_results": [],
+  "audit": {
+    "blocking_count": 0,
+    "advisory_count": 0
+  },
+  "clippy_warning_count": 0,
+  "test_coverage_pct": null,
+  "doc_coverage_pct": null,
+  "proptest_density": null,
+  "mutants_alive_count": null,
+  "mutants_tested_count": null,
+  "captured_at": "2026-09-13T03:41:46Z"
+}

@@ -1,17 +1,17 @@
 {
   "base_note": null,
-  "base_ref": "v0.1.1",
-  "base_sha": "f7563edad85fd66dad5dd3d4c8c7509082297417",
+  "base_ref": "v0.2.2",
+  "base_sha": "3b7f1e4b6d30ba66a51f0ea9a93ee88178f84b5e",
   "base_tag": null,
-  "blocking_count": 11,
-  "captured_at": "2026-09-13T01:05:59Z",
+  "blocking_count": 0,
+  "captured_at": "2026-09-13T03:42:08Z",
   "classified": {
     "mechanical_chain": 0,
-    "mechanical_merge": 1,
+    "mechanical_merge": 0,
     "mechanical_pattern": 0,
-    "substantive": 25
+    "substantive": 4
   },
-  "commit_count": 26,
+  "commit_count": 4,
   "commits": [
     {
       "class": "substantive",
@@ -19,9 +19,9 @@
       "note": "clean revert",
       "parent_count": 1,
       "revertable": true,
-      "sha": "f7631097bd41a7fa02ab8f4e338f47d722e09dd2",
-      "short_sha": "f763109",
-      "subject": "homeward-ingest: gate receipts at e442dc7 (verdict=block, see PRD iter_log)"
+      "sha": "3824da382a6fb7e19b45826e958c85291eabc924",
+      "short_sha": "3824da3",
+      "subject": "homeward-ingest: v0.2.3 — symlink Cargo.lock to workspace root, unblocking supply-audit/license-audit/sbom (build-homeward-ingest-autobuilder-onboard)"
     },
     {
       "class": "substantive",
@@ -29,39 +29,9 @@
       "note": "clean revert",
       "parent_count": 1,
       "revertable": true,
-      "sha": "e442dc77d0bcfb9de847c1a94bd8b79e3f5760b2",
-      "short_sha": "e442dc7",
-      "subject": "homeward: commit gate baseline recorded at 39702a6 (repo-wide autobuilder-onboarding debt)"
-    },
-    {
-      "class": "substantive",
-      "mechanical": false,
-      "note": "conflicts during revert",
-      "parent_count": 1,
-      "revertable": false,
-      "sha": "39702a61f9d2d6cc1499d082ced58173778415d0",
-      "short_sha": "39702a6",
-      "subject": "homeward-ingest: gate receipts at 724cb1d (verdict=block, see PRD iter_log)"
-    },
-    {
-      "class": "substantive",
-      "mechanical": false,
-      "note": "conflicts during revert",
-      "parent_count": 1,
-      "revertable": false,
-      "sha": "724cb1dc696c0cf120678a3c087398627130b6e5",
-      "short_sha": "724cb1d",
-      "subject": "homeward-ingest: gate receipts regenerated at cc195cc (verdict=block, see PRD iter_log)"
-    },
-    {
-      "class": "substantive",
-      "mechanical": false,
-      "note": "conflicts during revert",
-      "parent_count": 1,
-      "revertable": false,
-      "sha": "cc195cc0e9bb48a970952942644993b407e1478f",
-      "short_sha": "cc195cc",
-      "subject": "homeward-ingest: gate receipts at 86f10e3 (verdict=block, see PRD iter_log)"
+      "sha": "f3b20c063d2909c61650c73f4626f36f2d062490",
+      "short_sha": "f3b20c0",
+      "subject": "deploy/hub/README: document the applied homeward-mcp unit"
     },
     {
       "class": "substantive",
@@ -69,9 +39,9 @@
       "note": "clean revert",
       "parent_count": 1,
       "revertable": true,
-      "sha": "86f10e3ab9d1479ad78a07c7578603840d48a999",
-      "short_sha": "86f10e3",
-      "subject": "homeward-mcp: also carry intent-card under homeward-mcp/agent/ (gate project-root resolution)"
+      "sha": "8da4c66ca8e9bc3aa5b85792e2875a061a91afe3",
+      "short_sha": "8da4c66",
+      "subject": "tests: add real hub-deploy AC verification scripts (PRD-homeward-mcp-hub-deploy)"
     },
     {
       "class": "substantive",
@@ -79,207 +49,17 @@
       "note": "clean revert",
       "parent_count": 1,
       "revertable": true,
-      "sha": "486c6791e0b3d134054900de781c96bcc5bb042b",
-      "short_sha": "486c679",
-      "subject": "homeward-mcp: changelog entry names crate version 0.1.0 (ship-postconditions)"
-    },
-    {
-      "class": "substantive",
-      "mechanical": false,
-      "note": "clean revert",
-      "parent_count": 1,
-      "revertable": true,
-      "sha": "4cf2747a96500027e40dcdf6fcf1b9a080bf9e86",
-      "short_sha": "4cf2747",
-      "subject": "homeward-mcp: Cargo.lock version bump propagation"
-    },
-    {
-      "class": "substantive",
-      "mechanical": false,
-      "note": "clean revert",
-      "parent_count": 1,
-      "revertable": true,
-      "sha": "6a01ecd8f011d70ae241acdabe8f01ef82216495",
-      "short_sha": "6a01ecd",
-      "subject": "agent: refresh intent card for homeward-mcp-server"
-    },
-    {
-      "class": "substantive",
-      "mechanical": false,
-      "note": "conflicts during revert",
-      "parent_count": 1,
-      "revertable": false,
-      "sha": "11deccf6261476a47468509a96f80137983ba9f9",
-      "short_sha": "11deccf",
-      "subject": "homeward-mcp: changelog for v0.37.0"
-    },
-    {
-      "class": "substantive",
-      "mechanical": false,
-      "note": "clean revert",
-      "parent_count": 1,
-      "revertable": true,
-      "sha": "39d30aa696895b2fc6cec7afedf82606191d75ba",
-      "short_sha": "39d30aa",
-      "subject": "homeward-mcp: v0.37.0 — read-only MCP server (search_pets, get_pet, recent_intakes)"
-    },
-    {
-      "class": "substantive",
-      "mechanical": false,
-      "note": "conflicts during revert",
-      "parent_count": 1,
-      "revertable": false,
-      "sha": "e930121b57a2e81cd7cafcb58d56f8d0e081c9d9",
-      "short_sha": "e930121",
-      "subject": "homeward-ingest: gate receipts at af6aa415 (verdict=block, see PRD iter_log)"
-    },
-    {
-      "class": "substantive",
-      "mechanical": false,
-      "note": "clean revert",
-      "parent_count": 1,
-      "revertable": true,
-      "sha": "af6aa41512225d18463b3e73d4a8c8261027ade0",
-      "short_sha": "af6aa41",
-      "subject": "agent: refresh intent card for homeward-ingest-backfill"
-    },
-    {
-      "class": "substantive",
-      "mechanical": false,
-      "note": "conflicts during revert",
-      "parent_count": 1,
-      "revertable": false,
-      "sha": "f990e3a89323aea9fc7f21e95b6366ab49657333",
-      "short_sha": "f990e3a",
-      "subject": "homeward-ingest: changelog for v0.2.0 backfill release"
-    },
-    {
-      "class": "substantive",
-      "mechanical": false,
-      "note": "clean revert",
-      "parent_count": 1,
-      "revertable": true,
-      "sha": "d885ce381acb49f00c4818b9d7ff69cf096f4e3f",
-      "short_sha": "d885ce3",
-      "subject": "homeward-ingest: v0.2.0 — RG population backfill command"
-    },
-    {
-      "class": "mechanical_merge",
-      "mechanical": true,
-      "note": "clean merge revert (`git revert -m 1`)",
-      "parent_count": 2,
-      "revertable": true,
-      "sha": "87aded1f909187ba49351004c7234249a042bfc7",
-      "short_sha": "87aded1",
-      "subject": "Merge branch 'build/homeward-ingest-backfill'"
-    },
-    {
-      "class": "substantive",
-      "mechanical": false,
-      "note": "clean revert",
-      "parent_count": 1,
-      "revertable": true,
-      "sha": "db0bf815fa1f5a3bfe90f23c98d419de2d67da64",
-      "short_sha": "db0bf81",
-      "subject": "eval(embed): cross-session holdout — honest lost-vs-found numbers"
-    },
-    {
-      "class": "substantive",
-      "mechanical": false,
-      "note": "clean revert",
-      "parent_count": 1,
-      "revertable": true,
-      "sha": "0ad0087239dd6e63a93de015676353125f0633b4",
-      "short_sha": "0ad0087",
-      "subject": "test: fix the two long-standing failures (long_beach catalog, embed small-variant)"
-    },
-    {
-      "class": "substantive",
-      "mechanical": false,
-      "note": "conflicts during revert",
-      "parent_count": 1,
-      "revertable": false,
-      "sha": "44692943edd0645e542fc37003faaad0180ed974",
-      "short_sha": "4469294",
-      "subject": "deploy(hub): capture the live constellation hub scaffolding"
-    },
-    {
-      "class": "substantive",
-      "mechanical": false,
-      "note": "conflicts during revert",
-      "parent_count": 1,
-      "revertable": false,
-      "sha": "a3afc60c9b8cea10c1f9b8bc3db4a48b661027cf",
-      "short_sha": "a3afc60",
-      "subject": "feat(wall): integrate homeward-wall crate into the main workspace"
-    },
-    {
-      "class": "substantive",
-      "mechanical": false,
-      "note": "clean revert",
-      "parent_count": 1,
-      "revertable": true,
-      "sha": "6cccd17f1c23402b4206b7c658406cbabd5fe454",
-      "short_sha": "6cccd17",
-      "subject": "docs(wall): link the Finding Coconut live match demo"
-    },
-    {
-      "class": "substantive",
-      "mechanical": false,
-      "note": "clean revert",
-      "parent_count": 1,
-      "revertable": true,
-      "sha": "ebea436e98a19b28b997ad775555c19542c01103",
-      "short_sha": "ebea436",
-      "subject": "feat(embed): dedupe /query matches per animal"
-    },
-    {
-      "class": "substantive",
-      "mechanical": false,
-      "note": "conflicts during revert",
-      "parent_count": 1,
-      "revertable": false,
-      "sha": "726203a6c2ceb5e2faa7cf10999c295d4056e889",
-      "short_sha": "726203a",
-      "subject": "fix(connectors): rescuegroups pagination must use page, not offset"
-    },
-    {
-      "class": "substantive",
-      "mechanical": false,
-      "note": "conflicts during revert",
-      "parent_count": 1,
-      "revertable": false,
-      "sha": "0a96f550d19cd00b0b98365df3b4b35a5788ac5b",
-      "short_sha": "0a96f55",
-      "subject": "fix(connectors): tolerate missing data key on zero-match rescuegroups pages"
-    },
-    {
-      "class": "substantive",
-      "mechanical": false,
-      "note": "clean revert",
-      "parent_count": 1,
-      "revertable": true,
-      "sha": "8481e96ac2efcd8b8f26ccc4e8a8e3ce9088868b",
-      "short_sha": "8481e96",
-      "subject": "feat(embed): add DINOv2-large embed variant (1024-d)"
-    },
-    {
-      "class": "substantive",
-      "mechanical": false,
-      "note": "conflicts during revert",
-      "parent_count": 1,
-      "revertable": false,
-      "sha": "1290a9508b7e3ca8795cd5c9831369ef53e11268",
-      "short_sha": "1290a95",
-      "subject": "fix(connectors): rescuegroups delta cursor must be RFC3339"
+      "sha": "5125ab6eb9d7f026206086d918feb3c5afa6bd64",
+      "short_sha": "5125ab6",
+      "subject": "homeward: regenerate Cargo.lock for homeward-ingest v0.2.2"
     }
   ],
-  "head_sha": "f7631097bd41a7fa02ab8f4e338f47d722e09dd2",
-  "mechanical_count": 1,
-  "receipt_digest": "sha256:a6201283b43d64b4e072b8d20eaf51254d325402a489e81a752ee37f8d01da65",
-  "revertable_count": 15,
+  "head_sha": "3824da382a6fb7e19b45826e958c85291eabc924",
+  "mechanical_count": 0,
+  "receipt_digest": "sha256:4673820d640da686aa3e76cc6aee5727eb8a57295c2fc4018c94d0938dafc21d",
+  "revertable_count": 4,
   "rollback_md": "target/autobuilder/rollback.md",
   "rollback_model": "revert-commits",
   "schema": "autobuilder.rollback_plan_receipt.v2",
-  "verdict": "block"
+  "verdict": "pass"
 }

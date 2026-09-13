@@ -1,0 +1,1171 @@
+::gate cargo check
+warning: field `id` is never read
+  --> homeward-connectors/src/connectors/opendatasoft.rs:76:5
+   |
+75 | struct OdsRecord {
+   |        --------- field in this struct
+76 |     id: Option<String>,
+   |     ^^
+   |
+   = note: `OdsRecord` has a derived impl for the trait `Debug`, but this is intentionally ignored during dead code analysis
+   = note: `#[warn(dead_code)]` on by default
+
+warning: field `ever_polled` is never read
+   --> homeward-connectors/src/coverage.rs:141:5
+    |
+134 | struct SourceStats {
+    |        ----------- field in this struct
+...
+141 |     ever_polled: bool,
+    |     ^^^^^^^^^^^
+
+warning: `homeward-connectors` (lib) generated 2 warnings
+    Checking homeward-ingest v0.2.3 (/home/jsy/wintermute/homeward/homeward-ingest)
+warning: function `query_visual_scores_with_bytes` is never used
+   --> homeward-report/src/bin/reportd.rs:490:15
+    |
+490 | pub(crate) fn query_visual_scores_with_bytes(
+    |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: `#[warn(dead_code)]` on by default
+
+warning: `homeward-report` (bin "homeward-reportd") generated 1 warning
+warning: field `churn_threshold` is never read
+   --> homeward-ingest/src/orchestrator.rs:159:5
+    |
+146 | struct ConnectorState {
+    |        -------------- field in this struct
+...
+159 |     churn_threshold: usize,
+    |     ^^^^^^^^^^^^^^^
+    |
+    = note: `ConnectorState` has derived impls for the traits `Clone` and `Debug`, but these are intentionally ignored during dead code analysis
+    = note: `#[warn(dead_code)]` on by default
+
+warning: `homeward-ingest` (lib) generated 1 warning
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.53s
+::gate cargo clippy
+::gate cargo test
+warning: field `id` is never read
+  --> homeward-connectors/src/connectors/opendatasoft.rs:76:5
+   |
+75 | struct OdsRecord {
+   |        --------- field in this struct
+76 |     id: Option<String>,
+   |     ^^
+   |
+   = note: `OdsRecord` has a derived impl for the trait `Debug`, but this is intentionally ignored during dead code analysis
+   = note: `#[warn(dead_code)]` on by default
+
+warning: field `ever_polled` is never read
+   --> homeward-connectors/src/coverage.rs:141:5
+    |
+134 | struct SourceStats {
+    |        ----------- field in this struct
+...
+141 |     ever_polled: bool,
+    |     ^^^^^^^^^^^
+
+warning: `homeward-connectors` (lib) generated 2 warnings
+   Compiling homeward-ingest v0.2.3 (/home/jsy/wintermute/homeward/homeward-ingest)
+warning: unused imports: `CoarseLocation`, `LostStatus`, and `Species`
+   --> homeward-report/src/export.rs:651:49
+    |
+651 |     use homeward_schema::{BrokeredContactToken, CoarseLocation, LostStatus, PhotoRef, Species};
+    |                                                 ^^^^^^^^^^^^^^  ^^^^^^^^^^            ^^^^^^^
+    |
+    = note: `#[warn(unused_imports)]` on by default
+
+warning: unused variable: `now`
+   --> homeward-report/src/lib.rs:445:13
+    |
+445 |         let now = Utc::now();
+    |             ^^^ help: if this is intentional, prefix it with an underscore: `_now`
+    |
+    = note: `#[warn(unused_variables)]` on by default
+
+warning: unused import: `RankedCandidates`
+  --> homeward-report/tests/match_flow_tests.rs:14:18
+   |
+14 |     MatchParams, RankedCandidates,
+   |                  ^^^^^^^^^^^^^^^^
+   |
+   = note: `#[warn(unused_imports)]` on by default
+
+warning: unused imports: `ReportStore` and `SubmitRequest`
+  --> homeward-report/tests/match_flow_tests.rs:20:5
+   |
+20 |     ReportStore, SubmitRequest,
+   |     ^^^^^^^^^^^  ^^^^^^^^^^^^^
+
+warning: `homeward-report` (lib test) generated 2 warnings (run `cargo fix --lib -p homeward-report --tests` to apply 1 suggestion)
+warning: `homeward-report` (test "match_flow_tests") generated 2 warnings (run `cargo fix --test "match_flow_tests"` to apply 2 suggestions)
+warning: `homeward-connectors` (lib test) generated 2 warnings (2 duplicates)
+warning: function `query_visual_scores_with_bytes` is never used
+   --> homeward-report/src/bin/reportd.rs:490:15
+    |
+490 | pub(crate) fn query_visual_scores_with_bytes(
+    |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: `#[warn(dead_code)]` on by default
+
+warning: `homeward-report` (bin "homeward-reportd" test) generated 1 warning
+warning: unreachable `pub` item
+ --> homeward-mcp/tests/common/mod.rs:9:1
+  |
+9 | pub mod mock_embed;
+  | ---^^^^^^^^^^^^^^^
+  | |
+  | help: consider restricting its visibility: `pub(crate)`
+  |
+  = help: or consider exporting it for use by other crates
+  = note: requested on the command line with `-W unreachable-pub`
+
+warning: unreachable `pub` item
+  --> homeward-mcp/tests/common/mod.rs:32:1
+   |
+32 | pub fn make_pet(species: Species, mutate: impl FnOnce(&mut PetRecord)) -> PetRecord {
+   | ---^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   | |
+   | help: consider restricting its visibility: `pub(crate)`
+   |
+   = help: or consider exporting it for use by other crates
+
+warning: unreachable `pub` item
+  --> homeward-mcp/tests/common/mod.rs:72:1
+   |
+72 | pub fn make_fixture_db(dir: &Path, records: &[PetRecord]) -> PathBuf {
+   | ---^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   | |
+   | help: consider restricting its visibility: `pub(crate)`
+   |
+   = help: or consider exporting it for use by other crates
+
+warning: unreachable `pub` item
+   --> homeward-mcp/tests/common/mod.rs:111:1
+    |
+111 | pub fn spawn_stdio_server(db_path: &Path) -> Child {
+    | ---^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    | |
+    | help: consider restricting its visibility: `pub(crate)`
+    |
+    = help: or consider exporting it for use by other crates
+
+warning: unreachable `pub` item
+   --> homeward-mcp/tests/common/mod.rs:127:1
+    |
+127 | pub fn spawn_stdio_server_with_embed(db_path: &Path, embed_addr: SocketAddr) -> Child {
+    | ---^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    | |
+    | help: consider restricting its visibility: `pub(crate)`
+    |
+    = help: or consider exporting it for use by other crates
+
+warning: unreachable `pub` item
+   --> homeward-mcp/tests/common/mod.rs:144:1
+    |
+144 | pub async fn spawn_http_server(db_path: &Path) -> (Child, String) {
+    | ---^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    | |
+    | help: consider restricting its visibility: `pub(crate)`
+    |
+    = help: or consider exporting it for use by other crates
+
+warning: unreachable `pub` item
+   --> homeward-mcp/tests/common/mod.rs:179:1
+    |
+179 | pub struct HttpClient {
+    | ---^^^^^^^^^^^^^^^^^^
+    | |
+    | help: consider restricting its visibility: `pub(crate)`
+    |
+    = help: or consider exporting it for use by other crates
+
+warning: unreachable `pub` item
+   --> homeward-mcp/tests/common/mod.rs:190:5
+    |
+190 |     pub async fn handshake(addr: &str) -> Self {
+    |     ---^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |     |
+    |     help: consider restricting its visibility: `pub(crate)`
+
+warning: unreachable `pub` item
+   --> homeward-mcp/tests/common/mod.rs:246:5
+    |
+246 |     pub async fn request(&mut self, method: &str, params: Value) -> Value {
+    |     ---^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |     |
+    |     help: consider restricting its visibility: `pub(crate)`
+
+warning: unreachable `pub` item
+   --> homeward-mcp/tests/common/mod.rs:271:5
+    |
+271 |     pub async fn call_tool(&mut self, name: &str, arguments: Value) -> Value {
+    |     ---^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |     |
+    |     help: consider restricting its visibility: `pub(crate)`
+
+warning: unreachable `pub` item
+   --> homeward-mcp/tests/common/mod.rs:280:1
+    |
+280 | pub struct StdioClient {
+    | ---^^^^^^^^^^^^^^^^^^^
+    | |
+    | help: consider restricting its visibility: `pub(crate)`
+    |
+    = help: or consider exporting it for use by other crates
+
+warning: unreachable `pub` item
+   --> homeward-mcp/tests/common/mod.rs:288:5
+    |
+288 |     pub async fn handshake(child: &mut Child) -> Self {
+    |     ---^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |     |
+    |     help: consider restricting its visibility: `pub(crate)`
+
+warning: unreachable `pub` item
+   --> homeward-mcp/tests/common/mod.rs:329:5
+    |
+329 |     pub async fn request(&mut self, method: &str, params: Value) -> Value {
+    |     ---^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |     |
+    |     help: consider restricting its visibility: `pub(crate)`
+
+warning: unreachable `pub` item
+   --> homeward-mcp/tests/common/mod.rs:338:5
+    |
+338 |     pub async fn call_tool(&mut self, name: &str, arguments: Value) -> Value {
+    |     ---^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |     |
+    |     help: consider restricting its visibility: `pub(crate)`
+
+warning: unreachable `pub` item
+   --> homeward-mcp/tests/common/mod.rs:403:1
+    |
+403 | pub fn tool_result_value(result: &Value) -> Value {
+    | ---^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    | |
+    | help: consider restricting its visibility: `pub(crate)`
+    |
+    = help: or consider exporting it for use by other crates
+
+warning: unreachable `pub` item
+   --> homeward-mcp/tests/common/mod.rs:418:1
+    |
+418 | pub fn tool_result_is_error(result: &Value) -> bool {
+    | ---^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    | |
+    | help: consider restricting its visibility: `pub(crate)`
+    |
+    = help: or consider exporting it for use by other crates
+
+warning: unreachable `pub` item
+   --> homeward-mcp/tests/common/mod.rs:426:1
+    |
+426 | pub fn tool_names(list_result: &Value) -> BTreeMap<String, Value> {
+    | ---^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    | |
+    | help: consider restricting its visibility: `pub(crate)`
+    |
+    = help: or consider exporting it for use by other crates
+
+warning: unreachable `pub` item
+  --> homeward-mcp/tests/common/mock_embed.rs:16:1
+   |
+16 | pub struct MockEmbedServer {
+   | ---^^^^^^^^^^^^^^^^^^^^^^^
+   | |
+   | help: consider restricting its visibility: `pub(crate)`
+   |
+   = help: or consider exporting it for use by other crates
+
+warning: unreachable `pub` item
+  --> homeward-mcp/tests/common/mock_embed.rs:31:5
+   |
+31 |     pub async fn start(matches: Vec<(String, f64)>) -> Self {
+   |     ---^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |     |
+   |     help: consider restricting its visibility: `pub(crate)`
+
+warning: unreachable `pub` item
+  --> homeward-mcp/tests/common/mock_embed.rs:51:5
+   |
+51 |     pub async fn closed_port() -> SocketAddr {
+   |     ---^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |     |
+   |     help: consider restricting its visibility: `pub(crate)`
+
+warning: `homeward-mcp` (test "mcp_ac02_search_pets_radius_and_privacy") generated 20 warnings (run `cargo fix --test "mcp_ac02_search_pets_radius_and_privacy"` to apply 20 suggestions)
+warning: `homeward-mcp` (test "mcp_ac04_invalid_species_typed_error") generated 20 warnings (20 duplicates)
+warning: `homeward-mcp` (test "mcpmatch_ac02_response_metadata_shape") generated 20 warnings (20 duplicates)
+warning: `homeward-mcp` (test "mcpmatch_ac05_validation_errors") generated 20 warnings (20 duplicates)
+warning: `homeward-mcp` (test "mcpmatch_ac04_degraded_embed_service") generated 20 warnings (20 duplicates)
+warning: `homeward-mcp` (test "mcpmatch_ac03_no_persistence_audit") generated 20 warnings (20 duplicates)
+warning: `homeward-mcp` (test "mcp_ac06_http_and_stdio_parity") generated 20 warnings (20 duplicates)
+warning: `homeward-mcp` (test "mcpmatch_ac08_limit_and_radius_preserve_knn_order") generated 20 warnings (20 duplicates)
+warning: `homeward-mcp` (test "mcp_ac05_missing_db_clean_error") generated 20 warnings (20 duplicates)
+warning: `homeward-mcp` (test "mcp_ac01_tools_list_and_resource") generated 20 warnings (20 duplicates)
+warning: `homeward-mcp` (test "mcpmatch_ac01_parity_with_fixture_index") generated 20 warnings (20 duplicates)
+warning: `homeward-mcp` (test "mcp_ac03_empty_result_well_formed") generated 20 warnings (20 duplicates)
+warning: `homeward-report` (bin "homeward-reportd") generated 1 warning (1 duplicate)
+warning: field `churn_threshold` is never read
+   --> homeward-ingest/src/orchestrator.rs:159:5
+    |
+146 | struct ConnectorState {
+    |        -------------- field in this struct
+...
+159 |     churn_threshold: usize,
+    |     ^^^^^^^^^^^^^^^
+    |
+    = note: `ConnectorState` has derived impls for the traits `Clone` and `Debug`, but these are intentionally ignored during dead code analysis
+    = note: `#[warn(dead_code)]` on by default
+
+warning: `homeward-ingest` (lib) generated 1 warning
+warning: `homeward-ingest` (lib test) generated 1 warning (1 duplicate)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 1.94s
+     Running unittests src/lib.rs (/home/jsy/wintermute/homeward/target/debug/deps/homeward-8382b76a911c023e)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/lib.rs (/home/jsy/wintermute/homeward/target/debug/deps/homeward_connectors-9799e495a510bb7b)
+
+running 130 tests
+test catalog::tests::test_family_not_built_error ... ok
+test catalog::tests::test_absent_sections_default_empty ... ok
+test catalog::tests::test_arcgis_config_roundtrip ... ok
+test catalog::tests::test_opendatasoft_config_roundtrip ... ok
+test catalog::tests::test_mixed_catalog_parses ... ok
+test catalog::tests::test_deploy_sources_toml_regression ... ok
+test connectors::arcgis::tests::ac3_paging_exceeded_transfer_limit ... ok
+test connectors::arcgis::tests::ac4_stray_filter ... ok
+test connectors::arcgis::tests::ac5_polite_client_field_present ... ok
+test connectors::arcgis::tests::ac1_poll_none_returns_stray_records ... ok
+test connectors::arcgis::tests::ac7_arcgis_config_loads_from_toml ... ok
+test connectors::arcgis::tests::ac2_timestamp_cursor_builds_epoch_ms_where_clause ... ok
+test connectors::arcgis::tests::found_maps_to_found_report ... ok
+test connectors::arcgis::tests::epoch_ms_intake_date_parsed ... ok
+test connectors::opendatasoft::tests::ac1_provenance_tagged_with_ods_family ... ok
+test connectors::opendatasoft::tests::ac2_cursor_timestamp_builds_odsql_where ... ok
+test connectors::opendatasoft::tests::ac2_empty_result_returns_ok_empty_vec ... ok
+test connectors::opendatasoft::tests::ac4_connector_uses_polite_client ... ok
+test connectors::opendatasoft::tests::ods_datetime_formats_parse ... ok
+test connectors::opendatasoft::tests::ac3_only_stray_intake_records_survive ... ok
+test connectors::opendatasoft::tests::ac1_poll_none_fixture_returns_stray_records ... ok
+test connectors::opendatasoft::tests::stray_values_match_known_tokens ... ok
+test connectors::petfbi::tests::from_env_config_fields_are_populated ... ok
+test connectors::petfbi::tests::connector_provenance_is_petfbi ... ok
+test connectors::petfbi::tests::from_env_returns_none_when_var_unset ... ok
+test connectors::opendatasoft::tests::ac6_opendatasoft_config_from_catalog_instantiates ... ok
+test connectors::petfbi::tests::helpinglostpets_source_carries_helpinglostpets_source_id ... ok
+test connectors::petfbi::tests::no_photo_url_yields_empty_photos ... ok
+test connectors::petfbi::tests::petfbi_and_help_source_ids_are_distinguishable ... ok
+test connectors::petfbi::tests::petfbi_source_carries_petfbi_source_id ... ok
+test connectors::petfbi::tests::source_id_constants_are_correct ... ok
+test connectors::petfbi::tests::photos_are_url_references_not_bytes ... ok
+test connectors::petfbi::tests::type_found_normalizes_to_found_report ... ok
+test connectors::petfbi::tests::type_lost_normalizes_to_lost_report ... ok
+test connectors::petfbi::tests::unknown_species_returns_error ... ok
+test connectors::rescuegroups::tests::build_filters_criteria_is_rfc3339_not_space_separated ... ok
+test connectors::rescuegroups::tests::build_filters_delta_poll_uses_animals_namespaced_field ... ok
+test connectors::rescuegroups::tests::build_filters_full_poll_is_empty ... ok
+test connectors::rescuegroups::tests::build_filters_never_sends_bare_updated_date_field_name ... ok
+test connectors::rescuegroups::tests::build_search_url_carries_page_and_page_size ... ok
+test connectors::rescuegroups::tests::build_search_url_never_comma_joins_species ... ok
+test connectors::petfbi::tests::found_fixture_maps_to_stray_record_fields ... ok
+test connectors::petfbi::tests::lost_fixture_maps_to_lost_report_fields ... ok
+test connectors::rescuegroups::tests::build_search_url_uses_public_prefix ... ok
+test connectors::rescuegroups::tests::deserializes_zero_match_page_with_no_data_key ... ok
+test connectors::rescuegroups::tests::normalizes_cat_record ... ok
+test connectors::rescuegroups::tests::mixed_species_both_normalized ... ok
+test connectors::rescuegroups::tests::normalizes_dog_record ... ok
+test connectors::rescuegroups::tests::pagination_loop_continues_when_more_pages_remain ... ok
+test connectors::rescuegroups::tests::pagination_loop_stops_immediately_on_zero_match_page ... ok
+test connectors::rescuegroups::tests::pagination_loop_stops_on_last_page ... ok
+test connectors::rescuegroups::tests::pagination_loop_stops_on_short_page_even_if_pages_looks_bigger ... ok
+test connectors::rescuegroups::tests::photos_carry_only_url_not_bytes ... ok
+test connectors::rescuegroups::tests::rg_meta_deserializes_pagination_fields ... ok
+test connectors::rescuegroups::tests::rg_meta_pagination_fields_default_when_absent ... ok
+test connectors::rescuegroups::tests::provenance_class_is_api ... ok
+test connectors::rescuegroups::tests::species_from_query_maps_dogs_and_cats ... ok
+test connectors::rescuegroups::tests::species_list_is_dogs_and_cats_one_at_a_time ... ok
+test connectors::rescuegroups::tests::deserializes_real_cats_sample_and_populates_records ... ok
+test connectors::socrata::tests::ac1_file_loaded_config_matches_builtin ... ok
+test connectors::socrata::tests::ac3_malformed_toml_typed_error ... ok
+test connectors::socrata::tests::ac3b_missing_required_field_typed_error ... ok
+test connectors::socrata::tests::ac4_homeward_sources_env_var ... ok
+test connectors::rescuegroups::tests::deserializes_real_dogs_sample_and_populates_records ... ok
+test connectors::socrata::tests::ac2_roundtrip_four_builtins ... ok
+test connectors::socrata::tests::austin_stray_dog_normalizes ... ok
+test connectors::socrata::tests::ac5_optional_fields_absent_are_none ... ok
+test connectors::socrata::tests::dallas_chip_status_maps ... ok
+test connectors::socrata::tests::intake_type_stray_maps_correctly ... ok
+test connectors::socrata::tests::parse_soda_datetime_formats ... ok
+test connectors::socrata::tests::mixed_species_both_yield_records ... ok
+test connectors::socrata::tests::outcome_date_present_means_departed ... ok
+test connectors::socrata::tests::provenance_class_is_open_data ... ok
+test connectors::socrata::tests::socrata_photos_always_empty ... ok
+test coverage::tests::live_when_recent_and_has_records ... ok
+test coverage::tests::geo_fields_absent_when_geo_false ... ok
+test coverage::tests::stale_when_last_success_is_old ... ok
+test coverage::tests::no_store_marks_unknown ... ok
+test coverage::tests::threshold_constants_are_documented ... ok
+test discover::tests::test_arcgis_families_filter ... ok
+test discover::tests::test_candidate_has_all_required_fields ... ok
+test discover::tests::test_empty_holes_list_parses_ok ... ok
+test discover::tests::test_discover_from_holes_does_not_write_sources_toml ... ok
+test discover::tests::test_families_default_when_empty_args ... ok
+test discover::tests::test_from_holes_default_families ... ok
+test discover::tests::test_hole_candidate_row_json_contains_probe_cmd ... ok
+test discover::tests::test_hole_candidate_rows_sorted_by_population_descending ... ok
+test discover::tests::test_hole_candidate_rows_tie_broken_by_score ... ok
+test discover::tests::test_json_output_is_valid ... ok
+test discover::tests::test_limit_caps_candidates ... ok
+test discover::tests::test_load_holes_from_file_missing_errors ... ok
+test discover::tests::test_load_holes_from_str_empty_list ... ok
+test discover::tests::test_load_holes_from_file_roundtrip ... ok
+test discover::tests::test_load_holes_from_str_parses_fixture ... ok
+test discover::tests::test_ods_fixture_parsed_and_scored ... ok
+test discover::tests::test_parking_dataset_dropped_from_fixture ... ok
+test discover::tests::test_parse_format_invalid_errors ... ok
+test discover::tests::test_parse_from_holes_args ... ok
+test discover::tests::test_parse_from_holes_missing_path_errors ... ok
+test discover::tests::test_query_terms_from_label_splits_on_comma ... ok
+test discover::tests::test_query_terms_label_no_comma ... ok
+test discover::tests::test_query_terms_no_label_uses_synthetic ... ok
+test discover::tests::test_region_name_from_label ... ok
+test discover::tests::test_region_name_synthetic ... ok
+test discover::tests::test_score_signals_animal_type_col ... ok
+test discover::tests::test_score_candidate_does_not_write_files ... ok
+test discover::tests::test_score_signals_intake_type_col ... ok
+test discover::tests::test_score_zero_for_unrelated_dataset ... ok
+test discover::tests::test_scoring_animal_intake_outranks_parking ... ok
+test geo_coverage::tests::cell_id_deterministic_same_cell ... ok
+test geo_coverage::tests::cell_id_is_stable ... ok
+test geo_coverage::tests::hole_heuristic_flags_only_genuine_hole ... ok
+test geo_coverage::tests::holes_ranked_by_missed_population_descending ... ok
+test geo_coverage::tests::no_external_spatial_dep ... ok
+test geo_coverage::tests::rollup_spans_three_cells ... ok
+test geo_coverage::tests::stray_count_distinct_from_record_count ... ok
+test geo_coverage::tests::ungeocoded_records_are_tallied ... ok
+test probe::tests::ac1_austin_fixture_green_required_columns_match ... ok
+test probe::tests::ac3_missing_animal_id_yields_red_distinct_message ... ok
+test probe::tests::ac2_green_output_parses_via_source_catalog ... ok
+test probe::tests::ac3_no_stray_fixture_yields_red ... ok
+test probe::tests::ac5_404_yields_typed_error_not_panic ... ok
+test probe::tests::ac4_intake_type_confirmed_only_when_stray_observed ... ok
+test probe::tests::ac5_json_flag_emits_structured_output ... ok
+test probe::tests::ac5_ods_probe_green_fixture_emits_toml ... ok
+test probe::tests::is_stray_value_matches_known_values ... ok
+test probe::tests::ac5_ods_probe_no_intake_column_emits_red ... ok
+test probe::tests::ods_green_toml_parses_via_catalog ... ok
+test coverage::tests::json_roundtrip_silent_and_gap ... ok
+test coverage::tests::silent_source_when_store_has_no_records ... ok
+
+test result: ok. 130 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.68s
+
+     Running unittests src/main.rs (/home/jsy/wintermute/homeward/target/debug/deps/homeward-7cb68824ed99b9ef)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/catalog_load_test.rs (/home/jsy/wintermute/homeward/target/debug/deps/catalog_load_test-badfed738d0cef52)
+
+running 4 tests
+test ac1_catalog_parses_without_error ... ok
+test ac2_all_entries_have_required_column_map_fields ... ok
+test ac3b_catalog_has_at_least_six_sources ... ok
+test ac3_four_builtin_cities_present_and_match_const_fns ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/integration_connector.rs (/home/jsy/wintermute/homeward/target/debug/deps/integration_connector-735beb487174d62a)
+
+running 19 tests
+test ac1_polite_client_304_is_ok_not_error ... ok
+test ac1_304_returns_empty_no_error ... ok
+test ac2_rescuegroups_delta_poll_sends_animals_namespaced_filter_field ... ok
+test ac2_rescuegroups_issues_one_post_per_species_under_public_path ... ok
+test ac2_rescuegroups_normalizes_fixture ... ok
+test ac3_socrata_connector_stray_maps_intake_type ... ok
+test ac2_rescuegroups_pages_via_page_param_not_offset ... ok
+test ac3_socrata_austin_normalizes_fixture ... ok
+test ac4_mixed_species_both_yielded_rescuegroups ... ok
+test ac2_rescuegroups_deserializes_real_v5_public_payload_shape ... ok
+test ac4_mixed_species_both_yielded_socrata ... ok
+test ac5_polite_client_sends_conditional_header_etag ... ok
+test ac5_polite_client_sends_if_modified_since ... ok
+test ac7_known_connector_is_registered ... ok
+test ac5_polite_client_sends_user_agent ... ok
+test ac7_unknown_connector_returns_error ... ok
+test ac6_photo_ref_has_no_bytes_field ... ok
+test ac7_poll_mock_returns_valid_json_records ... ok
+test ac5_per_host_min_interval_delays_second_request ... ok
+
+test result: ok. 19 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running unittests src/lib.rs (/home/jsy/wintermute/homeward/target/debug/deps/homeward_embed_client-66b96e1fa697fdce)
+
+running 10 tests
+test tests::base_url_format_with_custom_host_and_port ... ok
+test tests::default_local_config_base_url_matches_env_format ... ok
+test tests::default_local_config_has_expected_url ... ok
+test tests::embed_client_error_status_display ... ok
+test tests::enroll_request_new_formats_ulid ... ok
+test tests::enroll_request_species_none_omitted_in_json ... ok
+test tests::query_request_b64_only_serialises_correctly ... ok
+test tests::query_request_url_only_serialises_correctly ... ok
+test tests::client_builds_successfully ... ok
+test tests::health_check_returns_false_when_sidecar_not_running ... ok
+
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/lib.rs (/home/jsy/wintermute/homeward/target/debug/deps/homeward_geocode-b1b4654384c2b263)
+
+running 19 tests
+test enrichment::tests::does_not_overwrite_existing_location ... ok
+test enrichment::tests::fills_when_location_none ... ok
+test enrichment::tests::garbage_text_returns_not_resolved ... ok
+test enrichment::tests::idempotent_two_runs_same_result ... ok
+test gazetteer::tests::case_insensitive_name ... ok
+test gazetteer::tests::parse_place_row ... ok
+test gazetteer::tests::parse_zip_row ... ok
+test gazetteer::tests::unknown_zip_returns_none ... ok
+test enrichment::tests::no_found_text_returns_not_resolved ... ok
+test enrichment::tests::provenance_tagged_as_found_text ... ok
+test parser::tests::empty_string_returns_unrecognised ... ok
+test parser::tests::garbage_returns_unrecognised ... ok
+test parser::tests::parse_city_state_comma_austin ... ok
+test parser::tests::parse_city_state_comma_dallas ... ok
+test parser::tests::parse_city_state_comma_long_beach ... ok
+test parser::tests::parse_city_state_space_austin ... ok
+test parser::tests::parse_prefix_with_city_state ... ok
+test parser::tests::parse_zip_78701 ... ok
+test parser::tests::unknown_city_returns_unrecognised_or_not_in_gz ... ok
+
+test result: ok. 19 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/acceptance_ac1.rs (/home/jsy/wintermute/homeward/target/debug/deps/acceptance_ac1-d9f1c40b74bf56dc)
+
+running 2 tests
+test ac1_load_csv_fixture ... ok
+test ac1_gazetteer_loads_offline ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/acceptance_ac10.rs (/home/jsy/wintermute/homeward/target/debug/deps/acceptance_ac10-392d3e836df340a4)
+
+running 1 test
+test ac10_workspace_api_surface_compiles ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/acceptance_ac2.rs (/home/jsy/wintermute/homeward/target/debug/deps/acceptance_ac2-bbe8fca27706e2f8)
+
+running 2 tests
+test ac2_zip_78701_resolves_to_austin_coarse ... ok
+test ac2_zip_90801_resolves_to_long_beach_coarse ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/acceptance_ac3.rs (/home/jsy/wintermute/homeward/target/debug/deps/acceptance_ac3-00a94c6ae4205e22)
+
+running 3 tests
+test ac3_city_comma_state_with_prefix ... ok
+test ac3_city_comma_state_forms ... ok
+test ac3_city_space_state_forms ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/acceptance_ac4.rs (/home/jsy/wintermute/homeward/target/debug/deps/acceptance_ac4-c745abe491daf4f0)
+
+running 4 tests
+test ac4_number_that_is_not_a_zip ... ok
+test ac4_partial_state_code_not_guessed ... ok
+test ac4_garbage_input ... ok
+test ac4_unknown_city ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/acceptance_ac5.rs (/home/jsy/wintermute/homeward/target/debug/deps/acceptance_ac5-c22f205c8f670934)
+
+running 2 tests
+test ac5_zip_result_at_precision_2 ... ok
+test ac5_city_state_result_at_precision_2 ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/acceptance_ac6.rs (/home/jsy/wintermute/homeward/target/debug/deps/acceptance_ac6-89dd72ff1855c49d)
+
+running 2 tests
+test ac6_fills_when_location_none ... ok
+test ac6_no_overwrite_existing_location ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/acceptance_ac7.rs (/home/jsy/wintermute/homeward/target/debug/deps/acceptance_ac7-da617b674c117fc6)
+
+running 2 tests
+test ac7_shelter_location_has_no_found_text_tag ... ok
+test ac7_provenance_tag_is_found_text ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/acceptance_ac8.rs (/home/jsy/wintermute/homeward/target/debug/deps/acceptance_ac8-902ab37dbab040a8)
+
+running 1 test
+test ac8_idempotent_run_twice ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/acceptance_ac9.rs (/home/jsy/wintermute/homeward/target/debug/deps/acceptance_ac9-6c725cc989822d10)
+
+running 3 tests
+test ac9_un_enriched_record_fails_filter ... ok
+test ac9_enriched_record_passes_state_filter ... ok
+test ac9_enriched_record_passes_bbox_filter_for_austin ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/lib.rs (/home/jsy/wintermute/homeward/target/debug/deps/homeward_ingest-7c7a4eb9f5d80aa8)
+
+running 34 tests
+test dedup::tests::hamming_distance_all_differ_is_64 ... ok
+test dedup::tests::hamming_distance_identical_is_zero ... ok
+test dedup::tests::url_hash_same_url_same_hash ... ok
+test dedup::tests::no_source_animal_id_always_new ... ok
+test dedup::tests::different_source_animal_ids_get_distinct_canonicals ... ok
+test departure::tests::is_explicitly_departed_with_outcome_date ... ok
+test dedup::tests::same_source_animal_id_resolves_to_same_canonical ... ok
+test departure::tests::delete_org_removes_records ... ok
+test departure::tests::one_absence_does_not_depart ... ok
+test departure::tests::seen_resets_absence ... ok
+test departure::tests::ttl_backstop_expires_old_records ... ok
+test departure::tests::full_sync_of_one_source_never_departs_another_sources_stale_records ... ok
+test departure::tests::two_absences_departs ... ok
+test enroll::tests::ac5_slow_embedder_does_not_stall_event_publish ... ok
+test orchestrator::tests::ac1_high_churn_stray_zero_keeps_interval ... ok
+test orchestrator::tests::ac1_no_change_caps_at_max ... ok
+test orchestrator::tests::ac1_no_change_doubles_interval ... ok
+test orchestrator::tests::ac1_no_change_never_below_floor ... ok
+test orchestrator::tests::ac2_stray_burst_enters_hot_window ... ok
+test orchestrator::tests::ac2_stray_burst_resets_to_stray_floor ... ok
+test orchestrator::tests::ac3_adoptable_churn_no_floor_reset ... ok
+test orchestrator::tests::ac4_hot_window_decays_then_backsoff ... ok
+test orchestrator::tests::ac5_stray_class_excludes_non_stray ... ok
+test orchestrator::tests::ac5_stray_class_includes_stray_and_found_report ... ok
+test orchestrator::tests::ac6_custom_threshold_changes_behavior ... ok
+test orchestrator::tests::ac7_status_reflects_stray_seen_and_hot_window ... ok
+test orchestrator::tests::stray_floor_hard_lower_bound ... ok
+test enroll::tests::ac2_n_photos_produce_n_enroll_calls ... ok
+test store::tests::delete_org_blocks_reappearance ... ok
+test enroll::tests::ac4_same_photo_not_re_enrolled ... ok
+test store::tests::last_seen_advances_on_reupsert ... ok
+test enroll::tests::ac3_no_sidecar_ingest_completes_without_error ... ok
+test store::tests::cursor_persists_across_reopen ... ok
+test store::tests::records_persist_across_reopen ... ok
+
+test result: ok. 34 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.04s
+
+     Running unittests src/main.rs (/home/jsy/wintermute/homeward/target/debug/deps/homeward_ingestd-0e6e1f4671513110)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/backfill_tests.rs (/home/jsy/wintermute/homeward/target/debug/deps/backfill_tests-15e070c3ae8a080c)
+
+running 7 tests
+test ac3_rate_limited_backfill_backs_off_and_completes ... ok
+test ac1_seeded_backfill_reaches_full_population_with_zero_duplicates ... ok
+test ac6_completion_report_has_per_source_counts_and_totals ... ok
+test ac2_interrupted_backfill_resumes_from_persisted_progress ... ok
+test ac8_empty_db_backfill_completes_without_special_casing ... ok
+test ac4_photo_bearing_animals_are_enrolled_and_id_map_audited_as_list ... ok
+test ac7_dry_run_plan_reports_coverage_and_estimate_without_writing ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.63s
+
+     Running tests/federated_dedup_tests.rs (/home/jsy/wintermute/homeward/target/debug/deps/federated_dedup_tests-44191cb2a44ca0e3)
+
+running 8 tests
+test different_species_no_merge ... ok
+test distant_date_no_merge ... ok
+test distant_location_no_merge ... ok
+test distant_phash_no_merge ... ok
+test merge_count_correct ... ok
+test merged_record_has_both_provenances ... ok
+test same_animal_merges ... ok
+test two_lost_reports_never_merge ... ok
+
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/lib.rs (/home/jsy/wintermute/homeward/target/debug/deps/homeward_match-5622395be4824886)
+
+running 28 tests
+test filter::tests::departed_excluded ... ok
+test filter::tests::in_custody_and_adoptable_both_pass ... ok
+test filter::tests::intake_date_window_filters_old ... ok
+test filter::tests::no_coords_on_record_passes_geo ... ok
+test filter::tests::species_mismatch_excluded ... ok
+test filter::tests::wider_date_window_grows_candidate_set ... ok
+test filter::tests::wider_radius_grows_candidate_set ... ok
+test fusion::tests::attribute_score_no_shared_data_is_neutral ... ok
+test fusion::tests::attribute_score_size_match_boosts ... ok
+test fusion::tests::geo_score_none_is_neutral ... ok
+test fusion::tests::geo_score_zero_distance_is_one ... ok
+test fusion::tests::recency_score_zero_days_is_one ... ok
+test fusion::tests::weights_sum_to_one ... ok
+test hold::tests::is_in_stray_hold_after_window ... ok
+test hold::tests::is_in_stray_hold_within_window ... ok
+test hold::tests::non_stray_has_no_deadline ... ok
+test hold::tests::stray_adoptable_has_no_deadline ... ok
+test hold::tests::stray_in_custody_has_deadline ... ok
+test hold::tests::stray_no_intake_date_has_no_deadline ... ok
+test report::tests::bucket_precision_reported_on_held_out_set ... ok
+test report::tests::cat_report_never_returns_dog ... ok
+test report::tests::departed_records_never_appear ... ok
+test report::tests::empty_result_is_not_an_error ... ok
+test report::tests::invalid_params_return_error ... ok
+test report::tests::fusion_score_is_deterministic ... ok
+test report::tests::score_is_in_unit_interval ... ok
+test report::tests::stray_in_hold_sorted_first ... ok
+test filter::tests::geo_radius_filters_distant ... ok
+
+test result: ok. 28 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/main.rs (/home/jsy/wintermute/homeward/target/debug/deps/homeward_match-7bfdb63747dae3ca)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/lib.rs (/home/jsy/wintermute/homeward/target/debug/deps/homeward_mcp-a447d9c39f607656)
+
+running 17 tests
+test baseline::tests::cat_baseline_matches_eval_md ... ok
+test baseline::tests::cat_rank1_is_worse_than_dog_rank1 ... ok
+test baseline::tests::dog_baseline_matches_eval_md ... ok
+test baseline::tests::every_baseline_cites_a_source ... ok
+test baseline::tests::unknown_species_falls_back_to_aggregate ... ok
+test geo::tests::same_point_is_zero_distance ... ok
+test geo::tests::austin_to_dallas_is_roughly_two_hundred_fifty_km ... ok
+test image_input::tests::empty_payload_is_rejected ... ok
+test image_input::tests::file_scheme_is_rejected ... ok
+test image_input::tests::ftp_scheme_is_rejected ... ok
+test image_input::tests::http_and_https_urls_are_allowed ... ok
+test image_input::tests::invalid_base64_is_rejected ... ok
+test image_input::tests::non_image_payload_is_rejected ... ok
+test image_input::tests::unparseable_url_is_rejected ... ok
+test image_input::tests::valid_jpeg_magic_bytes_decode_ok ... ok
+test image_input::tests::valid_png_magic_bytes_decode_ok ... ok
+test image_input::tests::oversized_payload_is_rejected ... ok
+
+test result: ok. 17 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.13s
+
+     Running unittests src/main.rs (/home/jsy/wintermute/homeward/target/debug/deps/homeward_mcp-01d13d40b4d6eeeb)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/mcp_ac01_tools_list_and_resource.rs (/home/jsy/wintermute/homeward/target/debug/deps/mcp_ac01_tools_list_and_resource-99a405984ead0f66)
+
+running 1 test
+test tools_list_has_exactly_search_pets_get_pet_and_match_photo_with_schemas ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.27s
+
+     Running tests/mcp_ac02_search_pets_radius_and_privacy.rs (/home/jsy/wintermute/homeward/target/debug/deps/mcp_ac02_search_pets_radius_and_privacy-ddf45a052f201947)
+
+running 1 test
+test radius_search_filters_by_distance_and_redacts_output ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.50s
+
+     Running tests/mcp_ac03_empty_result_well_formed.rs (/home/jsy/wintermute/homeward/target/debug/deps/mcp_ac03_empty_result_well_formed-7808087da9ce3699)
+
+running 1 test
+test no_matches_returns_empty_well_formed_result ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.25s
+
+     Running tests/mcp_ac04_invalid_species_typed_error.rs (/home/jsy/wintermute/homeward/target/debug/deps/mcp_ac04_invalid_species_typed_error-e37387d2c1481f19)
+
+running 1 test
+test invalid_species_is_a_typed_error_and_server_survives ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.22s
+
+     Running tests/mcp_ac05_missing_db_clean_error.rs (/home/jsy/wintermute/homeward/target/debug/deps/mcp_ac05_missing_db_clean_error-9865104aa568b5f2)
+
+running 1 test
+test missing_db_file_is_a_clean_error_not_a_crash ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/mcp_ac06_http_and_stdio_parity.rs (/home/jsy/wintermute/homeward/target/debug/deps/mcp_ac06_http_and_stdio_parity-52871328cea86ed9)
+
+running 1 test
+test same_tool_call_succeeds_over_stdio_and_http ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.40s
+
+     Running tests/mcpmatch_ac01_parity_with_fixture_index.rs (/home/jsy/wintermute/homeward/target/debug/deps/mcpmatch_ac01_parity_with_fixture_index-7df9d26af085d333)
+
+running 1 test
+test match_photo_preserves_sidecar_knn_order ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.46s
+
+     Running tests/mcpmatch_ac02_response_metadata_shape.rs (/home/jsy/wintermute/homeward/target/debug/deps/mcpmatch_ac02_response_metadata_shape-5dd7fcd10fba8241)
+
+running 1 test
+test successful_match_carries_similarity_advisory_and_baseline ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.26s
+
+     Running tests/mcpmatch_ac03_no_persistence_audit.rs (/home/jsy/wintermute/homeward/target/debug/deps/mcpmatch_ac03_no_persistence_audit-e3c0f22d2d53ba51)
+
+running 1 test
+test match_photo_persists_nothing ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.26s
+
+     Running tests/mcpmatch_ac04_degraded_embed_service.rs (/home/jsy/wintermute/homeward/target/debug/deps/mcpmatch_ac04_degraded_embed_service-ed43394e9100c23f)
+
+running 1 test
+test embed_service_down_yields_fast_typed_error_and_server_stays_up ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.21s
+
+     Running tests/mcpmatch_ac05_validation_errors.rs (/home/jsy/wintermute/homeward/target/debug/deps/mcpmatch_ac05_validation_errors-b5d33b8b0ca4f65b)
+
+running 4 tests
+test non_image_b64_payload_is_a_typed_error ... ok
+test missing_both_image_fields_is_a_typed_error ... ok
+test non_http_url_scheme_is_a_typed_error ... ok
+test oversized_b64_payload_is_a_typed_error ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.92s
+
+     Running tests/mcpmatch_ac08_limit_and_radius_preserve_knn_order.rs (/home/jsy/wintermute/homeward/target/debug/deps/mcpmatch_ac08_limit_and_radius_preserve_knn_order-e358a3fe263b7971)
+
+running 1 test
+test limit_and_radius_filter_without_reordering_survivors ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.41s
+
+     Running unittests src/lib.rs (/home/jsy/wintermute/homeward/target/debug/deps/homeward_report-5d568e91d8fd6eee)
+
+running 84 tests
+test alerts::tests::below_threshold_no_alert ... ok
+test alerts::tests::species_mismatch_no_alert ... ok
+test alerts::tests::dedup_prevents_re_alert ... ok
+test alerts::tests::alert_is_candidate_framed ... ok
+test alerts::tests::contact_token_not_raw_contact ... ok
+test alerts::tests::stray_in_hold_includes_reclaim_deadline ... ok
+test api::tests::similarity_search_is_candidate_framed ... ok
+test api::tests::similarity_search_sorted_by_score_descending ... ok
+test api::tests::api_filters_by_species ... ok
+test delivery::tests::dedup_suppresses_second_delivery ... ok
+test api::tests::api_does_not_expose_report_pii ... ok
+test delivery::tests::dry_run_deliverer_sends_nothing ... ok
+test delivery::tests::relay_email_degrades_to_dry_run_when_unconfigured ... ok
+test api::tests::api_enforces_max_results_rate_limit ... ok
+test delivery::tests::rendered_message_is_candidate_framed_no_raw_address ... ok
+test delivery_log::tests::in_memory_append_and_query ... ok
+test delivery_log::tests::suppressed_does_not_count_as_delivered ... ok
+test exif::tests::jpeg_without_exif_unchanged_structure ... ok
+test exif::tests::keeps_app0_jfif_marker ... ok
+test exif::tests::non_jpeg_returned_unchanged ... ok
+test exif::tests::strips_app1_exif_marker ... ok
+test export::tests::export_json_never_contains_raw_pii ... ok
+test export::tests::export_strips_exif_and_uses_brokered_contact ... ok
+test delivery_log::tests::file_backed_multiple_appends ... ok
+test delivery_log::tests::file_backed_append_and_query ... ok
+test export::tests::gated_channels_are_manual_only ... ok
+test export::tests::no_syndicator_claims_automated_delivery_to_gated_channels ... ok
+test export::tests::export_produces_valid_jsonld_fields ... ok
+test export::tests::flyer_is_deterministic_and_contains_required_fields ... ok
+test integration_tests::deleted_report_no_further_alerts ... ok
+test integration_tests::cat_matching_intake_triggers_one_alert ... ok
+test integration_tests::expired_report_generates_no_alert ... ok
+test integration_tests::dog_matching_intake_triggers_one_alert_deduped ... ok
+test export::tests::local_artifact_syndicator_writes_both_artifacts ... ok
+test integration_tests::shelter_api_no_report_pii ... ok
+test match_watch::tests::alert_fires_on_first_match ... ok
+test integration_tests::submit_strips_exif_and_brokers_contact ... ok
+test integration_tests::no_read_path_exposes_raw_contact_or_street_address ... ok
+test match_watch::tests::below_threshold_produces_no_alert ... ok
+test match_watch::tests::dedup_suppresses_second_delivery ... ok
+test match_watch::tests::report_without_photo_skipped ... ok
+test server::tests::exif_strip_removes_app1_before_b64 ... ok
+test match_watch::tests::no_embed_client_tick_completes_without_panic ... ok
+test server::tests::health_returns_ok ... ok
+test server::tests::coverage_returns_json_with_sources ... ok
+test server::tests::intake_bad_species_is_400 ... ok
+test server::tests::index_route_returns_html ... ok
+test server::tests::intake_empty_gallery ... ok
+test server::tests::matches_endpoint_404_for_unknown_report ... ok
+test server::tests::matches_endpoint_empty_when_no_alerts ... ok
+test server::tests::matches_endpoint_returns_pushed_alert_entry ... ok
+test server::tests::no_pii_in_intake_response ... ok
+test server::tests::report_get_unknown_id_returns_404 ... ok
+test server::tests::report_submit_appears_in_active_reports ... ok
+test server::tests::report_get_returns_200_with_fields ... ok
+test server::tests::report_submit_duplicate_via_store_returns_409 ... ok
+test server::tests::report_submit_returns_201_with_report_id ... ok
+test server::tests::report_submit_with_invalid_notify_url_returns_400 ... ok
+test server::tests::report_submit_with_ftp_notify_url_returns_400 ... ok
+test server::tests::report_submit_stores_notify_url ... ok
+test server::tests::resolve_upload_dir_creates_dir_when_absent ... ok
+test server::tests::report_submit_with_valid_notify_url_returns_201 ... ok
+test server::tests::report_submit_without_notify_url_returns_201 ... ok
+test server::tests::search_missing_photo_is_400 ... ok
+test server::tests::report_submit_with_upload_photo_url_stores_it ... ok
+test server::tests::search_no_embed_client_returns_empty_with_note ... ok
+test server::tests::search_with_photo_returns_candidates ... ok
+test server::tests::static_index_html_route_returns_html ... ok
+test server::tests::test_search_response_shape ... ok
+test server::tests::upload_non_image_content_type_returns_415 ... ok
+test store::tests::delete_missing_returns_err ... ok
+test server::tests::upload_over_size_limit_returns_413 ... ok
+test store::tests::delete_removes_record ... ok
+test store::tests::duplicate_insert_rejected ... ok
+test store::tests::expire_stale_leaves_future_reports ... ok
+test store::tests::expire_stale_removes_active_past_ttl ... ok
+test store::tests::insert_and_get ... ok
+test webhook::tests::validate_accepts_http ... ok
+test webhook::tests::validate_accepts_https ... ok
+test webhook::tests::validate_rejects_empty_string ... ok
+test webhook::tests::validate_rejects_ftp_scheme ... ok
+test server::tests::upload_strips_exif_from_stored_file ... ok
+test webhook::tests::validate_rejects_non_url ... ok
+test server::tests::upload_jpeg_returns_200_and_url_is_serveable ... ok
+
+test result: ok. 84 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running unittests src/bin/reportd.rs (/home/jsy/wintermute/homeward/target/debug/deps/homeward_reportd-bf0ab6ae55f3369d)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/export_tests.rs (/home/jsy/wintermute/homeward/target/debug/deps/export_tests-d70b568f3cd07380)
+
+running 7 tests
+test export_photo_is_reference ... ok
+test flyer_contains_required_fields ... ok
+test export_contact_brokered_not_raw ... ok
+test export_json_ld_well_formed ... ok
+test flyer_deterministic ... ok
+test gated_channels_return_manual_only_not_success ... ok
+test local_syndicator_writes_both_artifacts ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/match_flow_tests.rs (/home/jsy/wintermute/homeward/target/debug/deps/match_flow_tests-0fbd3a9c66819df6)
+
+running 7 tests
+test ac4_sidecar_unreachable_returns_geo_date_shortlist ... ok
+test ac3_shortlist_ordered_by_fused_visual_scores ... ok
+test ac3_visual_score_propagated_into_explanation ... ok
+test ac4_no_visual_score_lower_than_with_visual ... ok
+test ac5_alert_is_candidate_framed ... ok
+test ac5_contact_token_is_brokered ... ok
+test ac5_no_fabricated_candidate_score ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/relay_delivery_tests.rs (/home/jsy/wintermute/homeward/target/debug/deps/relay_delivery_tests-e50f32d20d428709)
+
+running 7 tests
+test ac4_endpoint_unset_degrades_to_dry_run ... ok
+test ac5_non_https_endpoint_rejected_before_network_call ... ok
+test ac3_500_response_returns_failed_not_sent ... ok
+test ac1_200_with_message_id_returns_sent_with_real_id ... ok
+test ac2_post_body_contains_required_fields ... ok
+test ac7_previously_delivered_suppressed_no_second_post ... ok
+test ac6_timeout_returns_failed_not_hung ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.00s
+
+     Running unittests src/lib.rs (/home/jsy/wintermute/homeward/target/debug/deps/homeward_schema-14767446d325f7b6)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/acceptance_ac1.rs (/home/jsy/wintermute/homeward/target/debug/deps/acceptance_ac1-37390cb926f06e3e)
+
+running 1 test
+test ac1_build_and_test_infrastructure ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/acceptance_ac2.rs (/home/jsy/wintermute/homeward/target/debug/deps/acceptance_ac2-d1a5b5abc2b81a1a)
+
+running 5 tests
+test ac2_known_species_cat ... ok
+test ac2_known_species_dog ... ok
+test ac2_known_species_aliases ... ok
+test ac2_unknown_species_fails_with_typed_error ... ok
+test ac2_unknown_species_no_silent_default ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/acceptance_ac3.rs (/home/jsy/wintermute/homeward/target/debug/deps/acceptance_ac3-32cdc846779539e2)
+
+running 5 tests
+test ac3_owner_surrender_adoptable_is_valid ... ok
+test ac3_intake_and_availability_are_distinct_fields ... ok
+test ac3_found_report_departed_is_valid ... ok
+test ac3_stray_adoptable_is_flagged ... ok
+test ac3_stray_in_custody_is_valid ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/acceptance_ac4.rs (/home/jsy/wintermute/homeward/target/debug/deps/acceptance_ac4-e88d2757f7290744)
+
+running 4 tests
+test ac4_photo_ref_has_url_field ... ok
+test ac4_photo_ref_no_bytes_field ... ok
+test ac4_photo_ref_json_roundtrip ... ok
+test ac4_photo_ref_with_attribution ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/acceptance_ac5.rs (/home/jsy/wintermute/homeward/target/debug/deps/acceptance_ac5-6b90adfe94bc048f)
+
+running 5 tests
+test ac5_brokered_contact_token_no_raw_accessor ... ok
+test ac5_brokered_contact_token_json_roundtrip ... ok
+test ac5_coarse_location_json_roundtrip ... ok
+test ac5_brokered_contact_token_opaque ... ok
+test ac5_coarse_location_no_street_address ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/acceptance_ac6.rs (/home/jsy/wintermute/homeward/target/debug/deps/acceptance_ac6-e70cd596ef640219)
+
+running 5 tests
+test ac6_lost_report_missing_optionals_default ... ok
+test ac6_pet_record_missing_optionals_use_defaults ... ok
+test ac6_lost_report_json_roundtrip ... ok
+test ac6_pet_record_json_roundtrip ... ok
+test ac6_provenance_json_roundtrip ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/acceptance_ac7.rs (/home/jsy/wintermute/homeward/target/debug/deps/acceptance_ac7-1f2959ce67d8f6bb)
+
+running 5 tests
+test ac7_none_coords_stay_none ... ok
+test ac7_precise_coord_stored_at_coarse_precision_2dp ... ok
+test ac7_coarsened_location_json_roundtrip ... ok
+test ac7_precision_0_stores_integer_degrees ... ok
+test ac7_precision_4_preserves_more_detail ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/proptest_invariants.rs (/home/jsy/wintermute/homeward/target/debug/deps/proptest_invariants-29e92890ee46bab7)
+
+running 3 tests
+test geo_precision_bounded ... ok
+test species_json_roundtrip ... ok
+test unknown_species_always_errors ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+
+     Running unittests src/lib.rs (/home/jsy/wintermute/homeward/target/debug/deps/homeward_wall-8a2dcc191bf5b81d)
+
+running 13 tests
+test server::tests::index_route_returns_html ... ok
+test server::tests::health_returns_ok ... ok
+test server::tests::stats_missing_db_degrades_gracefully ... ok
+test server::tests::buddies_missing_db_degrades_to_empty_page ... ok
+test stream::tests::query_since_uses_buddies_since_semantics ... ok
+test wall_db::tests::max_photo_canonical_id_ignores_photoless_rows ... ok
+test wall_db::tests::limit_is_clamped_to_max_page_limit ... ok
+test wall_db::tests::cursor_pagination_walks_newest_first_without_gaps_or_dupes ... ok
+test wall_db::tests::next_cursor_is_none_on_last_page ... ok
+test wall_db::tests::stats_counts_are_correct ... ok
+test wall_db::tests::photo_filter_excludes_records_without_photos ... ok
+test wall_db::tests::watermark_query_skips_photoless_new_arrivals ... ok
+test wall_db::tests::watermark_logic_only_returns_rows_after_the_mark ... ok
+
+test result: ok. 13 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/bin/homeward-walld.rs (/home/jsy/wintermute/homeward/target/debug/deps/homeward_walld-3492d7b0ff7e1a26)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests homeward
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests homeward_connectors
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests homeward_embed_client
+
+running 1 test
+test crates/homeward-embed-client/src/lib.rs - (line 23) - compile ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests homeward_geocode
+
+running 1 test
+test homeward-geocode/src/lib.rs - (line 8) ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests homeward_ingest
+
+running 1 test
+test homeward-ingest/src/enroll.rs - enroll (line 18) - compile ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests homeward_match
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests homeward_mcp
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests homeward_report
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests homeward_schema
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests homeward_wall
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+::gate audit

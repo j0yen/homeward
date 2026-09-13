@@ -1,0 +1,71 @@
+{
+  "base_ref": "v0.2.2",
+  "base_sha": "3b7f1e4b6d30ba66a51f0ea9a93ee88178f84b5e",
+  "captured_at": "2026-09-13T03:42:08Z",
+  "head_sha": "3824da382a6fb7e19b45826e958c85291eabc924",
+  "min_confidence": 0.7,
+  "proof_lanes_path": "agent/proof-lanes.toml",
+  "proof_lanes_sha256": "sha256:2a55df6aebd91689da760c51ef3d7363b59b0daf317e33686c4e478b13b9ec71",
+  "receipt_digest": "sha256:c7f3c081fb72003af6b04d6684798f0159a5d2ae2fae5db2c9941071763fd17a",
+  "required_commands": [
+    "cargo check --workspace",
+    "homeward-ingest/scripts/run-metrics.sh"
+  ],
+  "routes": [
+    {
+      "confidence": 1.0,
+      "lanes": [
+        "deps"
+      ],
+      "path": "Cargo.lock"
+    },
+    {
+      "confidence": 0.0,
+      "lanes": [],
+      "path": "deploy/hub/README.md"
+    },
+    {
+      "confidence": 1.0,
+      "lanes": [
+        "onboarding"
+      ],
+      "path": "homeward-ingest/CHANGELOG.md"
+    },
+    {
+      "confidence": 0.0,
+      "lanes": [],
+      "path": "homeward-ingest/Cargo.lock"
+    },
+    {
+      "confidence": 1.0,
+      "lanes": [
+        "deps"
+      ],
+      "path": "homeward-ingest/Cargo.toml"
+    },
+    {
+      "confidence": 0.0,
+      "lanes": [],
+      "path": "tests/hub-deploy_ac1_unit-active.sh"
+    },
+    {
+      "confidence": 0.0,
+      "lanes": [],
+      "path": "tests/hub-deploy_ac2_tools-list-external.sh"
+    },
+    {
+      "confidence": 0.0,
+      "lanes": [],
+      "path": "tests/hub-deploy_ac3_search-pets-live.sh"
+    }
+  ],
+  "schema": "autobuilder.vti_plan_receipt.v1",
+  "unrouted_paths": [
+    "deploy/hub/README.md",
+    "homeward-ingest/Cargo.lock",
+    "tests/hub-deploy_ac1_unit-active.sh",
+    "tests/hub-deploy_ac2_tools-list-external.sh",
+    "tests/hub-deploy_ac3_search-pets-live.sh"
+  ],
+  "verdict": "block"
+}

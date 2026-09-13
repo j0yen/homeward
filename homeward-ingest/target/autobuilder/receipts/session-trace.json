@@ -1,0 +1,15 @@
+{
+  "captured_at": "2026-09-13T03:42:08Z",
+  "constraints_evaluated": {},
+  "head_sha": "3824da382a6fb7e19b45826e958c85291eabc924",
+  "notes": [],
+  "receipt_digest": "sha256:67d5a5c8f1bd3f6f95cfc6e84dbbd8c62ab456669e23b30931ce5f714d525c81",
+  "schema": "autobuilder.session_trace_receipt.v1",
+  "tracer": {
+    "event_count": 1908,
+    "log_path": "/home/jsy/wintermute/homeward/homeward-ingest/target/autobuilder/session-trace.ndjson",
+    "log_sha256": "7909972bad40d8eef33fb7548703644d7a3661222fcd6ac812827a538559fd5c",
+    "tool": "ctrace"
+  },
+  "verdict": "pass"
+}

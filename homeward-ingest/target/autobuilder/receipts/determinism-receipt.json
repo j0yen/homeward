@@ -1,13 +1,13 @@
 {
   "artifacts": [
     {
-      "digest_run_a": "sha256:4382038ed4a05dc31271e35a608cae5e5a05a6e8950b94493297494808ab84ba",
-      "digest_run_b": "sha256:4382038ed4a05dc31271e35a608cae5e5a05a6e8950b94493297494808ab84ba",
+      "digest_run_a": "sha256:a63a4905c154d6a2284a5b523d05c64fd2c472841994db0ee8484b794d9504af",
+      "digest_run_b": "sha256:a63a4905c154d6a2284a5b523d05c64fd2c472841994db0ee8484b794d9504af",
       "path": "release/libhomeward_ingest.rlib"
     },
     {
-      "digest_run_a": "sha256:16f31a5ef33731955e0035925962e7420add792726884acfb1ced806b2bc0159",
-      "digest_run_b": "sha256:16f31a5ef33731955e0035925962e7420add792726884acfb1ced806b2bc0159",
+      "digest_run_a": "sha256:059ddc865cff690bfe635831f1cb71d11d34c6debb32f73740dde1d2cc4ffffc",
+      "digest_run_b": "sha256:059ddc865cff690bfe635831f1cb71d11d34c6debb32f73740dde1d2cc4ffffc",
       "path": "release/homeward-ingestd"
     },
     {
@@ -16,10 +16,10 @@
       "path": "release/.cargo-lock"
     }
   ],
-  "captured_at": "2026-09-13T01:06:47Z",
-  "head_sha": "f7631097bd41a7fa02ab8f4e338f47d722e09dd2",
+  "captured_at": "2026-09-13T03:43:07Z",
+  "head_sha": "3824da382a6fb7e19b45826e958c85291eabc924",
   "mismatched": [],
-  "receipt_digest": "sha256:4b6678f762b7b725d670af9ad34606ae402d4098ba761e8f9086a7bcb02c0c03",
+  "receipt_digest": "sha256:681e769026fb1f04c7bd989e377e9ec09df5879559601262c3d1e6db81dd2e38",
   "schema": "autobuilder.determinism_receipt.v1",
   "verdict": "pass"
 }

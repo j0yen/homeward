@@ -1,22 +1,15 @@
 {
-  "head_sha": "f7631097bd41a7fa02ab8f4e338f47d722e09dd2",
-  "head": "f7631097bd41a7fa02ab8f4e338f47d722e09dd2",
+  "head_sha": "3824da382a6fb7e19b45826e958c85291eabc924",
+  "head": "3824da382a6fb7e19b45826e958c85291eabc924",
   "script_sha256": "63c3855d69fc963ccd5dcd4270a3fc1cf861d2325e3ee033385c164eaab64d75",
-  "verdict": "block",
-  "exit_code": 1,
-  "new_blocks": [
-    "supply-audit",
-    "license-audit",
-    "sbom"
-  ],
+  "verdict": "delta-pass",
+  "exit_code": 0,
+  "new_blocks": [],
   "inherited_blocks": [
     "vti-plan",
-    "proof-receipt",
     "risk-gate",
     "reviewer-agent",
-    "rollback-plan",
     "ci-checks",
-    "session-trace",
     "msrv-verify",
     "ac-traceability"
   ],
@@ -29,20 +22,8 @@
   },
   "blocks": [
     {
-      "receipt": "proof-receipt",
-      "finding": "autobuilder loop --iteration 0 exited non-zero",
-      "path": "",
-      "scope": "in-scope"
-    },
-    {
       "receipt": "vti-plan",
       "finding": "autobuilder vti-plan exited non-zero",
-      "path": "",
-      "scope": "inherited"
-    },
-    {
-      "receipt": "rollback-plan",
-      "finding": "commits since v0.1.1 are not all revert-clean (see target/autobuilder/rollback.md); fix forward, or a human rewrites history and says so — this script never edits history to force a pass",
       "path": "",
       "scope": "inherited"
     },
@@ -60,19 +41,19 @@
     }
   ],
   "attribution": {
-    "in_scope": 1,
-    "inherited": 4
+    "in_scope": 0,
+    "inherited": 3
   },
   "phases": {
     "risk-gate": "skip",
     "intake": "0",
-    "proof-receipt": "1!",
+    "proof-receipt": "23",
     "vti-plan": "0!",
-    "rollback-plan": "0!",
-    "ci-checks": "0!",
-    "receipts": "49!",
+    "rollback-plan": "0",
+    "ci-checks": "1!",
+    "receipts": "59!",
     "reviewer": "skip",
     "gate": "0!"
   },
-  "wall_s": 50
+  "wall_s": 83
 }
