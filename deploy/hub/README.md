@@ -44,7 +44,7 @@ every live result's `city_county`/`state` is null because
 all (0/185374 rows) — tracked in `PRD-homeward-ingest-location-backfill-missing.md`,
 not a defect in this deploy.
 
-`tests/hub-deploy_ac4_public-reachability.sh` closes a gap those three left:
+`tests/hub-deploy-public-reachability_ac{1,2}_*.sh` close a gap those three left:
 Tailscale-peer reachability (`100.66.158.49:8095`) is a real but *weaker*
 bar than what mcphost.dev's tenant tool-execution sandbox (2.28.40.4)
 actually needs, and mcphost.dev is not a Tailscale peer. That sandbox
@@ -52,9 +52,10 @@ timed out against the Tailscale address entirely; the hub's **public**
 address, `178.105.64.66:8095`, is the one that actually works from
 mcphost.dev and is what every mcphost-tool wrapping of homeward-mcp must
 target (see PRD-homeward-mcp-hub-deploy-public-reachability-test-gap.md).
-AC4 pins its own egress route away from `tailscale0` before trusting a
+AC1 pins its own egress route away from `tailscale0` before trusting a
 green result, so it fails loudly — not silently — if a future firewall
-change ever closes the public port.
+change ever closes the public port. AC2 asserts this README itself names
+the public address as the supported one.
 
 ## Supported address for external/mcphost callers
 

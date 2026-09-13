@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# AC (PRD-homeward-mcp-hub-deploy-public-reachability-test-gap): Given the
+# AC1 (PRD-homeward-mcp-hub-deploy-public-reachability-test-gap): Given the
 # hub's homeward-mcp unit running, When a client queries it via the
 # non-Tailscale/public path, Then it passes today and would fail loudly if
 # that path were closed.
