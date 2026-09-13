@@ -1,8 +1,8 @@
 {
   "schema": "autobuilder.intent_card.v1",
-  "prd_source": "/home/jsy/Documents/PRDs/build-queue/PRD-build-homeward-ingest-autobuilder-onboard.md",
-  "intent_slug": "build-homeward-ingest-autobuilder-onboard",
-  "root_motivation": "Five whys (from `PRD-homeward-ingest-backfill`'s own iter_log, 2026-09-13):",
+  "prd_source": "/home/jsy/Documents/PRDs/build-queue/PRD-homeward-ingest-backfill.md",
+  "intent_slug": "homeward-ingest-backfill",
+  "root_motivation": "An owner searching for a pet sheltered before 2026-06-13 (or in any page the forward cursor skipped) gets zero results even when the pet is listed on RescueGroups \u2014 homeward has no record of it. Evidence: homeward-ops standing gap \"RG API ~62k animals, DB ~9.7k (pre-2026-06-13 cursor not backfilled)\" (verified 2026-08-31); RG v5 confirmed live with dogs+cats search endpoints 2026-09-12.",
   "user_persona": "UNSPECIFIED \u2014 no existing intent card to carry forward from; set by hand (intent-card-refresh.sh cannot source this from a PRD).",
   "unfakeable_metric": {
     "name": "acceptance_tests_passing_count",
@@ -14,26 +14,50 @@
     {
       "id": "AC1",
       "level": "MUST",
-      "description": "Given `homeward-ingest/agent/proof-lanes.toml` after this change, When every path under `homeward-ingest/src/` and `homeward-ingest/tests/` is checked against it, Then each resolves to >= 1 lane (mirrors the proof-lanes.toml header's own stated contract).",
+      "description": "Given a dev DB seeded with 100 of 500 fixture animals, When backfill runs against a fixture RG server, Then the DB holds all 500 with zero duplicate RG ids.",
       "test": "tests/acceptance_ac1.rs"
     },
     {
       "id": "AC2",
       "level": "MUST",
-      "description": "Given `homeward-ingest/scripts/run-metrics.sh` (or the workspace-level equivalent, whichever `homeward-schema` actually wires into its gate) after this change, When it is run against `homeward-ingest`, Then it produces `target/autobuilder/metrics.json` matching the documented schema.",
+      "description": "Given a backfill interrupted at ~50%, When the command re-runs, Then it resumes from persisted progress and the final DB matches AC1's result exactly.",
       "test": "tests/acceptance_ac2.rs"
     },
     {
       "id": "AC3",
       "level": "MUST",
-      "description": "Given a fresh `extend-gate.sh /home/jsy/wintermute/homeward --head <HEAD> --force` run after this change, When its output is inspected, Then it no longer names `supply-audit`, `license-audit`, or `sbom` as `no-receipt` for homeward-ingest paths.",
+      "description": "Given the fixture RG server returns 429 on every third request, When backfill runs, Then it completes with all animals present and the log shows backoff events, not failures.",
       "test": "tests/acceptance_ac3.rs"
     },
     {
       "id": "AC4",
-      "level": "SHOULD",
-      "description": "Given `homeward-ingest-backfill` (parked behind this PRD via `Depends-on`) after this PRD ships, When its gate re-runs, Then it reaches `pass` or `delta-pass` without a manually widened baseline.",
+      "level": "MUST",
+      "description": "Given fixture animals with photos, When backfill completes, Then each has an embedding entry and the enrollment audit reads id_map.json as a list (audit count == list length for enrolled ids).",
       "test": "tests/acceptance_ac4.rs"
+    },
+    {
+      "id": "AC5",
+      "level": "MUST",
+      "description": "Given the fixture RG server, When backfill paginates, Then requests use page-based parameters and no request carries an `offset` param.",
+      "test": "tests/acceptance_ac5.rs"
+    },
+    {
+      "id": "AC6",
+      "level": "SHOULD",
+      "description": "Given a completed run, When the report prints, Then it shows per-source fetched/inserted/skipped/failed and DB-total vs RG-total lines.",
+      "test": "tests/acceptance_ac6.rs"
+    },
+    {
+      "id": "AC7",
+      "level": "SHOULD",
+      "description": "Given `--dry-run`, When invoked, Then coverage and page estimate print and the DB mtime is unchanged.",
+      "test": "tests/acceptance_ac7.rs"
+    },
+    {
+      "id": "AC8",
+      "level": "MAY",
+      "description": "Given an empty DB, When backfill runs, Then it completes without special-casing (empty input edge).",
+      "test": "tests/acceptance_ac8.rs"
     }
   ],
   "scope": [],

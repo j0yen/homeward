@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.2.4 — 2026-09-13
+
+Closes out the `homeward-ingestd backfill` acceptance coverage gap: adds a dedicated `ac5_backfill_never_sends_an_offset_param` test asserting the RG page-based-pagination backfill (page-based RG pagination reuse, idempotent skip-not-refresh insert keyed on RG animal id, resumable per-page progress cursor, 429/5xx backoff, photo enrollment via EnrollWorker, `id_map.json` audited as a list, `--dry-run`, and a completion report) never sends an `offset` query param — closing the last of the 8 backfill acceptance criteria (`homeward ingest backfill`, PRD-homeward-ingest-backfill) that `verified-completed.sh --derive` could not previously pair to its own dedicated test.
+
 ## v0.2.3 — 2026-09-13
 
 Symlinks `homeward-ingest/Cargo.lock` to the workspace-root lock file.
