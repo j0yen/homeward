@@ -43,6 +43,13 @@ use crate::store::{Store, StoreError};
 /// forward ingest cursor's `"rescuegroups"` key (see module docs).
 pub const BACKFILL_CURSOR_KEY: &str = "rescuegroups-backfill";
 
+/// Cursor storage key for the location-backfill pass
+/// ([`run_location_backfill`]). Deliberately distinct from both
+/// [`BACKFILL_CURSOR_KEY`] (the population backfill) and the forward
+/// ingest cursor's `"rescuegroups"` key — all three walk the same RG
+/// population independently and must never share progress state.
+pub const LOCATION_BACKFILL_CURSOR_KEY: &str = "rescuegroups-location-backfill";
+
 /// RG species query segments this command walks, in order.
 const SPECIES: [&str; 2] = ["dogs", "cats"];
 
@@ -96,21 +103,29 @@ impl BackfillProgress {
     }
 }
 
-fn load_progress(store: &Store) -> Result<BackfillProgress, BackfillError> {
-    match store.load_cursor(BACKFILL_CURSOR_KEY)? {
+fn load_progress_keyed(store: &Store, key: &str) -> Result<BackfillProgress, BackfillError> {
+    match store.load_cursor(key)? {
         Some(cursor) => Ok(serde_json::from_str(&cursor.cursor_json)?),
         None => Ok(BackfillProgress::default()),
     }
 }
 
-fn save_progress(store: &Store, progress: &BackfillProgress) -> Result<(), BackfillError> {
+fn save_progress_keyed(store: &Store, key: &str, progress: &BackfillProgress) -> Result<(), BackfillError> {
     let cursor_json = serde_json::to_string(progress)?;
     store.save_cursor(&crate::store::SourceCursor {
-        source_name: BACKFILL_CURSOR_KEY.to_owned(),
+        source_name: key.to_owned(),
         cursor_json,
         updated_at: chrono::Utc::now(),
     })?;
     Ok(())
+}
+
+fn load_progress(store: &Store) -> Result<BackfillProgress, BackfillError> {
+    load_progress_keyed(store, BACKFILL_CURSOR_KEY)
+}
+
+fn save_progress(store: &Store, progress: &BackfillProgress) -> Result<(), BackfillError> {
+    save_progress_keyed(store, BACKFILL_CURSOR_KEY, progress)
 }
 
 // ─── Report ──────────────────────────────────────────────────────────────────
@@ -370,5 +385,142 @@ pub async fn run_backfill(
         .as_deref()
         .and_then(read_id_map_len);
 
+    Ok(report)
+}
+
+
+// ─── Location backfill (PRD-homeward-ingest-location-backfill-missing) ──────
+//
+// `run_backfill` above only ever INSERTS animals the store doesn't already
+// hold; it never revisits the ~185k rows already ingested before the
+// connector's `location: None,` bug was fixed (AC1). This pass re-walks the
+// same RG population — reusing the identical page-based `fetch_normalized_page`
+// path, never `offset` — and for every already-present record whose stored
+// `location` is still null, copies over the location the (now-fixed)
+// connector mapped for that animal this run. Idempotency here is
+// "update-if-missing, never clobber": a record that already carries a
+// location (whether from a prior location-backfill run or a fresh forward
+// poll) is left untouched, matching AC2's "some source records may
+// genuinely lack a location upstream — 100% is not required, but 0% must
+// not persist" framing.
+
+/// Per-species counts for [`LocationBackfillReport`].
+#[derive(Debug, Default, Clone, Copy)]
+pub struct LocationSourceCounts {
+    /// Records fetched from RG this run (across all pages).
+    pub scanned: u64,
+    /// Already-present records whose `location` was null and is now set.
+    pub updated: u64,
+    /// Already-present records whose `location` was already non-null —
+    /// left untouched.
+    pub already_had_location: u64,
+    /// Records RG itself has no usable location for this run (the mapping
+    /// legitimately returned `None`) — left null, not an error.
+    pub source_missing_location: u64,
+    /// Fetched records with no matching row in the store at all (never
+    /// ingested — out of scope for this pass; the population backfill
+    /// above owns that gap).
+    pub not_in_store: u64,
+}
+
+/// Completion report for [`run_location_backfill`].
+#[derive(Debug, Default)]
+pub struct LocationBackfillReport {
+    /// Dogs counts.
+    pub dogs: LocationSourceCounts,
+    /// Cats counts.
+    pub cats: LocationSourceCounts,
+    /// `canonical_records` rows with non-null `location` after this run
+    /// (via [`Store::count_with_location`]).
+    pub db_with_location_after: u64,
+    /// Same count before this run started — the delta is this run's own
+    /// contribution, distinct from location data that arrived via ordinary
+    /// forward polling in between.
+    pub db_with_location_before: u64,
+}
+
+impl LocationBackfillReport {
+    fn counts_mut(&mut self, species: &str) -> &mut LocationSourceCounts {
+        if species == "dogs" { &mut self.dogs } else { &mut self.cats }
+    }
+
+    /// Render the completion report as human-readable text.
+    #[must_use]
+    pub fn render(&self) -> String {
+        format!(
+            "location-backfill complete\n\
+             dogs:  scanned={} updated={} already_had_location={} source_missing_location={} not_in_store={}\n\
+             cats:  scanned={} updated={} already_had_location={} source_missing_location={} not_in_store={}\n\
+             db rows with location: {} -> {}",
+            self.dogs.scanned, self.dogs.updated, self.dogs.already_had_location,
+            self.dogs.source_missing_location, self.dogs.not_in_store,
+            self.cats.scanned, self.cats.updated, self.cats.already_had_location,
+            self.cats.source_missing_location, self.cats.not_in_store,
+            self.db_with_location_before, self.db_with_location_after,
+        )
+    }
+}
+
+/// Walk the complete RG dogs+cats population and backfill `location` on
+/// already-ingested records that don't have one yet.
+///
+/// # Errors
+/// Propagates [`BackfillError`] on sqlite, connector, or progress
+/// (de)serialization failure. On error, progress already persisted for
+/// completed pages is left in place — re-running resumes from there.
+pub async fn run_location_backfill(
+    store: &mut Store,
+    connector: &RescueGroupsConnector,
+) -> Result<LocationBackfillReport, BackfillError> {
+    let mut progress = load_progress_keyed(store, LOCATION_BACKFILL_CURSOR_KEY)?;
+    let mut report = LocationBackfillReport::default();
+    report.db_with_location_before = store.count_with_location()?;
+
+    for species in SPECIES {
+        loop {
+            let mut sp = progress.get(species);
+            if sp.done {
+                break;
+            }
+
+            let page = connector.fetch_normalized_page(species, sp.next_page).await?;
+            let is_last = page.is_last_page();
+
+            for record in page.records {
+                report.counts_mut(species).scanned += 1;
+
+                let Some(sid) = record.source_animal_id.as_deref() else { continue };
+                let Some(existing_id) = store.find_by_source_animal_id(&record.source.name, sid)? else {
+                    report.counts_mut(species).not_in_store += 1;
+                    continue;
+                };
+
+                let mut existing = store.get(existing_id)?;
+                if existing.location.is_some() {
+                    report.counts_mut(species).already_had_location += 1;
+                    continue;
+                }
+
+                if let Some(loc) = record.location {
+                    existing.location = Some(loc);
+                    store.upsert(&existing)?;
+                    report.counts_mut(species).updated += 1;
+                } else {
+                    report.counts_mut(species).source_missing_location += 1;
+                }
+            }
+
+            sp.next_page += 1;
+            sp.done = is_last;
+            progress.set(species, sp);
+            save_progress_keyed(store, LOCATION_BACKFILL_CURSOR_KEY, &progress)?;
+
+            if is_last {
+                break;
+            }
+        }
+    }
+
+    report.db_with_location_after = store.count_with_location()?;
     Ok(report)
 }

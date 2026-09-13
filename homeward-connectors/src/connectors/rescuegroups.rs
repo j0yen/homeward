@@ -19,6 +19,7 @@ use chrono::{DateTime, Utc};
 use homeward_schema::{
     AgeBucket, Availability, ChipStatus, IntakeType, PetRecord, PhotoRef, Provenance, Sex, Size,
     Species, TosClass,
+    geo::ShelterLocation,
     provenance::SourceId,
 };
 use reqwest::StatusCode;
@@ -103,8 +104,22 @@ impl RescueGroupsConfig {
 /// records, `meta.pageReturned` matching the requested page). The JSON:API-
 /// standard `page[number]`/`page[size]` form was also tried and returns no
 /// data at all — `page` (bare) is the only form that works against this API.
+/// `include` query value requesting every related resource the connector
+/// maps: `colors`/`pictures` (already normalized) plus `locations`/`orgs`
+/// (PRD-homeward-ingest-location-backfill-missing — without this, RG's v5
+/// API omits both from `included[]` and the connector has nothing to
+/// resolve a [`ShelterLocation`] from, regardless of what the mapping code
+/// does). Explicit and exhaustive rather than relying on RG's undocumented
+/// "default includes": the real API returns colors/pictures with no
+/// `include` param at all today, but adding `include=locations,orgs` alone
+/// would silently narrow the response to just those two and drop the
+/// colors/pictures this connector already depends on.
+const INCLUDE_PARAM: &str = "colors,pictures,locations,orgs";
+
 fn build_search_url(base_url: &str, species: &str, page: u64) -> String {
-    format!("{base_url}/public/animals/search/available/{species}?limit={PAGE_SIZE}&page={page}")
+    format!(
+        "{base_url}/public/animals/search/available/{species}?limit={PAGE_SIZE}&page={page}&include={INCLUDE_PARAM}"
+    )
 }
 
 /// Build the JSON:API `filters` array for a delta poll's "since" watermark
@@ -475,6 +490,14 @@ struct RgAttributes {
 struct RgRelationships {
     colors: Option<RgRelationshipData>,
     pictures: Option<RgRelationshipData>,
+    /// The animal's shelter location(s) — real payloads carry `city`,
+    /// `state`, `lat`, `lon` on the included `locations` resource (verified
+    /// against the RG v5 API docs; PRD-homeward-ingest-location-backfill-missing).
+    locations: Option<RgRelationshipData>,
+    /// The animal's org (shelter/rescue). Some orgs expose their own
+    /// `city`/`state`/`lat`/`lon` directly (no separate `locations`
+    /// resource); used as a fallback when `locations` is absent.
+    orgs: Option<RgRelationshipData>,
 }
 
 /// A JSON:API relationship: just resource references (`type` + `id`) — the
@@ -562,6 +585,52 @@ fn resolve_colors(refs: &[RgResourceRef], included: &IncludedIndex) -> Vec<Strin
         .collect()
 }
 
+/// Decimal places lat/lon are rounded to for RescueGroups-sourced
+/// locations — matches the ±1.1 km convention already used elsewhere in
+/// this codebase (`ShelterLocation::new`'s own doc comment, and every
+/// other call site in this workspace).
+const LOCATION_PRECISION: u8 = 2;
+
+/// Resolve an animal's coarse [`ShelterLocation`] from its `locations`
+/// relationship, falling back to its `orgs` relationship when no
+/// `locations` resource is present (some orgs expose city/state/lat/lon
+/// directly on the org resource with no separate location record —
+/// PRD-homeward-ingest-location-backfill-missing AC1).
+///
+/// Returns `None` when neither relationship resolves to a resource with a
+/// usable `city` or `state` — a real, honest gap (some source records
+/// genuinely lack shelter location data), not a mapping defect.
+fn resolve_location(
+    location_refs: &[RgResourceRef],
+    org_refs: &[RgResourceRef],
+    included: &IncludedIndex,
+) -> Option<ShelterLocation> {
+    let attrs = location_refs
+        .iter()
+        .chain(org_refs.iter())
+        .find_map(|r| included.get(&(r.kind.clone(), r.id.clone())))?;
+
+    let city = attrs
+        .get("city")
+        .and_then(|v| v.as_str())
+        .filter(|s| !s.is_empty());
+    let state = attrs
+        .get("state")
+        .and_then(|v| v.as_str())
+        .filter(|s| !s.is_empty())
+        .map(ToOwned::to_owned);
+    let lat = attrs.get("lat").and_then(serde_json::Value::as_f64);
+    let lon = attrs.get("lon").and_then(serde_json::Value::as_f64);
+
+    // `city_county` is required on `ShelterLocation`; fall back to state
+    // when only that is present, and give up (return `None`) when the
+    // resolved resource carries neither — coarse geo with nothing
+    // human-readable to show isn't worth fabricating a placeholder for.
+    let city_county = city.map(ToOwned::to_owned).or_else(|| state.clone())?;
+
+    Some(ShelterLocation::new(lat, lon, LOCATION_PRECISION, city_county, state))
+}
+
 // ─── Normalization ─────────────────────────────────────────────────────────
 
 fn normalize_rg_record(
@@ -617,6 +686,20 @@ fn normalize_rg_record(
         .unwrap_or_default();
     let colors = resolve_colors(color_refs, included);
 
+    let location_refs: &[RgResourceRef] = animal
+        .relationships
+        .as_ref()
+        .and_then(|r| r.locations.as_ref())
+        .map(|l| l.data.as_slice())
+        .unwrap_or_default();
+    let org_refs: &[RgResourceRef] = animal
+        .relationships
+        .as_ref()
+        .and_then(|r| r.orgs.as_ref())
+        .map(|o| o.data.as_slice())
+        .unwrap_or_default();
+    let location = resolve_location(location_refs, org_refs, included);
+
     Ok(PetRecord {
         canonical_id: Ulid::new(),
         source: SourceId::new("rescuegroups", TosClass::Api),
@@ -632,7 +715,7 @@ fn normalize_rg_record(
         intake_type: IntakeType::Adoptable,
         availability: Availability::Adoptable,
         chip_status,
-        location: None,
+        location,
         found_location_text: attr.found_location.clone(),
         photos,
         first_seen,
@@ -777,6 +860,79 @@ mod tests {
         assert_eq!(cat_rec.species, Species::Cat);
     }
 
+    // ─── Location mapping (PRD-homeward-ingest-location-backfill-missing) ─────
+    // Inline module-level regression coverage, additional to the crate's own
+    // `tests/locbackfill_ac*` integration tests (which exercise the same
+    // mapping through the public `fetch_normalized_page` API end-to-end).
+
+    #[test]
+    fn location_populated_from_locations_relationship() {
+        let animal: RgAnimal = serde_json::from_value(json!({
+            "id": "dog-loc-1",
+            "type": "animals",
+            "attributes": {
+                "updatedDate": "2024-01-15T10:00:00Z",
+                "createdDate": "2024-01-10T08:00:00Z",
+            },
+            "relationships": {
+                "locations": { "data": [ { "type": "locations", "id": "loc-1" } ] },
+            },
+        }))
+        .expect("test fixture parse");
+
+        let mut included = IncludedIndex::new();
+        included.insert(
+            ("locations".to_owned(), "loc-1".to_owned()),
+            json!({ "city": "Austin", "state": "TX", "lat": 30.2672, "lon": -97.7431 }),
+        );
+
+        let config = RescueGroupsConfig { api_key: "test".to_owned(), base_url: "http://localhost".to_owned() };
+        let rec = normalize_rg_record(animal, Species::Dog, &included, &config).expect("normalize");
+
+        let loc = rec.location.expect("location must be populated from the `locations` relationship");
+        assert_eq!(loc.city_county, "Austin");
+        assert_eq!(loc.state.as_deref(), Some("TX"));
+        assert_eq!(loc.lat, Some(30.27));
+        assert_eq!(loc.lon, Some(-97.74));
+    }
+
+    #[test]
+    fn location_falls_back_to_org_when_no_locations_relationship() {
+        let animal: RgAnimal = serde_json::from_value(json!({
+            "id": "dog-loc-2",
+            "type": "animals",
+            "attributes": {
+                "updatedDate": "2024-01-15T10:00:00Z",
+                "createdDate": "2024-01-10T08:00:00Z",
+            },
+            "relationships": {
+                "orgs": { "data": [ { "type": "orgs", "id": "org-1" } ] },
+            },
+        }))
+        .expect("test fixture parse");
+
+        let mut included = IncludedIndex::new();
+        included.insert(("orgs".to_owned(), "org-1".to_owned()), json!({ "city": "Dallas", "state": "TX" }));
+
+        let config = RescueGroupsConfig { api_key: "test".to_owned(), base_url: "http://localhost".to_owned() };
+        let rec = normalize_rg_record(animal, Species::Dog, &included, &config).expect("normalize");
+
+        let loc = rec.location.expect("location must fall back to the `orgs` relationship");
+        assert_eq!(loc.city_county, "Dallas");
+        assert_eq!(loc.state.as_deref(), Some("TX"));
+    }
+
+    #[test]
+    fn location_is_none_when_neither_relationship_present() {
+        let animal = make_animal("dog-loc-3", json!({}));
+        let config = RescueGroupsConfig { api_key: "test".to_owned(), base_url: "http://localhost".to_owned() };
+        let rec = normalize_rg_record(animal, Species::Dog, &IncludedIndex::new(), &config).expect("normalize");
+        assert!(
+            rec.location.is_none(),
+            "no locations/orgs relationship in the payload must map to None, not a fabricated location"
+        );
+    }
+
     #[test]
     fn species_from_query_maps_dogs_and_cats() {
         assert_eq!(species_from_query("dogs"), Species::Dog);
@@ -822,17 +978,23 @@ mod tests {
         let url = build_search_url("https://api.rescuegroups.org/v5", "dogs", 1);
         assert_eq!(
             url,
-            "https://api.rescuegroups.org/v5/public/animals/search/available/dogs?limit=250&page=1"
+            "https://api.rescuegroups.org/v5/public/animals/search/available/dogs?limit=250&page=1&include=colors,pictures,locations,orgs"
         );
     }
 
+    // Regression note (PRD-homeward-ingest-location-backfill-missing): the
+    // `include` param's value is a comma-joined list of RESOURCE TYPES
+    // (`colors,pictures,locations,orgs`), not species — this test only
+    // guards against comma-joining the *species path segment* the way the
+    // old (never-valid) `dogs,cats` request did, not against commas
+    // anywhere in the URL.
     #[test]
     fn build_search_url_never_comma_joins_species() {
         for species in SPECIES {
             let url = build_search_url("https://api.rescuegroups.org/v5", species, 1);
             assert!(
-                !url.contains(','),
-                "url must not comma-join species: {url}"
+                !url.contains(&format!("available/{species},")),
+                "species path segment must not be comma-joined: {url}"
             );
             assert!(url.contains(&format!("available/{species}?")));
         }
@@ -846,7 +1008,7 @@ mod tests {
         let url = build_search_url("https://api.rescuegroups.org/v5", "cats", 3);
         assert_eq!(
             url,
-            "https://api.rescuegroups.org/v5/public/animals/search/available/cats?limit=250&page=3"
+            "https://api.rescuegroups.org/v5/public/animals/search/available/cats?limit=250&page=3&include=colors,pictures,locations,orgs"
         );
     }
 
