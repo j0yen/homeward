@@ -10,25 +10,39 @@ captured so the site is reproducible from git.
 | path | lands at (on hub) |
 |---|---|
 | `systemd/homeward-{embed,ingest,report,wall}.service` | `~/.config/systemd/user/` (user units, `WantedBy=default.target`) |
+| `systemd/homeward-mcp.service` | same; applied 2026-09-13 (PRD-homeward-mcp-hub-deploy) — streamable-HTTP MCP server, `--http :8095`, binds `0.0.0.0` |
 | `systemd/homeward-backfill-legacy.service` | same; one-shot, exited SUCCESS 2026-08-17, kept for re-runs |
 | `caddy/Caddyfile` | `/etc/caddy/Caddyfile` (system Caddy, TLS for apex/www + `stream.` subdomain) |
 | `scripts/backfill_legacy_enroll.py` | `~/.local/bin/` |
 | `homeward.env.sample` | `~/.config/homeward/homeward.env` (600; holds the RescueGroups key) |
 | `placement.toml.fragment` | lines merged into `~/.config/wintermute/placement.toml` |
 
-Binaries: `homeward-ingestd`, `homeward-reportd`, `homeward-walld` in
-`~/.local/bin/`. Embed sidecar: `~/homeward-embed/` venv (CPU torch,
-`HW_EMBED_MODEL=large`, 1024-d) with `yolov8n.pt` in the working directory —
-`WorkingDirectory` must be that dir or YOLO silently re-downloads.
+Binaries: `homeward-ingestd`, `homeward-reportd`, `homeward-walld`,
+`homeward-mcp` in `~/.local/bin/`. Embed sidecar: `~/homeward-embed/` venv
+(CPU torch, `HW_EMBED_MODEL=large`, 1024-d) with `yolov8n.pt` in the working
+directory — `WorkingDirectory` must be that dir or YOLO silently re-downloads.
 
 ## Differences from the generic `deploy/` units
 
-- `ExecCondition=wm-node should-run <name>` on ingest/report (fleet placement guard)
+- `ExecCondition=wm-node should-run <name>` on ingest/report/mcp (fleet placement guard)
 - `WantedBy=default.target` instead of `homeward.target`
 - embed runs from a venv, not `uv run`; `MemoryHigh=4G`
 - report listens on 8080 (unit flag overrides the env 8081) and reads an optional `messaging.env` for relay/SMTP
 - embed sidecar on 127.0.0.1:8741
 - wall service (port 8090) exists only here
+- mcp service (port 8095, streamable-HTTP `/mcp`, `GET /healthz`) exists only here; reachable directly over Tailscale (no Caddy route yet — see "MCP verification" below)
+
+## MCP verification (homeward-mcp, applied 2026-09-13)
+
+`tests/hub-deploy_ac{1,2,3}_*.sh` at the repo root re-run the real checks
+used to verify this deploy: `systemctl --user is-active` on the hub,
+`tools/list` from an external host (RedBaron/carbon over Tailscale,
+`100.66.158.49:8095`), and a live `search_pets` call. All three were green
+against the real hub at ship time. Known gap surfaced by that verification:
+every live result's `city_county`/`state` is null because
+`homeward-connectors`' RescueGroups mapper never populates `location` at
+all (0/185374 rows) — tracked in `PRD-homeward-ingest-location-backfill-missing.md`,
+not a defect in this deploy.
 
 ## Deploy recipe (binaries)
 
