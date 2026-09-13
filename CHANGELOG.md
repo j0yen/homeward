@@ -1,5 +1,18 @@
 # Changelog
 
+## v0.38.0 — 2026-09-13
+
+Adds `match_photo` to homeward-mcp: submit a lost pet's photo (image_url or
+image_b64) and species, get back a ranked, similarity-scored shortlist of
+shelter intakes that may be the same animal, framed as candidates-not-
+confirmations. Reuses the existing embed sidecar's body-crop -> DINOv2
+embed -> kNN pipeline via `homeward-embed-client`; adds Rust-side image
+validation (http/https-only URL scheme, base64 magic-byte + size checks)
+and a species-level accuracy baseline (sourced from the checked-in
+cross-session eval snapshot) in every response's metadata. Nothing
+submitted is persisted. AC6 (ryzen7 harness parity) and AC7 (warm-service
+p95 bench) are deferred -- see PRD's mock_justifications.
+
 ## v0.37.0 — 2026-09-12
 
 ### homeward-mcp: read-only MCP server over the shelter database (crate homeward-mcp 0.1.0)
