@@ -456,6 +456,23 @@ impl Store {
         records
     }
 
+    /// Count records whose `record_json.location` is non-null.
+    ///
+    /// Used by the location-backfill report (PRD-homeward-ingest-location-
+    /// backfill-missing) — same `json_extract` query the PRD's own
+    /// verification step used to establish the 0/185374 baseline.
+    ///
+    /// # Errors
+    /// Propagates [`StoreError::Sqlite`] on sqlite errors.
+    pub fn count_with_location(&self) -> Result<u64, StoreError> {
+        let n: i64 = self.conn.query_row(
+            "SELECT COUNT(*) FROM canonical_records WHERE json_extract(record_json, '$.location') IS NOT NULL",
+            [],
+            |r| r.get(0),
+        )?;
+        Ok(u64::try_from(n).unwrap_or(0))
+    }
+
     /// Find a canonical id for a record with a matching `source_animal_id`
     /// within the same source.
     ///

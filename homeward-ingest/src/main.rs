@@ -52,6 +52,7 @@ async fn main() {
         "stats" => cmd_stats(rest),
         "get" => cmd_get(rest),
         "backfill" => cmd_backfill(rest).await,
+        "location-backfill" => cmd_location_backfill(rest).await,
         "--help" | "-h" | "help" => {
             print_usage_stdout();
         }
@@ -69,6 +70,7 @@ fn print_usage() {
     eprintln!("  homeward-ingestd stats  [--db <path>]");
     eprintln!("  homeward-ingestd get <canonical_id> [--db <path>]");
     eprintln!("  homeward-ingestd backfill [--db <path>] [--dry-run] [--id-map <path>]");
+    eprintln!("  homeward-ingestd location-backfill [--db <path>]");
 }
 
 fn print_usage_stdout() {
@@ -82,6 +84,8 @@ fn print_usage_stdout() {
         "  homeward-ingestd backfill [--db <path>] [--dry-run] [--id-map <path>]"
     );
     println!("                                           Backfill full RG population");
+    println!("  homeward-ingestd location-backfill [--db <path>]");
+    println!("                                           Backfill `location` on already-ingested RG records");
     println!("  homeward-ingestd --help                 Show this help");
 }
 
@@ -322,6 +326,47 @@ async fn cmd_backfill(args: &[String]) {
         }
         Err(e) => {
             eprintln!("backfill failed: {e}");
+            eprintln!("progress already made this run is persisted — re-run to resume");
+            process::exit(1);
+        }
+    }
+}
+
+/// `homeward-ingestd location-backfill` — PRD-homeward-ingest-location-
+/// backfill-missing AC2: re-walk the RG population and populate `location`
+/// on already-ingested records that don't have one yet (the connector-side
+/// fix, AC1, only affects newly-fetched records going forward).
+async fn cmd_location_backfill(args: &[String]) {
+    let db_path = parse_db_flag(args);
+
+    let Ok(api_key) = std::env::var("RESCUEGROUPS_API_KEY") else {
+        eprintln!("RESCUEGROUPS_API_KEY env var not set — location-backfill needs RG API access");
+        process::exit(1);
+    };
+    let config = RescueGroupsConfig { api_key, base_url: "https://api.rescuegroups.org/v5".to_owned() };
+    let connector = match RescueGroupsConnector::new(config) {
+        Ok(c) => c,
+        Err(e) => {
+            eprintln!("failed to build RescueGroups connector: {e}");
+            process::exit(1);
+        }
+    };
+
+    let mut store = match Store::open(&db_path) {
+        Ok(s) => s,
+        Err(e) => {
+            eprintln!("failed to open store at {}: {e}", db_path.display());
+            process::exit(1);
+        }
+    };
+
+    info!("location-backfill starting — walking full RG dogs+cats population");
+    match backfill::run_location_backfill(&mut store, &connector).await {
+        Ok(report) => {
+            println!("{}", report.render());
+        }
+        Err(e) => {
+            eprintln!("location-backfill failed: {e}");
             eprintln!("progress already made this run is persisted — re-run to resume");
             process::exit(1);
         }
