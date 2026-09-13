@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.2.2 — 2026-09-13
+
+Fixes homeward-ingest/agent/proof-lanes.toml to the [[lane]] schema the
+installed autobuilder's vti-plan actually parses (homeward-schema's own
+file, used as the original model, predates this schema and fails the
+same way) — verified vti-plan now reports verdict=pass.
+
 ## v0.2.1 — 2026-09-13
 
 Onboards homeward-ingest to autobuilder's full producer set: adds
