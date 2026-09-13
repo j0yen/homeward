@@ -1,5 +1,17 @@
 # Changelog
 
+## v0.39.0 — 2026-09-13
+
+Fix: the RescueGroups connector hardcoded `location: None` for every mapped
+PetRecord, so `search_pets`'s "coarse location" promise and lat/lon/
+postal_code filters were unmet for all 185k live records (0/185374 rows
+carried a location). The connector now requests `locations`/`orgs` via the
+RG v5 `include` param and maps a real `ShelterLocation` (falling back from
+`locations` to `orgs`) into every newly-fetched record. A new
+`homeward-ingestd location-backfill` command backfills `location` on
+already-ingested rows that don't have one yet, without ever clobbering a
+row that already has one.
+
 ## v0.38.0 — 2026-09-13
 
 Adds `match_photo` to homeward-mcp: submit a lost pet's photo (image_url or
