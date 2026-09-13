@@ -1,8 +1,8 @@
 {
   "schema": "autobuilder.intent_card.v1",
-  "prd_source": "/home/jsy/Documents/PRDs/build-queue/PRD-homeward-mcp-server.md",
-  "intent_slug": "homeward-mcp-server",
-  "root_motivation": "Agents and assistants cannot query homeward: the database is live on the hub but reachable only via the wall UI (:8090) and the report API (:8081) \u2014 neither speaks MCP, so the fastest-growing consumer surface (agent tool use) has zero access. Evidence: homeward-ops service inventory (verified 2026-08-31); no MCP component exists in the repo; five prior `*-mcp` PRDs in built-prds/ establish the local pattern (recall-mcp, muster-mcp, docket-mcp, provenance-mcp, mdcollab-mcp).",
+  "prd_source": "/home/jsy/Documents/PRDs/build-queue/PRD-homeward-mcp-photo-match.md",
+  "intent_slug": "homeward-mcp-photo-match",
+  "root_motivation": "The matcher is homeward's core value (baselines: r5 0.693, r20 0.880 \u2014 a 20-candidate shortlist finds an enrolled pet ~7 times in 8) yet it is unreachable from any agent: the embed service listens on the hub's loopback-adjacent :8741 and no public calling surface exists. An owner's assistant holding a photo today has no programmatic route to the shortlist. Evidence: homeward-ops service inventory + eval baselines (2026-08-26); embed service and HNSW index live since the original embed/match PRDs.",
   "user_persona": "UNSPECIFIED \u2014 no existing intent card to carry forward from; set by hand (intent-card-refresh.sh cannot source this from a PRD).",
   "unfakeable_metric": {
     "name": "acceptance_tests_passing_count",
@@ -14,56 +14,50 @@
     {
       "id": "AC1",
       "level": "MUST",
-      "description": "Given the server on stdio with a fixture DB, When a client calls tools/list, Then exactly search_pets and get_pet appear with JSON schemas and recent_intakes lists as a resource.",
+      "description": "Given a fixture index with known neighbors, When match_photo submits an enrolled animal's held-out photo, Then the ranked list matches the direct pipeline's output for the same inputs (ids and order).",
       "test": "homeward-mcp/tests/mcp_ac01_tools_list_and_resource.rs"
     },
     {
       "id": "AC2",
       "level": "MUST",
-      "description": "Given fixture intakes near location X, When search_pets(dog, X, 50km) is called, Then only in-radius dogs return, each with hotlinked photo URL, coarse location, and brokered shelter contact \u2014 and no person-level PII field exists in the payload.",
+      "description": "Given any successful match response, When inspected, Then it carries similarity per candidate, the advisory string, and the species baseline metadata.",
       "test": "homeward-mcp/tests/mcp_ac02_search_pets_radius_and_privacy.rs"
     },
     {
       "id": "AC3",
       "level": "MUST",
-      "description": "Given a search with no matches, When called, Then an empty result with a well-formed shape returns (no error, no nulls where lists belong).",
+      "description": "Given a match call completes, When the filesystem and DB are audited, Then no submitted image bytes, query embeddings, or EXIF-bearing artifacts were written.",
       "test": "homeward-mcp/tests/mcp_ac03_empty_result_well_formed.rs"
     },
     {
       "id": "AC4",
       "level": "MUST",
-      "description": "Given an invalid species value, When search_pets is called, Then a typed MCP error returns and the server stays up.",
+      "description": "Given the embed service is stopped, When match_photo is called, Then a typed degraded error returns within 5 s and a subsequent search_pets call still succeeds.",
       "test": "homeward-mcp/tests/mcp_ac04_invalid_species_typed_error.rs"
     },
     {
       "id": "AC5",
       "level": "MUST",
-      "description": "Given the DB file is absent, When any tool is called, Then a clean typed error returns (no traceback in the client payload) and the process does not exit.",
+      "description": "Given a non-image payload and an oversized image, When submitted, Then each yields a typed validation error and the server stays up.",
       "test": "homeward-mcp/tests/mcp_ac05_missing_db_clean_error.rs"
     },
     {
       "id": "AC6",
-      "level": "MUST",
-      "description": "Given the same entry point, When started with --http, Then the same tool calls succeed over streamable HTTP as over stdio.",
+      "level": "SHOULD",
+      "description": "Given the ryzen7 harness cross-session pairs, When run through the MCP path, Then ranked-list parity \u226599% and the divergence report lists every non-matching pair.",
       "test": "homeward-mcp/tests/mcp_ac06_http_and_stdio_parity.rs"
     },
     {
       "id": "AC7",
       "level": "SHOULD",
-      "description": "Given a 60k-row fixture DB, When 200 timed search_pets calls run, Then p95 < 200 ms.",
+      "description": "Given a warm embed service, When 50 timed matches run, Then p95 < 4 s.",
       "test": "tests/acceptance_ac7.rs"
     },
     {
       "id": "AC8",
-      "level": "SHOULD",
-      "description": "Given 20 concurrent HTTP clients for 60 s, When they issue mixed tool calls, Then zero errors and no request starves >2 s.",
-      "test": "tests/acceptance_ac8.rs"
-    },
-    {
-      "id": "AC9",
       "level": "MAY",
-      "description": "Given the deploy recipe, When applied on a hub-like environment, Then a homeward-mcp user unit runs alongside the existing four services' conventions.",
-      "test": "tests/acceptance_ac9.rs"
+      "description": "Given limit=5 and a radius filter, When applied, Then survivors keep their kNN relative order.",
+      "test": "tests/acceptance_ac8.rs"
     }
   ],
   "scope": [],
