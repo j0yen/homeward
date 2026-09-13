@@ -1,5 +1,15 @@
 # Changelog
 
+## v0.2.3 — 2026-09-13
+
+Symlinks `homeward-ingest/Cargo.lock` to the workspace-root lock file.
+`supply-audit`/`license-audit`/`sbom` were erroring `read .../Cargo.lock:
+No such file or directory` because a workspace member has no lock file of
+its own — this is the actual reason v0.2.1's onboarding (proof-lanes.toml +
+run-metrics.sh) did not close the gate gap it claimed to close. Verified
+directly: all three producers now write `verdict: "pass"` receipts for
+homeward-ingest (380 deps scanned, 0 advisories, 0 license violations).
+
 ## v0.2.2 — 2026-09-13
 
 Fixes homeward-ingest/agent/proof-lanes.toml to the [[lane]] schema the
