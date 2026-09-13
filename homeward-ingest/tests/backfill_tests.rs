@@ -224,6 +224,45 @@ async fn ac1_seeded_backfill_reaches_full_population_with_zero_duplicates() {
     }
 }
 
+// ─── AC5 ─────────────────────────────────────────────────────────────────────
+
+/// AC5 as its own test (the assertion also lives inline in AC1's run above,
+/// but the acceptance criterion gets a dedicated, independently-named test
+/// too): every request the full backfill issues is page-based — never an
+/// `offset` param — against a fresh empty store, not piggybacked on AC1's
+/// duplicate/count assertions.
+#[tokio::test]
+async fn ac5_backfill_never_sends_an_offset_param() {
+    let server = MockServer::start().await;
+    let fx = build_500_fixture();
+    mount_500_fixture(&server, &fx).await;
+    let connector = connector_for(&server);
+
+    let mut store = Store::open_in_memory().expect("store");
+    let cfg = BackfillConfig::default();
+    let report = backfill::run_backfill(&mut store, &connector, &cfg, None)
+        .await
+        .expect("backfill run");
+
+    assert_eq!(report.dogs.fetched, 450);
+    assert_eq!(report.cats.fetched, 50);
+
+    let requests = server.received_requests().await.expect("recording enabled");
+    assert!(!requests.is_empty(), "backfill must issue at least one request");
+    for req in &requests {
+        assert!(
+            !req.url.query().unwrap_or_default().contains("offset"),
+            "request must never carry offset: {}",
+            req.url
+        );
+        assert!(
+            req.url.query().unwrap_or_default().contains("page="),
+            "request must be page-based: {}",
+            req.url
+        );
+    }
+}
+
 // ─── AC2 ─────────────────────────────────────────────────────────────────────
 
 #[tokio::test]
