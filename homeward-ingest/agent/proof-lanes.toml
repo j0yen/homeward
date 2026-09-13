@@ -1,0 +1,43 @@
+# proof-lanes.toml — maps changed paths to verification lanes.
+# Every changed path in Stage 3 must resolve to >= 1 lane here.
+# Modeled on homeward-schema/agent/proof-lanes.toml (PRD-build-homeward-ingest-autobuilder-onboard).
+
+[lanes.core-types]
+paths = ["src/lib.rs", "src/events.rs", "src/embed_client.rs"]
+gates = ["cargo check", "cargo clippy", "cargo test"]
+confidence = 0.95
+
+[lanes.store]
+paths = ["src/store.rs"]
+gates = ["cargo check", "cargo clippy", "cargo test --test backfill_tests"]
+confidence = 0.9
+
+[lanes.dedup]
+paths = ["src/dedup.rs"]
+gates = ["cargo check", "cargo clippy", "cargo test --test federated_dedup_tests"]
+confidence = 0.95
+
+[lanes.departure]
+paths = ["src/departure.rs"]
+gates = ["cargo check", "cargo clippy", "cargo test"]
+confidence = 0.9
+
+[lanes.enroll]
+paths = ["src/enroll.rs"]
+gates = ["cargo check", "cargo clippy", "cargo test --test backfill_tests"]
+confidence = 0.9
+
+[lanes.backfill]
+paths = ["src/backfill.rs"]
+gates = ["cargo check", "cargo clippy", "cargo test --test backfill_tests"]
+confidence = 0.9
+
+[lanes.orchestrator]
+paths = ["src/orchestrator.rs", "src/main.rs"]
+gates = ["cargo check", "cargo clippy", "cargo test"]
+confidence = 0.9
+
+[lanes.acceptance]
+paths = ["tests/backfill_tests.rs", "tests/federated_dedup_tests.rs"]
+gates = ["cargo test --workspace"]
+confidence = 1.0
