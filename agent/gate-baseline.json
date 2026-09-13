@@ -1,0 +1,43 @@
+{
+  "schema": "autobuilder.gate_baseline.v1",
+  "recorded_at": "2026-09-13T00:43:43Z",
+  "head_sha": "39702a61f9d2d6cc1499d082ced58173778415d0",
+  "receipts": [
+    {
+      "name": "vti-plan",
+      "reason": "missing: /home/jsy/wintermute/homeward/target/autobuilder/receipts/vti-plan.json"
+    },
+    {
+      "name": "proof-receipt",
+      "reason": "missing: /home/jsy/wintermute/homeward/target/autobuilder/receipts/39702a61f9d2d6cc1499d082ced58173778415d0.json"
+    },
+    {
+      "name": "risk-gate",
+      "reason": "missing: /home/jsy/wintermute/homeward/target/autobuilder/receipts/risk-gate.json"
+    },
+    {
+      "name": "reviewer-agent",
+      "reason": "missing: /home/jsy/wintermute/homeward/target/autobuilder/receipts/reviewer-agent.json"
+    },
+    {
+      "name": "rollback-plan",
+      "reason": "verdict=block not in [\"pass\"]"
+    },
+    {
+      "name": "ci-checks",
+      "reason": "verdict=block not in [\"pass\", \"skipped\"]"
+    },
+    {
+      "name": "session-trace",
+      "reason": "missing: /home/jsy/wintermute/homeward/target/autobuilder/receipts/session-trace.json"
+    },
+    {
+      "name": "msrv-verify",
+      "reason": "verdict=block not in [\"pass\", \"skipped\"]"
+    },
+    {
+      "name": "ac-traceability",
+      "reason": "verdict=block not in [\"pass\"]"
+    }
+  ]
+}
