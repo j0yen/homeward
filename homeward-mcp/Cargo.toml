@@ -21,6 +21,9 @@ homeward-schema = { path = "../homeward-schema" }
 # colors/lat-lon) -- kept as a dependency solely to reuse its ApiConfig
 # default result cap instead of re-declaring the "50" constant.
 homeward-report = { path = "../homeward-report" }
+# match_photo's embed+kNN call -- see crates/homeward-embed-client's own
+# doc comment for the /enroll, /query, /health sidecar contract.
+homeward-embed-client = { path = "../crates/homeward-embed-client" }
 rmcp = { version = "3.2.0", features = ["server", "transport-io", "transport-streamable-http-server", "macros"] }
 schemars = { version = "1", features = ["chrono04"] }
 axum = "0.8"
@@ -34,6 +37,9 @@ anyhow = "1"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 url = { workspace = true }
+# match_photo's image_b64 decode + magic-byte/size validation (AC5), same
+# version already used by homeward-report.
+base64 = "0.22"
 
 [dev-dependencies]
 ulid = { version = "1", features = ["serde"] }

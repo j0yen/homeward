@@ -10,10 +10,12 @@
 
 #![deny(unsafe_code)]
 
+pub mod baseline;
 pub mod dto;
 pub mod filter;
 pub mod geo;
 pub mod http;
+pub mod image_input;
 pub mod query;
 pub mod server;
 

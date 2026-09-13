@@ -6,7 +6,10 @@
 
 #![allow(dead_code)]
 
+pub mod mock_embed;
+
 use std::collections::BTreeMap;
+use std::net::SocketAddr;
 use std::path::{Path, PathBuf};
 use std::process::Stdio;
 use std::time::Duration;
@@ -116,6 +119,24 @@ pub fn spawn_stdio_server(db_path: &Path) -> Child {
         .kill_on_drop(true)
         .spawn()
         .expect("spawn homeward-mcp")
+}
+
+/// Same as [`spawn_stdio_server`], but also points the embed-sidecar client
+/// at `embed_addr` (`HW_EMBED_HOST`/`HW_EMBED_PORT`) -- for `match_photo`
+/// tests that need a controllable (mock, or deliberately closed) sidecar.
+pub fn spawn_stdio_server_with_embed(db_path: &Path, embed_addr: SocketAddr) -> Child {
+    let exe = env!("CARGO_BIN_EXE_homeward-mcp");
+    Command::new(exe)
+        .arg("serve")
+        .env("HOMEWARD_INGEST_DB", db_path)
+        .env("HW_EMBED_HOST", embed_addr.ip().to_string())
+        .env("HW_EMBED_PORT", embed_addr.port().to_string())
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::null())
+        .kill_on_drop(true)
+        .spawn()
+        .expect("spawn homeward-mcp (with embed env)")
 }
 
 /// Spawn the real `homeward-mcp` binary in `serve --http` mode, pointed at
