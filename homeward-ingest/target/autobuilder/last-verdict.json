@@ -1,6 +1,6 @@
 {
-  "head_sha": "e442dc77d0bcfb9de847c1a94bd8b79e3f5760b2",
-  "head": "e442dc77d0bcfb9de847c1a94bd8b79e3f5760b2",
+  "head_sha": "f7631097bd41a7fa02ab8f4e338f47d722e09dd2",
+  "head": "f7631097bd41a7fa02ab8f4e338f47d722e09dd2",
   "script_sha256": "63c3855d69fc963ccd5dcd4270a3fc1cf861d2325e3ee033385c164eaab64d75",
   "verdict": "block",
   "exit_code": 1,
@@ -67,12 +67,12 @@
     "risk-gate": "skip",
     "intake": "0",
     "proof-receipt": "1!",
-    "vti-plan": "1!",
+    "vti-plan": "0!",
     "rollback-plan": "0!",
     "ci-checks": "0!",
-    "receipts": "105!",
+    "receipts": "49!",
     "reviewer": "skip",
     "gate": "0!"
   },
-  "wall_s": 108
+  "wall_s": 50
 }

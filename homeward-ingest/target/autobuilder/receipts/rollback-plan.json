@@ -3,16 +3,26 @@
   "base_ref": "v0.1.1",
   "base_sha": "f7563edad85fd66dad5dd3d4c8c7509082297417",
   "base_tag": null,
-  "blocking_count": 10,
-  "captured_at": "2026-09-13T01:02:37Z",
+  "blocking_count": 11,
+  "captured_at": "2026-09-13T01:05:59Z",
   "classified": {
     "mechanical_chain": 0,
     "mechanical_merge": 1,
     "mechanical_pattern": 0,
-    "substantive": 24
+    "substantive": 25
   },
-  "commit_count": 25,
+  "commit_count": 26,
   "commits": [
+    {
+      "class": "substantive",
+      "mechanical": false,
+      "note": "clean revert",
+      "parent_count": 1,
+      "revertable": true,
+      "sha": "f7631097bd41a7fa02ab8f4e338f47d722e09dd2",
+      "short_sha": "f763109",
+      "subject": "homeward-ingest: gate receipts at e442dc7 (verdict=block, see PRD iter_log)"
+    },
     {
       "class": "substantive",
       "mechanical": false,
@@ -26,9 +36,9 @@
     {
       "class": "substantive",
       "mechanical": false,
-      "note": "clean revert",
+      "note": "conflicts during revert",
       "parent_count": 1,
-      "revertable": true,
+      "revertable": false,
       "sha": "39702a61f9d2d6cc1499d082ced58173778415d0",
       "short_sha": "39702a6",
       "subject": "homeward-ingest: gate receipts at 724cb1d (verdict=block, see PRD iter_log)"
@@ -264,9 +274,9 @@
       "subject": "fix(connectors): rescuegroups delta cursor must be RFC3339"
     }
   ],
-  "head_sha": "e442dc77d0bcfb9de847c1a94bd8b79e3f5760b2",
+  "head_sha": "f7631097bd41a7fa02ab8f4e338f47d722e09dd2",
   "mechanical_count": 1,
-  "receipt_digest": "sha256:3ca74f59fa68d22e63e12ca3d904aa78ba73fbc9f5957d337c6e4741453238bd",
+  "receipt_digest": "sha256:a6201283b43d64b4e072b8d20eaf51254d325402a489e81a752ee37f8d01da65",
   "revertable_count": 15,
   "rollback_md": "target/autobuilder/rollback.md",
   "rollback_model": "revert-commits",

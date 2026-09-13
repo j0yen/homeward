@@ -1,12 +1,12 @@
 {
-  "captured_at": "2026-09-13T01:02:41Z",
+  "captured_at": "2026-09-13T01:06:04Z",
   "default_max_bytes": 52428800,
-  "head_sha": "e442dc77d0bcfb9de847c1a94bd8b79e3f5760b2",
+  "head_sha": "f7631097bd41a7fa02ab8f4e338f47d722e09dd2",
   "measurements": [],
   "over_budget": [
     "target/release not found"
   ],
-  "receipt_digest": "sha256:2e83d92edc879bc730aeb9d79e8a0179a37fc4717449eed311fad7ff63648942",
+  "receipt_digest": "sha256:f0d71565803e58390906125994097bb04d5315cc606c8b4d29845c25b9d38281",
   "schema": "autobuilder.binary_size_receipt.v1",
   "verdict": "skipped"
 }
