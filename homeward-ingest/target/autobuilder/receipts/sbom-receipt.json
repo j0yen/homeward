@@ -857,11 +857,11 @@
         "version": "0.1.0"
       },
       {
-        "bom-ref": "homeward-ingest-0.2.3",
+        "bom-ref": "homeward-ingest-0.2.4",
         "name": "homeward-ingest",
-        "purl": "pkg:cargo/homeward-ingest@0.2.3",
+        "purl": "pkg:cargo/homeward-ingest@0.2.4",
         "type": "library",
-        "version": "0.2.3"
+        "version": "0.2.4"
       },
       {
         "bom-ref": "homeward-match-0.1.0",
@@ -2666,10 +2666,10 @@
     "specVersion": "1.5",
     "version": 1
   },
-  "captured_at": "2026-09-13T21:07:29Z",
+  "captured_at": "2026-09-13T22:35:04Z",
   "components_count": 380,
-  "head_sha": "65fe3d24939f693b18eec54a6cbb0527859afae9",
-  "receipt_digest": "sha256:59dce56a0b26eeb49bd1fde0dbc2b117de138fb31bcb26cc649dbc752e3af50b",
+  "head_sha": "cf112a42af678eaba66a90ba08fdb4bdfdb3b906",
+  "receipt_digest": "sha256:8654e934f5fe8d3f7e2b01bc428c3a187eaabcbaddd83e1af92c9937f943c65a",
   "schema": "autobuilder.sbom_receipt.v1",
   "verdict": "pass"
 }

@@ -1,14 +1,14 @@
 {
-  "captured_at": "2026-09-13T21:07:27Z",
+  "captured_at": "2026-09-13T22:35:03Z",
   "constraints_evaluated": {},
-  "head_sha": "65fe3d24939f693b18eec54a6cbb0527859afae9",
+  "head_sha": "cf112a42af678eaba66a90ba08fdb4bdfdb3b906",
   "notes": [],
-  "receipt_digest": "sha256:c7fe7b6ce2b763dc6c2ef3e660ffbe1d1aa8e8f80ecd7d200c071223754db766",
+  "receipt_digest": "sha256:c6439a205c1f82e338b1fea7d73db9dadc6aea9f661ecd68cf11f9983b2a29b2",
   "schema": "autobuilder.session_trace_receipt.v1",
   "tracer": {
-    "event_count": 5688,
+    "event_count": 2051,
     "log_path": "/home/jsy/wintermute/homeward/homeward-ingest/target/autobuilder/session-trace.ndjson",
-    "log_sha256": "dd1191ae9b91ace65ce6d298c76d8ed8e80c67072ae56d92e60788d717c7a7b3",
+    "log_sha256": "4ea1c53abdcefa1838beff5f193dadeb17bec4ae54bdcce1de72429e93e7424a",
     "tool": "ctrace"
   },
   "verdict": "pass"

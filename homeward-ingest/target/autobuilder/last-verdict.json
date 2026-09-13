@@ -1,6 +1,6 @@
 {
-  "head_sha": "65fe3d24939f693b18eec54a6cbb0527859afae9",
-  "head": "65fe3d24939f693b18eec54a6cbb0527859afae9",
+  "head_sha": "cf112a42af678eaba66a90ba08fdb4bdfdb3b906",
+  "head": "cf112a42af678eaba66a90ba08fdb4bdfdb3b906",
   "script_sha256": "63c3855d69fc963ccd5dcd4270a3fc1cf861d2325e3ee033385c164eaab64d75",
   "verdict": "delta-pass",
   "exit_code": 0,
@@ -54,13 +54,13 @@
   "phases": {
     "risk-gate": "skip",
     "intake": "0",
-    "proof-receipt": "29",
+    "proof-receipt": "22",
     "vti-plan": "0!",
     "rollback-plan": "0!",
-    "ci-checks": "0!",
-    "receipts": "51!",
+    "ci-checks": "1!",
+    "receipts": "43!",
     "reviewer": "skip",
     "gate": "0!"
   },
-  "wall_s": 81
+  "wall_s": 66
 }

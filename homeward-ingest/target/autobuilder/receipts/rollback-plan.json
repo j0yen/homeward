@@ -4,15 +4,35 @@
   "base_sha": "4f2d35e678b0d307cdfa570b3c9c550c461b33ef",
   "base_tag": null,
   "blocking_count": 1,
-  "captured_at": "2026-09-13T21:07:27Z",
+  "captured_at": "2026-09-13T22:35:03Z",
   "classified": {
     "mechanical_chain": 0,
     "mechanical_merge": 0,
     "mechanical_pattern": 0,
-    "substantive": 3
+    "substantive": 5
   },
-  "commit_count": 3,
+  "commit_count": 5,
   "commits": [
+    {
+      "class": "substantive",
+      "mechanical": false,
+      "note": "clean revert",
+      "parent_count": 1,
+      "revertable": true,
+      "sha": "cf112a42af678eaba66a90ba08fdb4bdfdb3b906",
+      "short_sha": "cf112a4",
+      "subject": "homeward-ingest: v0.2.4 — close AC5 backfill-offset test-pairing gap"
+    },
+    {
+      "class": "substantive",
+      "mechanical": false,
+      "note": "clean revert",
+      "parent_count": 1,
+      "revertable": true,
+      "sha": "4c37b21fbbaeacc6b7b261933d6e5188b8ba745a",
+      "short_sha": "4c37b21",
+      "subject": "homeward-ingest: regenerate autobuilder receipts (gate run, homeward-ingest-backfill)"
+    },
     {
       "class": "substantive",
       "mechanical": false,
@@ -44,10 +64,10 @@
       "subject": "homeward-mcp: add AC4 public-reachability test, close hub-deploy's Tailscale-only test gap"
     }
   ],
-  "head_sha": "65fe3d24939f693b18eec54a6cbb0527859afae9",
+  "head_sha": "cf112a42af678eaba66a90ba08fdb4bdfdb3b906",
   "mechanical_count": 0,
-  "receipt_digest": "sha256:081d0c3b809c05c72672ea6521339195ac98095992e1bac13673543fe7abff5c",
-  "revertable_count": 2,
+  "receipt_digest": "sha256:60272d9ec66b6853ae0f7b05d9052ffdaeb4f20a90bdc7dede30763433b24560",
+  "revertable_count": 4,
   "rollback_md": "target/autobuilder/rollback.md",
   "rollback_model": "revert-commits",
   "schema": "autobuilder.rollback_plan_receipt.v2",

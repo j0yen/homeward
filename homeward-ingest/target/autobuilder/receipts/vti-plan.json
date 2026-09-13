@@ -1,20 +1,281 @@
 {
   "base_ref": "v0.39.0",
   "base_sha": "4f2d35e678b0d307cdfa570b3c9c550c461b33ef",
-  "captured_at": "2026-09-13T21:07:27Z",
-  "head_sha": "65fe3d24939f693b18eec54a6cbb0527859afae9",
+  "captured_at": "2026-09-13T22:35:03Z",
+  "head_sha": "cf112a42af678eaba66a90ba08fdb4bdfdb3b906",
   "min_confidence": 0.7,
   "proof_lanes_path": "agent/proof-lanes.toml",
   "proof_lanes_sha256": "sha256:2a55df6aebd91689da760c51ef3d7363b59b0daf317e33686c4e478b13b9ec71",
-  "receipt_digest": "sha256:e3443386ea673570e88b4ab478baec53898f295b57639811553fc69755d0908d",
+  "receipt_digest": "sha256:4d5316b4e36c9bc91112bf52f28ec8192e2e109d25d9c63eb24b6806febeafa2",
   "required_commands": [
-    "cargo test --workspace"
+    "cargo check --workspace",
+    "cargo test --workspace",
+    "homeward-ingest/scripts/run-metrics.sh"
   ],
   "routes": [
+    {
+      "confidence": 1.0,
+      "lanes": [
+        "deps"
+      ],
+      "path": "Cargo.lock"
+    },
     {
       "confidence": 0.0,
       "lanes": [],
       "path": "deploy/hub/README.md"
+    },
+    {
+      "confidence": 1.0,
+      "lanes": [
+        "onboarding"
+      ],
+      "path": "homeward-ingest/CHANGELOG.md"
+    },
+    {
+      "confidence": 1.0,
+      "lanes": [
+        "deps"
+      ],
+      "path": "homeward-ingest/Cargo.toml"
+    },
+    {
+      "confidence": 1.0,
+      "lanes": [
+        "onboarding"
+      ],
+      "path": "homeward-ingest/agent/intent-card.json"
+    },
+    {
+      "confidence": 1.0,
+      "lanes": [
+        "onboarding"
+      ],
+      "path": "homeward-ingest/target/autobuilder/clippy.json"
+    },
+    {
+      "confidence": 1.0,
+      "lanes": [
+        "onboarding"
+      ],
+      "path": "homeward-ingest/target/autobuilder/last-verdict.json"
+    },
+    {
+      "confidence": 1.0,
+      "lanes": [
+        "onboarding"
+      ],
+      "path": "homeward-ingest/target/autobuilder/metrics.json"
+    },
+    {
+      "confidence": 1.0,
+      "lanes": [
+        "onboarding"
+      ],
+      "path": "homeward-ingest/target/autobuilder/receipts/65fe3d24939f693b18eec54a6cbb0527859afae9.json"
+    },
+    {
+      "confidence": 1.0,
+      "lanes": [
+        "onboarding"
+      ],
+      "path": "homeward-ingest/target/autobuilder/receipts/ac-traceability-receipt.json"
+    },
+    {
+      "confidence": 1.0,
+      "lanes": [
+        "onboarding"
+      ],
+      "path": "homeward-ingest/target/autobuilder/receipts/bench-delta-receipt.json"
+    },
+    {
+      "confidence": 1.0,
+      "lanes": [
+        "onboarding"
+      ],
+      "path": "homeward-ingest/target/autobuilder/receipts/binary-size-receipt.json"
+    },
+    {
+      "confidence": 1.0,
+      "lanes": [
+        "onboarding"
+      ],
+      "path": "homeward-ingest/target/autobuilder/receipts/ci-checks.json"
+    },
+    {
+      "confidence": 1.0,
+      "lanes": [
+        "onboarding"
+      ],
+      "path": "homeward-ingest/target/autobuilder/receipts/cli-surface-receipt.json"
+    },
+    {
+      "confidence": 1.0,
+      "lanes": [
+        "onboarding"
+      ],
+      "path": "homeward-ingest/target/autobuilder/receipts/cold-build-time-receipt.json"
+    },
+    {
+      "confidence": 1.0,
+      "lanes": [
+        "onboarding"
+      ],
+      "path": "homeward-ingest/target/autobuilder/receipts/determinism-receipt.json"
+    },
+    {
+      "confidence": 1.0,
+      "lanes": [
+        "onboarding"
+      ],
+      "path": "homeward-ingest/target/autobuilder/receipts/experiment-receipt.json"
+    },
+    {
+      "confidence": 1.0,
+      "lanes": [
+        "onboarding"
+      ],
+      "path": "homeward-ingest/target/autobuilder/receipts/flake-audit-receipt.json"
+    },
+    {
+      "confidence": 1.0,
+      "lanes": [
+        "onboarding"
+      ],
+      "path": "homeward-ingest/target/autobuilder/receipts/hermetic-build-receipt.json"
+    },
+    {
+      "confidence": 1.0,
+      "lanes": [
+        "onboarding"
+      ],
+      "path": "homeward-ingest/target/autobuilder/receipts/intake.json"
+    },
+    {
+      "confidence": 1.0,
+      "lanes": [
+        "onboarding"
+      ],
+      "path": "homeward-ingest/target/autobuilder/receipts/license-audit-receipt.json"
+    },
+    {
+      "confidence": 1.0,
+      "lanes": [
+        "onboarding"
+      ],
+      "path": "homeward-ingest/target/autobuilder/receipts/msrv-verify-receipt.json"
+    },
+    {
+      "confidence": 1.0,
+      "lanes": [
+        "onboarding"
+      ],
+      "path": "homeward-ingest/target/autobuilder/receipts/mutation-kill-receipt.json"
+    },
+    {
+      "confidence": 1.0,
+      "lanes": [
+        "onboarding"
+      ],
+      "path": "homeward-ingest/target/autobuilder/receipts/rollback-plan.json"
+    },
+    {
+      "confidence": 1.0,
+      "lanes": [
+        "onboarding"
+      ],
+      "path": "homeward-ingest/target/autobuilder/receipts/sbom-receipt.json"
+    },
+    {
+      "confidence": 1.0,
+      "lanes": [
+        "onboarding"
+      ],
+      "path": "homeward-ingest/target/autobuilder/receipts/schema-compat-receipt.json"
+    },
+    {
+      "confidence": 1.0,
+      "lanes": [
+        "onboarding"
+      ],
+      "path": "homeward-ingest/target/autobuilder/receipts/secrets-scan-receipt.json"
+    },
+    {
+      "confidence": 1.0,
+      "lanes": [
+        "onboarding"
+      ],
+      "path": "homeward-ingest/target/autobuilder/receipts/semver-check-receipt.json"
+    },
+    {
+      "confidence": 1.0,
+      "lanes": [
+        "onboarding"
+      ],
+      "path": "homeward-ingest/target/autobuilder/receipts/session-trace.json"
+    },
+    {
+      "confidence": 1.0,
+      "lanes": [
+        "onboarding"
+      ],
+      "path": "homeward-ingest/target/autobuilder/receipts/supply-audit-receipt.json"
+    },
+    {
+      "confidence": 1.0,
+      "lanes": [
+        "onboarding"
+      ],
+      "path": "homeward-ingest/target/autobuilder/receipts/vti-plan.json"
+    },
+    {
+      "confidence": 1.0,
+      "lanes": [
+        "onboarding"
+      ],
+      "path": "homeward-ingest/target/autobuilder/release-receipt.json"
+    },
+    {
+      "confidence": 1.0,
+      "lanes": [
+        "onboarding"
+      ],
+      "path": "homeward-ingest/target/autobuilder/results.tsv"
+    },
+    {
+      "confidence": 1.0,
+      "lanes": [
+        "onboarding"
+      ],
+      "path": "homeward-ingest/target/autobuilder/rollback.md"
+    },
+    {
+      "confidence": 1.0,
+      "lanes": [
+        "onboarding"
+      ],
+      "path": "homeward-ingest/target/autobuilder/run.log"
+    },
+    {
+      "confidence": 1.0,
+      "lanes": [
+        "onboarding"
+      ],
+      "path": "homeward-ingest/target/autobuilder/session-trace.ndjson"
+    },
+    {
+      "confidence": 1.0,
+      "lanes": [
+        "onboarding"
+      ],
+      "path": "homeward-ingest/target/autobuilder/session.1789333618.log"
+    },
+    {
+      "confidence": 1.0,
+      "lanes": [
+        "onboarding"
+      ],
+      "path": "homeward-ingest/target/autobuilder/test-output.txt"
     },
     {
       "confidence": 1.0,
