@@ -85,3 +85,82 @@ pub struct SearchPetsResult {
     /// True if more records matched than were returned.
     pub truncated: bool,
 }
+
+/// Input for the `match_photo` tool. Exactly one of `image_url`/`image_b64`
+/// must be given.
+#[derive(Debug, Clone, Deserialize, Serialize, JsonSchema)]
+pub struct MatchPhotoRequest {
+    /// URL of the lost pet's photo (`http`/`https` only). Alternative to `image_b64`.
+    #[serde(default)]
+    pub image_url: Option<String>,
+    /// Base64-encoded JPEG/PNG photo bytes. Alternative to `image_url`.
+    #[serde(default)]
+    pub image_b64: Option<String>,
+    /// Species of the lost pet: "dog" or "cat".
+    pub species: String,
+    /// Optional latitude to filter candidates by proximity (with `lon`).
+    #[serde(default)]
+    pub lat: Option<f64>,
+    /// Optional longitude, paired with `lat`.
+    #[serde(default)]
+    pub lon: Option<f64>,
+    /// Optional radius in kilometers, used only with `lat`/`lon`.
+    #[serde(default)]
+    pub radius_km: Option<f64>,
+    /// Maximum number of candidates to return (default and hard cap 20).
+    #[serde(default)]
+    pub limit: Option<u32>,
+}
+
+/// One ranked candidate returned by `match_photo` -- same redacted shape as
+/// [`PetSummary`] plus a similarity score. No owner PII: this tool only
+/// ever reads the shelter intake store, never a `LostReport`.
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+pub struct MatchCandidate {
+    /// Homeward's canonical id.
+    pub id: String,
+    /// "dog" or "cat".
+    pub species: String,
+    /// Cosine similarity to the submitted photo, in `[0, 1]`.
+    pub similarity: f64,
+    /// Coarse shelter city/county.
+    pub city_county: Option<String>,
+    /// Shelter state code.
+    pub state: Option<String>,
+    /// Coarse (already-rounded) latitude, if known.
+    pub lat: Option<f64>,
+    /// Coarse (already-rounded) longitude, if known.
+    pub lon: Option<f64>,
+    /// Hotlinked photo URLs (never re-hosted bytes).
+    pub photo_urls: Vec<String>,
+    /// Brokered shelter contact route -- never a person's phone/email.
+    pub shelter_contact: String,
+}
+
+/// Species-level accuracy baseline attached to every `match_photo` response
+/// so a caller can calibrate expectations (see `baseline` module).
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+pub struct SpeciesBaseline {
+    /// The species this baseline describes.
+    pub species: String,
+    /// Fraction of eval queries where the correct animal was the top-1 hit.
+    pub rank1: f64,
+    /// Fraction of eval queries where the correct animal was in the top 5.
+    pub rank5: f64,
+    /// Fraction of eval queries where the correct animal was in the top 20.
+    pub rank20: f64,
+    /// Which checked-in eval artifact this baseline was computed from.
+    pub source: String,
+}
+
+/// Output of the `match_photo` tool.
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+pub struct MatchPhotoResult {
+    /// Ranked candidates, most-similar first, already capped to `limit`.
+    pub candidates: Vec<MatchCandidate>,
+    /// Fixed framing string every response carries: candidates are leads,
+    /// never confirmed identifications.
+    pub advisory: String,
+    /// Species-level baseline so the caller can calibrate expectations.
+    pub species_baseline: SpeciesBaseline,
+}

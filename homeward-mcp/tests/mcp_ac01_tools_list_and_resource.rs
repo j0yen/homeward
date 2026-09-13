@@ -1,6 +1,11 @@
 //! AC1: Given the server on stdio with a fixture DB, When a client calls
-//! `tools/list`, Then exactly `search_pets` and `get_pet` appear with JSON
-//! schemas, and `recent_intakes` lists as a resource.
+//! `tools/list`, Then exactly `search_pets`, `get_pet`, and `match_photo`
+//! appear with JSON schemas, and `recent_intakes` lists as a resource.
+//!
+//! `match_photo` (PRD-homeward-mcp-photo-match) is an additive tool on this
+//! server -- per that PRD's own "Migration / compatibility" section,
+//! "tools/list gains one entry" -- so the original "exactly 2 tools"
+//! assertion here is updated to 3 rather than left stale.
 
 mod common;
 
@@ -9,7 +14,7 @@ use homeward_schema::Species;
 use serde_json::Value;
 
 #[tokio::test]
-async fn tools_list_has_exactly_search_pets_and_get_pet_with_schemas() {
+async fn tools_list_has_exactly_search_pets_get_pet_and_match_photo_with_schemas() {
     let dir = tempfile::tempdir().expect("tempdir");
     let db_path = make_fixture_db(dir.path(), &[make_pet(Species::Dog, |_| {})]);
 
@@ -21,12 +26,13 @@ async fn tools_list_has_exactly_search_pets_and_get_pet_with_schemas() {
 
     assert_eq!(
         tools.len(),
-        2,
-        "expected exactly 2 tools, got: {:?}",
+        3,
+        "expected exactly 3 tools, got: {:?}",
         tools.keys().collect::<Vec<_>>()
     );
     assert!(tools.contains_key("search_pets"), "search_pets missing");
     assert!(tools.contains_key("get_pet"), "get_pet missing");
+    assert!(tools.contains_key("match_photo"), "match_photo missing");
 
     for (name, tool) in &tools {
         let schema = tool

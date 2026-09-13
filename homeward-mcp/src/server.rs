@@ -3,7 +3,9 @@
 
 use std::path::PathBuf;
 use std::sync::Arc;
+use std::time::Duration;
 
+use homeward_embed_client::{EmbedClient, EmbedClientConfig, QueryRequest};
 use homeward_schema::Species;
 use rmcp::handler::server::router::tool::ToolRouter;
 use rmcp::handler::server::wrapper::Parameters;
@@ -17,8 +19,14 @@ use rmcp::{RoleServer, ServerHandler, tool, tool_handler, tool_router};
 
 pub use rmcp::model::CallToolResult;
 
-use crate::dto::{GetPetRequest, SearchPetsRequest, SearchPetsResult};
+use crate::baseline;
+use crate::dto::{
+    GetPetRequest, MatchCandidate, MatchPhotoRequest, MatchPhotoResult, SearchPetsRequest,
+    SearchPetsResult,
+};
 use crate::filter::{self, LocationFilter, SearchFilters};
+use crate::geo::haversine_km;
+use crate::image_input;
 use crate::query;
 
 /// Default `search_pets`/`recent_intakes` page size when `limit` is omitted.
@@ -32,6 +40,20 @@ fn max_limit() -> usize {
 const DEFAULT_RADIUS_KM: f64 = 50.0;
 /// URI for the `recent_intakes` resource.
 const RECENT_INTAKES_URI: &str = "homeward://recent-intakes";
+
+/// Hard cap (and default) on `match_photo` candidates -- independent of
+/// `search_pets`'s own cap, per the PRD's `limit≤20` signature.
+const MAX_MATCH_LIMIT: usize = 20;
+/// Ceiling applied to the embed sidecar call's timeout regardless of
+/// `HW_EMBED_TIMEOUT`, so a stopped/unreachable sidecar degrades within
+/// AC4's 5s bound even if an operator has configured a longer timeout for
+/// other embed-client uses.
+const EMBED_DEGRADED_TIMEOUT: Duration = Duration::from_secs(5);
+/// How many nearest neighbours to request from the sidecar per
+/// `match_photo` call, independent of `limit` -- over-fetching so a
+/// post-kNN location/radius filter (P2) doesn't starve an already-limited
+/// candidate set. Capped at the sidecar's own documented max (200).
+const MATCH_OVER_FETCH_K: u32 = 100;
 
 /// The read-only homeward MCP server: `search_pets`, `get_pet`, and the
 /// `recent_intakes` resource, backed by the ingest `SQLite` DB.
@@ -191,6 +213,144 @@ impl HomewardMcpServer {
                 req.id
             ))])),
         }
+    }
+
+    /// Photo-based candidate match against the shelter intake index.
+    #[tool(
+        name = "match_photo",
+        description = "Submit a lost pet's photo (image_url or image_b64, http/https only) and species to get a ranked, similarity-scored shortlist of shelter intakes that may be the same animal -- candidates, not confirmations. Response metadata always includes the advisory framing and the species-level accuracy baseline so callers can calibrate expectations (cats rank lower than dogs). Nothing submitted is persisted."
+    )]
+    pub async fn match_photo(
+        &self,
+        Parameters(req): Parameters<MatchPhotoRequest>,
+    ) -> Result<CallToolResult, McpError> {
+        let species = match Species::from_str_strict(&req.species) {
+            Ok(s) => s,
+            Err(e) => {
+                return Ok(CallToolResult::error(vec![ContentBlock::text(format!(
+                    "invalid species: {e}"
+                ))]));
+            }
+        };
+
+        // Validate the caller-supplied image BEFORE any network call (AC5):
+        // a malformed/oversized/wrong-scheme payload never reaches the
+        // embed sidecar and nothing derived from it is ever written.
+        match (req.image_url.as_deref(), req.image_b64.as_deref()) {
+            (Some(url), _) => {
+                if let Err(e) = image_input::validate_image_url(url) {
+                    return Ok(CallToolResult::error(vec![ContentBlock::text(e)]));
+                }
+            }
+            (None, Some(b64)) => {
+                if let Err(e) = image_input::validate_image_b64(b64) {
+                    return Ok(CallToolResult::error(vec![ContentBlock::text(e)]));
+                }
+            }
+            (None, None) => {
+                return Ok(CallToolResult::error(vec![ContentBlock::text(
+                    "match_photo requires either image_url or image_b64",
+                )]));
+            }
+        }
+
+        let limit = req
+            .limit
+            .and_then(|v| usize::try_from(v).ok())
+            .unwrap_or(MAX_MATCH_LIMIT)
+            .clamp(1, MAX_MATCH_LIMIT);
+
+        // Ceiling the sidecar timeout to the AC4 degraded-error bound
+        // regardless of the operator's HW_EMBED_TIMEOUT.
+        let mut embed_cfg = EmbedClientConfig::from_env();
+        embed_cfg.timeout = embed_cfg.timeout.min(EMBED_DEGRADED_TIMEOUT);
+        let client = match EmbedClient::new(embed_cfg) {
+            Ok(c) => c,
+            Err(e) => {
+                return Ok(CallToolResult::error(vec![ContentBlock::text(format!(
+                    "embed service degraded: could not build client: {e}"
+                ))]));
+            }
+        };
+
+        let query_req = QueryRequest {
+            image_url: req.image_url.clone(),
+            image_b64: req.image_b64.clone(),
+            k: MATCH_OVER_FETCH_K,
+            species_filter: Some(req.species.clone()),
+        };
+
+        let raw_matches = match client.query(query_req).await {
+            Ok(m) => m,
+            Err(e) => {
+                return Ok(CallToolResult::error(vec![ContentBlock::text(format!(
+                    "embed service degraded: {e}"
+                ))]));
+            }
+        };
+
+        if !query::db_reachable(&self.db_path) {
+            return Ok(Self::unavailable());
+        }
+        let records = match self.load_records().await {
+            Ok(r) => r,
+            Err(e) => {
+                return Ok(CallToolResult::error(vec![ContentBlock::text(format!(
+                    "shelter database read failed: {e}"
+                ))]));
+            }
+        };
+
+        let location_filter = match (req.lat, req.lon) {
+            (Some(lat), Some(lon)) => Some((lat, lon, req.radius_km.unwrap_or(f64::MAX))),
+            _ => None,
+        };
+
+        // Walk the sidecar's own kNN order and only ever drop entries (never
+        // reorder) so survivors keep their kNN relative order (AC8).
+        let mut candidates: Vec<MatchCandidate> = Vec::new();
+        for m in &raw_matches {
+            if candidates.len() >= limit {
+                break;
+            }
+            let Some(record) = records
+                .iter()
+                .find(|r| r.canonical_id.to_string() == m.canonical_id)
+            else {
+                continue; // index/DB drift: skip rather than fabricate a record.
+            };
+            if record.species != species {
+                continue; // defense in depth beyond the sidecar's own species_filter.
+            }
+            if let Some((lat, lon, radius_km)) = location_filter {
+                let within = record
+                    .location
+                    .as_ref()
+                    .and_then(|l| l.lat.zip(l.lon))
+                    .is_some_and(|(rlat, rlon)| haversine_km(lat, lon, rlat, rlon) <= radius_km);
+                if !within {
+                    continue;
+                }
+            }
+            let summary = filter::to_summary(record);
+            candidates.push(MatchCandidate {
+                id: summary.id,
+                species: summary.species,
+                similarity: m.score,
+                city_county: summary.city_county,
+                state: summary.state,
+                lat: summary.lat,
+                lon: summary.lon,
+                photo_urls: summary.photo_urls,
+                shelter_contact: summary.shelter_contact,
+            });
+        }
+
+        Ok(to_json_result(&MatchPhotoResult {
+            candidates,
+            advisory: "candidates-not-confirmations".to_owned(),
+            species_baseline: baseline::for_species(&req.species),
+        }))
     }
 }
 
